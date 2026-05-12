@@ -14,6 +14,7 @@ const videoList = ref(null)
 const videoListLoading = ref(false)
 let timer = null
 let biliupJobTimer = null
+const apiBase = `${import.meta.env.BASE_URL}api`
 
 const terminalKeys = {
   up: '\x1b[A',
@@ -55,7 +56,7 @@ const onlineSummary = computed(() => {
 
 async function loadTasks() {
   try {
-    const response = await fetch('/api/video-tasks/monitor?limit=100')
+    const response = await fetch(`${apiBase}/video-tasks/monitor?limit=100`)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -73,7 +74,7 @@ async function loadTasks() {
 
 async function loadBiliupStatus() {
   try {
-    const response = await fetch('/api/biliup/status')
+    const response = await fetch(`${apiBase}/biliup/status`)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -86,7 +87,7 @@ async function loadBiliupStatus() {
 
 async function startBiliupJob(action) {
   try {
-    const response = await fetch(`/api/biliup/${action}`, { method: 'POST' })
+    const response = await fetch(`${apiBase}/biliup/${action}`, { method: 'POST' })
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -107,7 +108,7 @@ async function pollBiliupJob() {
 async function refreshBiliupJob() {
   if (!biliupJob.value?.id) return
   try {
-    const response = await fetch(`/api/biliup/jobs/${biliupJob.value.id}`)
+    const response = await fetch(`${apiBase}/biliup/jobs/${biliupJob.value.id}`)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -125,7 +126,7 @@ async function refreshBiliupJob() {
 async function loadVideoList(type = 'all') {
   videoListLoading.value = true
   try {
-    const response = await fetch(`/api/biliup/videos?type=${type}&fromPage=1&maxPages=1`)
+    const response = await fetch(`${apiBase}/biliup/videos?type=${type}&fromPage=1&maxPages=1`)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -141,7 +142,7 @@ async function loadVideoList(type = 'all') {
 async function sendBiliupInput(input) {
   if (!biliupJob.value?.id || biliupJob.value.status !== 'running') return
   try {
-    const response = await fetch(`/api/biliup/jobs/${biliupJob.value.id}/input`, {
+    const response = await fetch(`${apiBase}/biliup/jobs/${biliupJob.value.id}/input`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input }),
@@ -165,7 +166,7 @@ async function sendTypedBiliupInput() {
 async function cancelBiliupJob() {
   if (!biliupJob.value?.id || biliupJob.value.status !== 'running') return
   try {
-    const response = await fetch(`/api/biliup/jobs/${biliupJob.value.id}/cancel`, {
+    const response = await fetch(`${apiBase}/biliup/jobs/${biliupJob.value.id}/cancel`, {
       method: 'POST',
     })
     if (!response.ok) {
