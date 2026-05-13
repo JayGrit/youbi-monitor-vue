@@ -525,6 +525,7 @@ h1 {
 }
 
 .stage-label,
+.stage-progress,
 .stage-time {
   max-width: 100%;
   overflow: hidden;
@@ -540,6 +541,13 @@ h1 {
 .stage-time {
   font-size: 12px;
   opacity: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-progress {
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 

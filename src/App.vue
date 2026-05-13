@@ -288,12 +288,23 @@ function nodeTitle(node) {
   const parts = [
     node.label,
     statusText[node.status] || node.status,
-    `耗时 ${formatDuration(node.elapsedSeconds)}`,
   ]
+  const progress = nodeProgress(node)
+  if (progress) {
+    parts.push(`任务点 ${progress}`)
+  }
+  parts.push(`耗时 ${formatDuration(node.elapsedSeconds)}`)
   if (node.errorMessage) {
     parts.push(node.errorMessage)
   }
   return parts.join('\n')
+}
+
+function nodeProgress(node) {
+  if (!Number.isFinite(Number(node.totalCount)) || Number(node.totalCount) <= 0) {
+    return ''
+  }
+  return `${Number(node.completedCount || 0)}/${Number(node.totalCount)}`
 }
 
 function qrImageUrl(url) {
@@ -448,6 +459,7 @@ onUnmounted(() => {
           <template v-for="(node, index) in task.nodes" :key="node.key">
             <div :class="['stage-node', `status-${node.status}`]" :title="nodeTitle(node)">
               <span class="stage-label">{{ node.label }}</span>
+              <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
               <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
             </div>
             <div
