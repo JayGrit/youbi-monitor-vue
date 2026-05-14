@@ -220,6 +220,10 @@ function isTaskReadyBusy(task) {
   return readyTaskId.value === task?.taskId
 }
 
+function canMarkTaskReady(task, node) {
+  return task?.status === 'failed' || node?.status === 'failed'
+}
+
 function accountRows(accounts) {
   const rows = accounts.slice(0, 3).map((account, index) => ({
     ...account,
@@ -492,7 +496,19 @@ onUnmounted(() => {
 
         <div class="stage-chain" aria-label="阶段链路">
           <template v-for="(node, index) in task.nodes" :key="node.key">
-            <div :class="['stage-node', `status-${node.status}`]" :title="nodeTitle(node)">
+            <button
+              v-if="canMarkTaskReady(task, node)"
+              type="button"
+              :class="['stage-node', 'stage-node-button', `status-${node.status}`]"
+              :disabled="isTaskReadyBusy(task)"
+              :title="`${nodeTitle(node)}\n点击切回排队中`"
+              @click="markTaskReady(task)"
+            >
+              <span class="stage-label">{{ node.label }}</span>
+              <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
+              <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
+            </button>
+            <div v-else :class="['stage-node', `status-${node.status}`]" :title="nodeTitle(node)">
               <span class="stage-label">{{ node.label }}</span>
               <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
               <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
