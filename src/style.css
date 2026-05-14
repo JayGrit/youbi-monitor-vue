@@ -467,11 +467,26 @@ h1 {
 
 .task-badge {
   flex: 0 0 auto;
+  border: 0;
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 12px;
   font-weight: 700;
   color: #ffffff;
+}
+
+.task-badge-button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.task-badge-button:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.task-badge-button:disabled {
+  cursor: wait;
+  opacity: 0.75;
 }
 
 .task-details {

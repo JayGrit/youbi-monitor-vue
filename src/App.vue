@@ -14,6 +14,7 @@ const bilibiliQrCode = ref(null)
 const bilibiliQrMessage = ref('')
 const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
+const readyTaskId = ref('')
 let timer = null
 let bilibiliQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
@@ -193,6 +194,30 @@ async function saveBilibiliKey(row) {
   } catch (err) {
     bilibiliError.value = err instanceof Error ? err.message : String(err)
   }
+}
+
+async function markTaskReady(task) {
+  if (!task?.taskId || task.status !== 'failed' || readyTaskId.value) return
+  readyTaskId.value = task.taskId
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(task.taskId)}/ready`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    task.status = 'ready'
+    task.errorMessage = ''
+    await loadTasks()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    readyTaskId.value = ''
+  }
+}
+
+function isTaskReadyBusy(task) {
+  return readyTaskId.value === task?.taskId
 }
 
 function accountRows(accounts) {
@@ -443,7 +468,17 @@ onUnmounted(() => {
         <div class="task-meta">
           <div class="task-title-row">
             <h2>{{ displayTitle(task) }}</h2>
-            <span :class="['task-badge', `status-${task.status}`]">
+            <button
+              v-if="task.status === 'failed'"
+              type="button"
+              :class="['task-badge', 'task-badge-button', `status-${task.status}`]"
+              :disabled="isTaskReadyBusy(task)"
+              title="点击切回排队中"
+              @click="markTaskReady(task)"
+            >
+              {{ isTaskReadyBusy(task) ? '处理中' : (statusText[task.status] || task.status) }}
+            </button>
+            <span v-else :class="['task-badge', `status-${task.status}`]">
               {{ statusText[task.status] || task.status }}
             </span>
           </div>
