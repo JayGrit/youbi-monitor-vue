@@ -403,6 +403,7 @@ onUnmounted(() => {
             :title="formatDateTime(device.lastSeenAt)"
           >
             <span :class="['dot', device.online ? 'dot-success' : 'dot-muted']"></span>
+            <span class="device-name">{{ device.deviceName }}</span>
             {{ formatLastSeen(device) }}
           </span>
         </div>
