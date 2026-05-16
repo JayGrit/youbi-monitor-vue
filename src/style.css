@@ -473,6 +473,7 @@ h1 {
   font-size: 16px;
   line-height: 1.35;
   font-weight: 720;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -502,6 +503,30 @@ h1 {
   opacity: 0.75;
 }
 
+.retry-button {
+  flex: 0 0 auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.retry-button:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.retry-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .task-details {
   display: flex;
   flex-wrap: wrap;
@@ -517,6 +542,11 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.upload-account {
+  color: #1f5f3d;
+  font-weight: 700;
 }
 
 .task-error {
@@ -643,6 +673,46 @@ h1 {
 
 .stage-link.status-failed {
   background: #dc2626;
+}
+
+.failure-panel {
+  grid-column: 1 / -1;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  padding: 12px;
+}
+
+.failure-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.failure-panel-head button {
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #991b1b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.failure-panel pre {
+  margin: 8px 0 0;
+  max-height: 260px;
+  overflow: auto;
+  color: #7f1d1d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 920px) {

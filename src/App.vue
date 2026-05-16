@@ -15,6 +15,7 @@ const bilibiliQrMessage = ref('')
 const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
 const readyTaskId = ref('')
+const openFailureKey = ref('')
 let timer = null
 let bilibiliQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
@@ -220,8 +221,21 @@ function isTaskReadyBusy(task) {
   return readyTaskId.value === task?.taskId
 }
 
-function canMarkTaskReady(task, node) {
-  return task?.status === 'failed' || node?.status === 'failed'
+function failureDetails(node) {
+  return [node?.errorMessage, node?.childErrorMessage].filter(Boolean).join('\n')
+}
+
+function canShowFailureDetails(node) {
+  return node?.status === 'failed' && Boolean(failureDetails(node))
+}
+
+function failureKey(task, node) {
+  return `${task?.taskId || ''}:${node?.key || ''}`
+}
+
+function toggleFailureDetails(task, node) {
+  const key = failureKey(task, node)
+  openFailureKey.value = openFailureKey.value === key ? '' : key
 }
 
 function accountRows(accounts) {
@@ -291,17 +305,25 @@ function pad(value) {
 }
 
 function displayTitle(task) {
-  return task.title || task.taskId || '未命名任务'
+  const title = String(task.title || '').trim()
+  if (title && !isWatchUrl(title)) return title
+  return task.taskId || '未命名任务'
 }
 
-function compactUrl(url) {
-  if (!url) return ''
+function isWatchUrl(value) {
   try {
-    const parsed = new URL(url)
-    return `${parsed.hostname}${parsed.pathname}`
+    const parsed = new URL(value)
+    return ['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(parsed.hostname) && parsed.pathname === '/watch'
   } catch {
-    return url
+    return /^https?:\/\/(www\.)?youtube\.com\/watch\b/.test(value)
   }
+}
+
+function uploadAccountText(task) {
+  const name = String(task.bilibiliUploadAccountName || '').trim()
+  const uid = String(task.bilibiliUploadUid || '').trim()
+  if (name && uid) return `${name} · UID ${uid}`
+  return name || (uid ? `UID ${uid}` : '')
 }
 
 function formatDateTime(value) {
@@ -473,23 +495,23 @@ onUnmounted(() => {
         <div class="task-meta">
           <div class="task-title-row">
             <h2>{{ displayTitle(task) }}</h2>
+            <span :class="['task-badge', `status-${task.status}`]">
+              {{ statusText[task.status] || task.status }}
+            </span>
             <button
               v-if="task.status === 'failed'"
               type="button"
-              :class="['task-badge', 'task-badge-button', `status-${task.status}`]"
+              class="retry-button"
               :disabled="isTaskReadyBusy(task)"
-              title="点击切回排队中"
+              title="把任务切回排队中"
               @click="markTaskReady(task)"
             >
-              {{ isTaskReadyBusy(task) ? '处理中' : (statusText[task.status] || task.status) }}
+              {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
             </button>
-            <span v-else :class="['task-badge', `status-${task.status}`]">
-              {{ statusText[task.status] || task.status }}
-            </span>
           </div>
           <div class="task-details">
             <span>{{ task.taskId }}</span>
-            <span v-if="task.sourceUrl">{{ compactUrl(task.sourceUrl) }}</span>
+            <span v-if="uploadAccountText(task)" class="upload-account">投稿账号 {{ uploadAccountText(task) }}</span>
             <span>总耗时 {{ formatDuration(task.elapsedSeconds) }}</span>
           </div>
           <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
@@ -498,12 +520,11 @@ onUnmounted(() => {
         <div class="stage-chain" aria-label="阶段链路">
           <template v-for="(node, index) in task.nodes" :key="node.key">
             <button
-              v-if="canMarkTaskReady(task, node)"
+              v-if="canShowFailureDetails(node)"
               type="button"
               :class="['stage-node', 'stage-node-button', `status-${node.status}`]"
-              :disabled="isTaskReadyBusy(task)"
-              :title="`${nodeTitle(node)}\n点击切回排队中`"
-              @click="markTaskReady(task)"
+              :title="`${nodeTitle(node)}\n点击查看失败原因`"
+              @click="toggleFailureDetails(task, node)"
             >
               <span class="stage-label">{{ node.label }}</span>
               <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
@@ -520,6 +541,18 @@ onUnmounted(() => {
               aria-hidden="true"
             ></div>
           </template>
+        </div>
+        <div
+          v-for="node in task.nodes"
+          v-show="openFailureKey === failureKey(task, node)"
+          :key="`${node.key}-failure`"
+          class="failure-panel"
+        >
+          <div class="failure-panel-head">
+            <strong>{{ node.label }}失败原因</strong>
+            <button type="button" @click="openFailureKey = ''">收起</button>
+          </div>
+          <pre>{{ failureDetails(node) }}</pre>
         </div>
       </article>
     </section>
