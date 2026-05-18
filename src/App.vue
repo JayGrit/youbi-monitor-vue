@@ -15,6 +15,7 @@ const bilibiliQrMessage = ref('')
 const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
 const readyTaskId = ref('')
+const restartTaskId = ref('')
 const openFailureKey = ref('')
 let timer = null
 let bilibiliQrTimer = null
@@ -219,6 +220,33 @@ async function markTaskReady(task) {
 
 function isTaskReadyBusy(task) {
   return readyTaskId.value === task?.taskId
+}
+
+async function restartTask(task) {
+  if (!task?.taskId || task.status === 'running' || restartTaskId.value) return
+  const confirmed = window.confirm(`确认从头开始任务？\n\n${displayTitle(task)}\n\n这会删除该任务已生成的数据库结果和 MinIO 文件，并从 downloader 重新排队。`)
+  if (!confirmed) return
+  restartTaskId.value = task.taskId
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(task.taskId)}/restart`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    task.status = 'ready'
+    task.currentStage = 'downloader'
+    task.errorMessage = ''
+    await loadTasks()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    restartTaskId.value = ''
+  }
+}
+
+function isTaskRestartBusy(task) {
+  return restartTaskId.value === task?.taskId
 }
 
 function failureDetails(node) {
@@ -507,6 +535,16 @@ onUnmounted(() => {
               @click="markTaskReady(task)"
             >
               {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
+            </button>
+            <button
+              v-if="task.status !== 'running'"
+              type="button"
+              class="restart-button"
+              :disabled="isTaskRestartBusy(task)"
+              title="删除已生成结果并从 downloader 重新开始"
+              @click="restartTask(task)"
+            >
+              {{ isTaskRestartBusy(task) ? '处理中' : '从头开始' }}
             </button>
           </div>
           <div class="task-details">
