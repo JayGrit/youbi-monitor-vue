@@ -672,7 +672,7 @@ function speechRows() {
       speaker: segment.speaker || asr.speaker || '',
       status: segment.status || '',
       attempt_count: segment.attempt_count ?? '',
-      speed_ratio: segment.speed_ratio ?? '',
+      speed_ratio: formatRatio(segment.speed_ratio),
       reference_wav_url: segment.reference_wav_url || '',
       tts_wav_url: segment.tts_wav_url || '',
       error_message: segment.error_message || '',
@@ -698,19 +698,46 @@ function rowsByIndex(rows) {
 function speechColumns() {
   return [
     'item_index',
-    'start_time',
-    'end_time',
     'asr_text',
     'src_text',
     'dst_text',
-    'speaker',
-    'status',
-    'attempt_count',
-    'speed_ratio',
     'reference_wav_url',
     'tts_wav_url',
-    'error_message',
+    'more_info',
   ]
+}
+
+function showSpeechColumn(row, column) {
+  if (column === 'asr_text') {
+    return !sameText(row.asr_text, row.src_text)
+  }
+  return true
+}
+
+function sameText(left, right) {
+  return normalizeText(left) !== '' && normalizeText(left) === normalizeText(right)
+}
+
+function normalizeText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ')
+}
+
+function speechMoreRows(row) {
+  return [
+    ['start_time', formatTimeline(row.start_time)],
+    ['end_time', formatTimeline(row.end_time)],
+    ['speaker', row.speaker || '-'],
+    ['status', row.status || '-'],
+    ['attempt_count', row.attempt_count === '' ? '-' : row.attempt_count],
+    ['speed_ratio', row.speed_ratio || '-'],
+    ['error_message', row.error_message || '-'],
+  ]
+}
+
+function formatRatio(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const number = Number(value)
+  return Number.isFinite(number) ? number.toFixed(2) : String(value)
 }
 
 function speechAudioAsset(row, column) {
@@ -1092,7 +1119,8 @@ onUnmounted(() => {
                   <tbody>
                     <tr v-for="row in speechRows()" :key="row.item_index">
                       <td v-for="column in speechColumns()" :key="column">
-                        <template v-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
+                        <template v-if="!showSpeechColumn(row, column)"></template>
+                        <template v-else-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
                           <button
                             v-if="speechAudioAsset(row, column) && !activeAudioUrls[speechAudioAsset(row, column).url]"
                             type="button"
@@ -1110,6 +1138,15 @@ onUnmounted(() => {
                           ></audio>
                           <span v-else>-</span>
                         </template>
+                        <details v-else-if="column === 'more_info'" class="speech-more">
+                          <summary>More</summary>
+                          <dl>
+                            <template v-for="[name, value] in speechMoreRows(row)" :key="name">
+                              <dt>{{ name }}</dt>
+                              <dd>{{ value }}</dd>
+                            </template>
+                          </dl>
+                        </details>
                         <span v-else-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>
                         <details v-else>
                           <summary>{{ tableCellSummary(column, row[column]) }}</summary>

@@ -1106,7 +1106,7 @@ h1 {
 }
 
 .speech-table {
-  min-width: 1840px;
+  min-width: 1280px;
 }
 
 .raw-table th,
@@ -1148,6 +1148,31 @@ h1 {
 .speech-table audio {
   width: 220px;
   height: 34px;
+}
+
+.speech-more summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 720;
+}
+
+.speech-more dl {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 8px 0 0;
+  min-width: 260px;
+}
+
+.speech-more dt {
+  color: #65758a;
+  font-weight: 720;
+}
+
+.speech-more dd {
+  margin: 0;
+  color: #344156;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 920px) {
