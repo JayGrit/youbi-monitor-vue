@@ -513,6 +513,7 @@ h1 {
 }
 
 .retry-button,
+.stop-button,
 .restart-button,
 .delete-button {
   flex: 0 0 auto;
@@ -528,6 +529,11 @@ h1 {
   padding: 5px 8px;
 }
 
+.stop-button {
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
 .restart-button {
   border-color: #fca5a5;
   color: #991b1b;
@@ -540,10 +546,15 @@ h1 {
 }
 
 .retry-button:hover:not(:disabled),
+.stop-button:hover:not(:disabled),
 .restart-button:hover:not(:disabled),
 .delete-button:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
+}
+
+.stop-button:hover:not(:disabled) {
+  border-color: #d97706;
 }
 
 .restart-button:hover:not(:disabled) {
@@ -556,6 +567,7 @@ h1 {
 }
 
 .retry-button:disabled,
+.stop-button:disabled,
 .restart-button:disabled,
 .delete-button:disabled {
   cursor: wait;

@@ -15,6 +15,7 @@ const bilibiliQrMessage = ref('')
 const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
 const readyTaskId = ref('')
+const stopTaskId = ref('')
 const restartTaskId = ref('')
 const deleteTaskId = ref('')
 const openFailureKey = ref('')
@@ -288,6 +289,32 @@ async function markTaskReady(task) {
 
 function isTaskReadyBusy(task) {
   return readyTaskId.value === task?.taskId
+}
+
+async function stopTask(task) {
+  if (!task?.taskId || task.status !== 'running' || stopTaskId.value) return
+  const confirmed = window.confirm(`确认停止任务？\n\n${displayTitle(task)}\n\n这会把当前任务标记为失败，已启动的 worker 进程不会被强制杀掉，但后续阶段不会继续排队。`)
+  if (!confirmed) return
+  stopTaskId.value = task.taskId
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(task.taskId)}/stop`, {
+      method: 'POST',
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    task.status = 'failed'
+    task.errorMessage = '手动停止任务'
+    await loadTasks()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    stopTaskId.value = ''
+  }
+}
+
+function isTaskStopBusy(task) {
+  return stopTaskId.value === task?.taskId
 }
 
 async function restartTask(task) {
@@ -972,6 +999,16 @@ onUnmounted(() => {
               @click="markTaskReady(task)"
             >
               {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
+            </button>
+            <button
+              v-if="task.status === 'running'"
+              type="button"
+              class="stop-button"
+              :disabled="isTaskStopBusy(task)"
+              title="停止任务并阻止后续阶段继续排队"
+              @click="stopTask(task)"
+            >
+              {{ isTaskStopBusy(task) ? '处理中' : '停止' }}
             </button>
             <button
               v-if="task.status !== 'running'"
