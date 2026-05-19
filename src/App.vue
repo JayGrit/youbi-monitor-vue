@@ -18,6 +18,11 @@ const readyTaskId = ref('')
 const restartTaskId = ref('')
 const deleteTaskId = ref('')
 const openFailureKey = ref('')
+const selectedTaskFlow = ref(null)
+const selectedStageKey = ref('downloader')
+const flowLoading = ref(false)
+const flowError = ref('')
+let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
@@ -51,6 +56,11 @@ const onlineSummary = computed(() => {
     }
   }
   return { online, total }
+})
+
+const selectedStage = computed(() => {
+  const stages = selectedTaskFlow.value?.stages || []
+  return stages.find(stage => stage.key === selectedStageKey.value) || stages[0] || null
 })
 
 async function loadTasks() {
@@ -275,6 +285,56 @@ function isTaskDeleteBusy(task) {
   return deleteTaskId.value === task?.taskId
 }
 
+async function openTaskFlow(task, stageKey = 'downloader') {
+  if (!task?.taskId) return
+  selectedStageKey.value = stageKey
+  selectedTaskFlow.value = null
+  await loadTaskFlow(task.taskId)
+  if (flowTimer) window.clearInterval(flowTimer)
+  flowTimer = window.setInterval(() => {
+    if (!selectedTaskFlow.value?.task?.id) return
+    const status = selectedTaskFlow.value.task.status
+    if (status === 'running' || status === 'ready') {
+      loadTaskFlow(selectedTaskFlow.value.task.id, true)
+    }
+  }, 5000)
+}
+
+async function loadTaskFlow(taskId, quiet = false) {
+  if (!taskId) return
+  if (!quiet) {
+    flowLoading.value = true
+  }
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/flow`)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    selectedTaskFlow.value = await response.json()
+    flowError.value = ''
+  } catch (err) {
+    flowError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    flowLoading.value = false
+  }
+}
+
+function closeTaskFlow() {
+  selectedTaskFlow.value = null
+  flowError.value = ''
+  if (flowTimer) {
+    window.clearInterval(flowTimer)
+    flowTimer = null
+  }
+}
+
+function refreshTaskFlow() {
+  const taskId = selectedTaskFlow.value?.task?.id
+  if (taskId) {
+    loadTaskFlow(taskId)
+  }
+}
+
 function failureDetails(node) {
   return [node?.errorMessage, node?.childErrorMessage].filter(Boolean).join('\n')
 }
@@ -412,6 +472,124 @@ function nodeProgress(node) {
   return `${Number(node.completedCount || 0)}/${Number(node.totalCount)}`
 }
 
+function flowTaskTitle(flow) {
+  const task = flow?.task || {}
+  return task.title || flow?.videoInfo?.title || task.id || '任务详情'
+}
+
+function fieldValueText(value) {
+  if (value === null || value === undefined || value === '') return '-'
+  if (typeof value === 'object') return formatJson(value)
+  return String(value)
+}
+
+function shortValue(value, max = 180) {
+  const text = fieldValueText(value)
+  return text.length > max ? `${text.slice(0, max)}...` : text
+}
+
+function formatJson(value) {
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2)
+    } catch {
+      return trimmed
+    }
+  }
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
+
+function isLongValue(value) {
+  const text = fieldValueText(value)
+  return text.length > 120 || text.includes('\n') || looksJson(text)
+}
+
+function looksJson(value) {
+  const text = String(value || '').trim()
+  return (text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))
+}
+
+function tableColumns(rows) {
+  const columns = []
+  const seen = new Set()
+  for (const row of rows || []) {
+    for (const key of Object.keys(row || {})) {
+      if (!seen.has(key)) {
+        seen.add(key)
+        columns.push(key)
+      }
+    }
+  }
+  return columns
+}
+
+function stageMedia(stage) {
+  const items = []
+  const seen = new Set()
+  function add(asset, fallbackName, value) {
+    if (!asset?.url || seen.has(asset.url)) return
+    seen.add(asset.url)
+    items.push({
+      name: asset.name || fallbackName,
+      kind: asset.kind || kindForName(asset.url || value),
+      url: asset.url,
+      objectName: asset.objectName || '',
+    })
+  }
+  for (const field of [...(stage?.inputs || []), ...(stage?.outputs || [])]) {
+    add(field.asset, field.name, field.value)
+  }
+  for (const table of stage?.tables || []) {
+    for (const row of table.rows || []) {
+      for (const [key, value] of Object.entries(row || {})) {
+        const asset = assetFromValue(key, value, stage.key)
+        add(asset, key, value)
+      }
+    }
+  }
+  return items.filter(item => ['video', 'audio', 'image'].includes(item.kind)).slice(0, 30)
+}
+
+function assetFromValue(name, value, stageKey) {
+  const text = String(value || '').trim()
+  if (!text || text.startsWith('db://')) return null
+  if (text.startsWith('http://') || text.startsWith('https://')) {
+    return { name, stage: stageKey, kind: kindForField(name, text), url: text }
+  }
+  return null
+}
+
+function kindForField(fieldName, name) {
+  const lowerField = String(fieldName || '').toLowerCase()
+  if (lowerField.includes('audio') || lowerField.includes('wav')) return 'audio'
+  if (lowerField.includes('video')) return 'video'
+  if (lowerField.includes('thumbnail') || lowerField.includes('cover')) return 'image'
+  return kindForName(name)
+}
+
+function kindForName(name) {
+  const lower = String(name || '').toLowerCase().split('?')[0]
+  if (/\.(mp4|mov|m4v|webm)$/.test(lower)) return 'video'
+  if (/\.(wav|mp3|m4a|aac|flac|ogg|webm)$/.test(lower)) return 'audio'
+  if (/\.(png|jpg|jpeg|webp|gif)$/.test(lower)) return 'image'
+  if (/\.json$/.test(lower)) return 'json'
+  return 'file'
+}
+
+function fieldRows(stage) {
+  return [
+    ...(stage?.inputs || []).map(field => ({ ...field, direction: '入参' })),
+    ...(stage?.outputs || []).map(field => ({ ...field, direction: '出参' })),
+  ]
+}
+
 function qrImageUrl(url) {
   if (!url) return ''
   return `https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}`
@@ -429,6 +607,9 @@ onUnmounted(() => {
   }
   if (bilibiliQrTimer) {
     window.clearInterval(bilibiliQrTimer)
+  }
+  if (flowTimer) {
+    window.clearInterval(flowTimer)
   }
 })
 </script>
@@ -594,21 +775,15 @@ onUnmounted(() => {
         <div class="stage-chain" aria-label="阶段链路">
           <template v-for="(node, index) in task.nodes" :key="node.key">
             <button
-              v-if="canShowFailureDetails(node)"
               type="button"
               :class="['stage-node', 'stage-node-button', `status-${node.status}`]"
-              :title="`${nodeTitle(node)}\n点击查看失败原因`"
-              @click="toggleFailureDetails(task, node)"
+              :title="`${nodeTitle(node)}\n点击查看任务流详情`"
+              @click="openTaskFlow(task, node.key)"
             >
               <span class="stage-label">{{ node.label }}</span>
               <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
               <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
             </button>
-            <div v-else :class="['stage-node', `status-${node.status}`]" :title="nodeTitle(node)">
-              <span class="stage-label">{{ node.label }}</span>
-              <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
-              <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
-            </div>
             <div
               v-if="index < task.nodes.length - 1"
               :class="['stage-link', `status-${node.status}`]"
@@ -630,5 +805,162 @@ onUnmounted(() => {
         </div>
       </article>
     </section>
+
+    <div v-if="selectedTaskFlow || flowLoading || flowError" class="flow-overlay" @click.self="closeTaskFlow">
+      <aside class="flow-drawer" aria-label="任务流详情">
+        <header class="flow-header">
+          <div>
+            <h2>{{ flowTaskTitle(selectedTaskFlow) }}</h2>
+            <p>
+              {{ selectedTaskFlow?.task?.id || '加载中' }}
+              <template v-if="selectedTaskFlow?.task?.status">
+                · {{ statusText[selectedTaskFlow.task.status] || selectedTaskFlow.task.status }}
+              </template>
+              <template v-if="selectedTaskFlow?.task?.current_stage">
+                · 当前 {{ selectedTaskFlow.task.current_stage }}
+              </template>
+            </p>
+          </div>
+          <div class="flow-actions">
+            <button type="button" :disabled="flowLoading" @click="refreshTaskFlow">
+              {{ flowLoading ? '刷新中' : '刷新' }}
+            </button>
+            <button type="button" @click="closeTaskFlow">关闭</button>
+          </div>
+        </header>
+
+        <div v-if="flowError" class="flow-error">任务流接口异常：{{ flowError }}</div>
+        <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">正在加载任务流</div>
+        <template v-else-if="selectedTaskFlow">
+          <div class="flow-summary">
+            <span>创建 {{ formatDateTime(selectedTaskFlow.task.created_at) }}</span>
+            <span>开始 {{ formatDateTime(selectedTaskFlow.task.started_at) }}</span>
+            <span>完成 {{ formatDateTime(selectedTaskFlow.task.completed_at) }}</span>
+            <a v-if="selectedTaskFlow.task.source_url" :href="selectedTaskFlow.task.source_url" target="_blank" rel="noreferrer">
+              源链接
+            </a>
+          </div>
+
+          <nav class="flow-tabs" aria-label="阶段详情标签">
+            <button
+              v-for="stage in selectedTaskFlow.stages"
+              :key="stage.key"
+              type="button"
+              :class="['flow-tab', selectedStageKey === stage.key ? 'flow-tab-active' : '', `status-${stage.status}`]"
+              @click="selectedStageKey = stage.key"
+            >
+              {{ stage.label }}
+            </button>
+          </nav>
+
+          <section v-if="selectedStage" class="flow-stage">
+            <div class="flow-stage-head">
+              <div>
+                <h3>{{ selectedStage.label }}</h3>
+                <p>
+                  {{ statusText[selectedStage.status] || selectedStage.status }}
+                  · 耗时 {{ formatDuration(selectedStage.elapsedSeconds) }}
+                  <template v-if="selectedStage.operator"> · {{ selectedStage.operator }}</template>
+                </p>
+              </div>
+              <span :class="['task-badge', `status-${selectedStage.status}`]">
+                {{ statusText[selectedStage.status] || selectedStage.status }}
+              </span>
+            </div>
+
+            <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
+
+            <div v-if="stageMedia(selectedStage).length" class="flow-section">
+              <h4>媒体预览</h4>
+              <div class="media-grid">
+                <article v-for="asset in stageMedia(selectedStage)" :key="asset.url" class="media-item">
+                  <div class="media-title">
+                    <strong>{{ asset.name }}</strong>
+                    <a :href="asset.url" target="_blank" rel="noreferrer">打开</a>
+                  </div>
+                  <video v-if="asset.kind === 'video'" :src="asset.url" controls preload="metadata"></video>
+                  <audio v-else-if="asset.kind === 'audio'" :src="asset.url" controls preload="metadata"></audio>
+                  <img v-else-if="asset.kind === 'image'" :src="asset.url" alt="" />
+                  <p v-if="asset.objectName">{{ asset.objectName }}</p>
+                </article>
+              </div>
+            </div>
+
+            <div class="flow-section">
+              <h4>入参 / 出参</h4>
+              <div v-if="fieldRows(selectedStage).length" class="field-table">
+                <div class="field-row field-header">
+                  <span>类型</span>
+                  <span>字段</span>
+                  <span>值</span>
+                </div>
+                <div v-for="field in fieldRows(selectedStage)" :key="`${field.direction}-${field.name}`" class="field-row">
+                  <strong>{{ field.direction }}</strong>
+                  <span>{{ field.name }}</span>
+                  <span>
+                    <a v-if="field.asset?.url" :href="field.asset.url" target="_blank" rel="noreferrer">
+                      {{ shortValue(field.value) }}
+                    </a>
+                    <template v-else>{{ shortValue(field.value) }}</template>
+                  </span>
+                  <pre v-if="isLongValue(field.value)" class="field-long">{{ formatJson(field.value) }}</pre>
+                </div>
+              </div>
+              <p v-else class="flow-muted">暂无入参或出参字段</p>
+            </div>
+
+            <div class="flow-section">
+              <h4>数据库记录</h4>
+              <div v-if="selectedStage.tables?.length" class="table-stack">
+                <article v-for="table in selectedStage.tables" :key="table.name" class="raw-table">
+                  <div class="raw-table-head">
+                    <strong>{{ table.name }}</strong>
+                    <span>{{ table.rows.length }} 行<template v-if="table.truncated">，已截断</template></span>
+                  </div>
+                  <div class="raw-table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th v-for="column in tableColumns(table.rows)" :key="column">{{ column }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, rowIndex) in table.rows" :key="row.id || row.task_id || rowIndex">
+                          <td v-for="column in tableColumns(table.rows)" :key="column">
+                            <span v-if="!isLongValue(row[column])">{{ shortValue(row[column], 90) }}</span>
+                            <details v-else>
+                              <summary>{{ shortValue(row[column], 70) }}</summary>
+                              <pre>{{ formatJson(row[column]) }}</pre>
+                            </details>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </article>
+              </div>
+              <p v-else class="flow-muted">暂无数据库记录</p>
+            </div>
+
+            <div v-if="selectedTaskFlow.minioObjects?.length" class="flow-section">
+              <h4>任务 MinIO 对象</h4>
+              <div class="object-list">
+                <a
+                  v-for="asset in selectedTaskFlow.minioObjects"
+                  :key="asset.objectName"
+                  :href="asset.url || undefined"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{{ asset.stage || '-' }}</span>
+                  <strong>{{ asset.objectName }}</strong>
+                  <em>{{ asset.kind }}</em>
+                </a>
+              </div>
+            </div>
+          </section>
+        </template>
+      </aside>
+    </div>
   </main>
 </template>
