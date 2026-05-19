@@ -515,7 +515,7 @@ function rowStatus(row) {
 }
 
 function formatDuration(seconds) {
-  const total = Math.max(0, Number(seconds || 0))
+  const total = Math.max(0, Math.round(Number(seconds || 0)))
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const secs = total % 60
@@ -533,6 +533,15 @@ function displayTitle(task) {
   const title = String(task.title || '').trim()
   if (title && !isWatchUrl(title)) return title
   return task.taskId || '未命名任务'
+}
+
+function taskSourceUrl(task) {
+  return String(task?.sourceWebpageUrl || task?.sourceUrl || '').trim()
+}
+
+function sourceDurationSeconds(task) {
+  const value = Number(task?.sourceDurationSeconds)
+  return Number.isFinite(value) && value > 0 ? value : null
 }
 
 function isWatchUrl(value) {
@@ -593,7 +602,12 @@ function flowCoverUrl(flow) {
 }
 
 function flowSourceUrl(flow) {
-  return flow?.task?.source_url || flow?.videoInfo?.source_url || flow?.videoInfo?.source_webpage_url || ''
+  return flow?.videoInfo?.source_webpage_url || flow?.videoInfo?.source_url || flow?.task?.source_url || ''
+}
+
+function flowDurationSeconds(flow) {
+  const value = Number(flow?.videoInfo?.source_duration_seconds || flow?.task?.source_duration_seconds)
+  return Number.isFinite(value) && value > 0 ? value : null
 }
 
 function fieldValueText(value) {
@@ -986,7 +1000,18 @@ onUnmounted(() => {
       <article v-for="task in tasks" :key="task.taskId" class="task-row">
         <div class="task-meta">
           <div class="task-title-row">
-            <h2>{{ displayTitle(task) }}</h2>
+            <h2>
+              <a
+                v-if="taskSourceUrl(task)"
+                :href="taskSourceUrl(task)"
+                target="_blank"
+                rel="noreferrer"
+                :title="taskSourceUrl(task)"
+              >
+                {{ displayTitle(task) }}
+              </a>
+              <template v-else>{{ displayTitle(task) }}</template>
+            </h2>
             <span :class="['task-badge', `status-${task.status}`]">
               {{ statusText[task.status] || task.status }}
             </span>
@@ -1033,6 +1058,7 @@ onUnmounted(() => {
           </div>
           <div class="task-details">
             <span>{{ task.taskId }}</span>
+            <span v-if="sourceDurationSeconds(task) !== null">视频时长 {{ formatDuration(sourceDurationSeconds(task)) }}</span>
             <span v-if="uploadAccountText(task)" class="upload-account">投稿账号 {{ uploadAccountText(task) }}</span>
             <span>总耗时 {{ formatDuration(task.elapsedSeconds) }}</span>
           </div>
@@ -1086,6 +1112,9 @@ onUnmounted(() => {
               </template>
               <template v-if="selectedTaskFlow?.task?.current_stage">
                 · current {{ selectedTaskFlow.task.current_stage }}
+              </template>
+              <template v-if="flowDurationSeconds(selectedTaskFlow) !== null">
+                · 视频时长 {{ formatDuration(flowDurationSeconds(selectedTaskFlow)) }}
               </template>
             </p>
           </div>
