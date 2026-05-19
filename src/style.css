@@ -425,6 +425,10 @@ h1 {
   background: #dc2626;
 }
 
+.dot-running {
+  background: #2563eb;
+}
+
 .dot-muted {
   background: #a7b0bd;
 }
@@ -778,7 +782,6 @@ h1 {
 }
 
 .flow-header p,
-.flow-summary,
 .flow-stage-head p,
 .flow-muted {
   color: #607086;
@@ -836,14 +839,40 @@ h1 {
 .flow-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  padding: 12px 20px 0;
+  gap: 12px;
+  padding: 14px 20px 0;
 }
 
-.flow-summary a,
 .media-title a,
 .field-row a {
   color: #1d4ed8;
+}
+
+.source-cover-link {
+  display: block;
+  width: min(280px, 100%);
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.source-cover-link img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.source-cover-link span {
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .flow-tabs {
@@ -859,9 +888,14 @@ h1 {
 }
 
 .flow-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   flex: 0 0 auto;
   min-width: 88px;
-  color: #ffffff;
+  background: #ffffff;
+  color: #243044;
   font-size: 13px;
   font-weight: 720;
 }

@@ -477,6 +477,10 @@ function flowTaskTitle(flow) {
   return task.title || flow?.videoInfo?.title || task.id || '任务详情'
 }
 
+function flowCoverUrl(flow) {
+  return flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || ''
+}
+
 function fieldValueText(value) {
   if (value === null || value === undefined || value === '') return '-'
   if (typeof value === 'object') return formatJson(value)
@@ -833,11 +837,16 @@ onUnmounted(() => {
         <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">正在加载任务流</div>
         <template v-else-if="selectedTaskFlow">
           <div class="flow-summary">
-            <span>创建 {{ formatDateTime(selectedTaskFlow.task.created_at) }}</span>
-            <span>开始 {{ formatDateTime(selectedTaskFlow.task.started_at) }}</span>
-            <span>完成 {{ formatDateTime(selectedTaskFlow.task.completed_at) }}</span>
-            <a v-if="selectedTaskFlow.task.source_url" :href="selectedTaskFlow.task.source_url" target="_blank" rel="noreferrer">
-              源链接
+            <a
+              v-if="selectedTaskFlow.task.source_url"
+              class="source-cover-link"
+              :href="selectedTaskFlow.task.source_url"
+              target="_blank"
+              rel="noreferrer"
+              title="打开原视频"
+            >
+              <img v-if="flowCoverUrl(selectedTaskFlow)" :src="flowCoverUrl(selectedTaskFlow)" alt="" />
+              <span v-else>原视频</span>
             </a>
           </div>
 
@@ -846,10 +855,11 @@ onUnmounted(() => {
               v-for="stage in selectedTaskFlow.stages"
               :key="stage.key"
               type="button"
-              :class="['flow-tab', selectedStageKey === stage.key ? 'flow-tab-active' : '', `status-${stage.status}`]"
+              :class="['flow-tab', selectedStageKey === stage.key ? 'flow-tab-active' : '']"
               @click="selectedStageKey = stage.key"
             >
-              {{ stage.label }}
+              <span :class="['dot', stage.status === 'failed' ? 'dot-failed' : stage.status === 'success' ? 'dot-success' : stage.status === 'running' ? 'dot-running' : 'dot-muted']"></span>
+              <span>{{ stage.label }}</span>
             </button>
           </nav>
 
