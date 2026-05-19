@@ -16,6 +16,7 @@ const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
 const readyTaskId = ref('')
 const restartTaskId = ref('')
+const deleteTaskId = ref('')
 const openFailureKey = ref('')
 let timer = null
 let bilibiliQrTimer = null
@@ -247,6 +248,31 @@ async function restartTask(task) {
 
 function isTaskRestartBusy(task) {
   return restartTaskId.value === task?.taskId
+}
+
+async function deleteTask(task) {
+  if (!task?.taskId || task.status === 'running' || deleteTaskId.value) return
+  const confirmed = window.confirm(`确认删除任务？\n\n${displayTitle(task)}\n\n这会永久删除该任务所有数据库记录和 MinIO 文件，无法恢复。`)
+  if (!confirmed) return
+  deleteTaskId.value = task.taskId
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(task.taskId)}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    tasks.value = tasks.value.filter(item => item.taskId !== task.taskId)
+    await loadTasks()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    deleteTaskId.value = ''
+  }
+}
+
+function isTaskDeleteBusy(task) {
+  return deleteTaskId.value === task?.taskId
 }
 
 function failureDetails(node) {
@@ -545,6 +571,16 @@ onUnmounted(() => {
               @click="restartTask(task)"
             >
               {{ isTaskRestartBusy(task) ? '处理中' : '从头开始' }}
+            </button>
+            <button
+              v-if="task.status !== 'running'"
+              type="button"
+              class="delete-button"
+              :disabled="isTaskDeleteBusy(task)"
+              title="永久删除任务数据库记录和 MinIO 文件"
+              @click="deleteTask(task)"
+            >
+              {{ isTaskDeleteBusy(task) ? '处理中' : '删除' }}
             </button>
           </div>
           <div class="task-details">
