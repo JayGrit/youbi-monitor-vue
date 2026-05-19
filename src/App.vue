@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 const tasks = ref([])
 const serviceHeartbeats = ref([])
@@ -23,10 +23,14 @@ const selectedStageKey = ref('downloader')
 const flowPageOpen = ref(false)
 const flowLoading = ref(false)
 const flowError = ref('')
+const activeAudioUrls = ref({})
+const audioRefs = ref({})
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
+const SPEECH_STAGE_KEY = 'speech'
+const SPEECH_STAGE_KEYS = ['whisper', 'translator', 'speaker']
 
 const statusText = {
   pending: '未开始',
@@ -43,6 +47,7 @@ const stageNameText = {
   whisper: 'Whisper',
   translator: 'Translator',
   speaker: 'Speaker',
+  speech: 'Whisper & Translator & Speaker',
   combiner: 'Combiner',
   uploader: 'Uploader',
 }
@@ -70,8 +75,49 @@ const onlineSummary = computed(() => {
 })
 
 const selectedStage = computed(() => {
+  if (selectedStageKey.value === SPEECH_STAGE_KEY) {
+    return speechStage.value
+  }
   const stages = selectedTaskFlow.value?.stages || []
   return stages.find(stage => stage.key === selectedStageKey.value) || stages[0] || null
+})
+
+const flowTabs = computed(() => {
+  const stages = selectedTaskFlow.value?.stages || []
+  const tabs = []
+  let speechInserted = false
+  for (const stage of stages) {
+    if (SPEECH_STAGE_KEYS.includes(stage.key)) {
+      if (!speechInserted) {
+        tabs.push(speechStage.value)
+        speechInserted = true
+      }
+    } else {
+      tabs.push(stage)
+    }
+  }
+  return tabs
+})
+
+const speechStage = computed(() => {
+  const stages = selectedTaskFlow.value?.stages || []
+  const speechStages = stages.filter(stage => SPEECH_STAGE_KEYS.includes(stage.key))
+  const failed = speechStages.find(stage => stage.status === 'failed')
+  const running = speechStages.find(stage => stage.status === 'running')
+  const ready = speechStages.find(stage => stage.status === 'ready')
+  const pending = speechStages.find(stage => stage.status === 'pending')
+  const status = failed?.status || running?.status || ready?.status || pending?.status || 'success'
+  return {
+    key: SPEECH_STAGE_KEY,
+    label: stageNameText[SPEECH_STAGE_KEY],
+    status,
+    elapsedSeconds: speechStages.reduce((total, stage) => total + Number(stage.elapsedSeconds || 0), 0),
+    operator: speechStages.map(stage => stage.operator).filter(Boolean).join(' / '),
+    errorMessage: speechStages.map(stage => stage.errorMessage).filter(Boolean).join('\n'),
+    inputs: speechStages.flatMap(stage => stage.inputs || []),
+    outputs: speechStages.flatMap(stage => stage.outputs || []),
+    tables: speechStages.flatMap(stage => stage.tables || []),
+  }
 })
 
 async function loadTasks() {
@@ -299,8 +345,10 @@ function isTaskDeleteBusy(task) {
 async function openTaskFlow(task, stageKey = 'downloader') {
   if (!task?.taskId) return
   flowPageOpen.value = true
-  selectedStageKey.value = stageKey
+  selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
   selectedTaskFlow.value = null
+  activeAudioUrls.value = {}
+  audioRefs.value = {}
   await loadTaskFlow(task.taskId)
   if (flowTimer) window.clearInterval(flowTimer)
   flowTimer = window.setInterval(() => {
@@ -335,6 +383,8 @@ function closeTaskFlow() {
   flowPageOpen.value = false
   selectedTaskFlow.value = null
   flowError.value = ''
+  activeAudioUrls.value = {}
+  audioRefs.value = {}
   if (flowTimer) {
     window.clearInterval(flowTimer)
     flowTimer = null
@@ -351,6 +401,22 @@ function refreshTaskFlow() {
 function stageName(stageOrKey) {
   const key = typeof stageOrKey === 'string' ? stageOrKey : stageOrKey?.key
   return stageNameText[key] || key || ''
+}
+
+function setAudioRef(url, element) {
+  if (element) {
+    audioRefs.value[url] = element
+  }
+}
+
+async function playLazyAudio(asset) {
+  if (!asset?.url) return
+  activeAudioUrls.value = {
+    ...activeAudioUrls.value,
+    [asset.url]: asset.url,
+  }
+  await nextTick()
+  audioRefs.value[asset.url]?.play?.()
 }
 
 function failureDetails(node) {
@@ -580,6 +646,83 @@ function tableCellSummary(column, value) {
   return shortValue(value, 70)
 }
 
+function speechRows() {
+  const stages = selectedTaskFlow.value?.stages || []
+  const whisper = stages.find(stage => stage.key === 'whisper')
+  const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
+  const asrSegments = tableRows(whisper, 'yd_asr_segment')
+  const fixedAsr = asrSegments.filter(row => row.segment_type === 'fixed')
+  const rawAsr = asrSegments.filter(row => row.segment_type === 'raw')
+  const asrByIndex = rowsByIndex(fixedAsr.length ? fixedAsr : rawAsr)
+  const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
+  const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
+    .map(index => Number(index))
+    .filter(index => Number.isFinite(index))
+    .sort((left, right) => left - right)
+  return indexes.map(index => {
+    const asr = asrByIndex[index] || {}
+    const segment = speakerByIndex[index] || {}
+    return {
+      item_index: index,
+      start_time: segment.start_time ?? asr.start_time,
+      end_time: segment.end_time ?? asr.end_time,
+      asr_text: asr.text || '',
+      src_text: segment.src_text || '',
+      dst_text: segment.dst_text || '',
+      speaker: segment.speaker || asr.speaker || '',
+      status: segment.status || '',
+      attempt_count: segment.attempt_count ?? '',
+      speed_ratio: segment.speed_ratio ?? '',
+      reference_wav_url: segment.reference_wav_url || '',
+      tts_wav_url: segment.tts_wav_url || '',
+      error_message: segment.error_message || '',
+    }
+  })
+}
+
+function tableRows(stage, tableName) {
+  return stage?.tables?.find(table => table.name === tableName)?.rows || []
+}
+
+function rowsByIndex(rows) {
+  const byIndex = {}
+  for (const row of rows || []) {
+    const index = Number(row.item_index ?? row.index)
+    if (Number.isFinite(index)) {
+      byIndex[index] = row
+    }
+  }
+  return byIndex
+}
+
+function speechColumns() {
+  return [
+    'item_index',
+    'start_time',
+    'end_time',
+    'asr_text',
+    'src_text',
+    'dst_text',
+    'speaker',
+    'status',
+    'attempt_count',
+    'speed_ratio',
+    'reference_wav_url',
+    'tts_wav_url',
+    'error_message',
+  ]
+}
+
+function speechAudioAsset(row, column) {
+  const url = String(row?.[column] || '').trim()
+  if (!url) return null
+  return {
+    name: column,
+    kind: 'audio',
+    url,
+  }
+}
+
 function formatTimeline(value) {
   if (value === null || value === undefined || value === '') return '-'
   const totalMs = Math.max(0, Number(value || 0))
@@ -674,7 +817,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="page-shell">
+  <main :class="['page-shell', flowPageOpen ? 'flow-page-shell' : '']">
     <template v-if="!flowPageOpen">
     <header class="top-bar">
       <div>
@@ -909,10 +1052,10 @@ onUnmounted(() => {
 
           <nav class="flow-tabs" aria-label="阶段详情标签">
             <button
-              v-for="stage in selectedTaskFlow.stages"
+              v-for="stage in flowTabs"
               :key="stage.key"
               type="button"
-              :class="['flow-tab', selectedStageKey === stage.key ? 'flow-tab-active' : '']"
+              :class="['flow-tab', stage.key === SPEECH_STAGE_KEY ? 'flow-tab-wide' : '', selectedStageKey === stage.key ? 'flow-tab-active' : '']"
               @click="selectedStageKey = stage.key"
             >
               <span :class="['dot', stage.status === 'failed' ? 'dot-failed' : stage.status === 'success' ? 'dot-success' : stage.status === 'running' ? 'dot-running' : 'dot-muted']"></span>
@@ -937,7 +1080,49 @@ onUnmounted(() => {
 
             <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
 
-            <div v-if="stageMedia(selectedStage).length" class="flow-section">
+            <div v-if="selectedStageKey === SPEECH_STAGE_KEY" class="flow-section">
+              <h4>Whisper / Translator / Speaker Joined Rows</h4>
+              <div class="raw-table-scroll">
+                <table class="speech-table">
+                  <thead>
+                    <tr>
+                      <th v-for="column in speechColumns()" :key="column">{{ column }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="row in speechRows()" :key="row.item_index">
+                      <td v-for="column in speechColumns()" :key="column">
+                        <template v-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
+                          <button
+                            v-if="speechAudioAsset(row, column) && !activeAudioUrls[speechAudioAsset(row, column).url]"
+                            type="button"
+                            class="audio-play-button"
+                            @click="playLazyAudio(speechAudioAsset(row, column))"
+                          >
+                            Play
+                          </button>
+                          <audio
+                            v-else-if="speechAudioAsset(row, column)"
+                            :ref="element => setAudioRef(speechAudioAsset(row, column).url, element)"
+                            :src="activeAudioUrls[speechAudioAsset(row, column).url]"
+                            controls
+                            preload="none"
+                          ></audio>
+                          <span v-else>-</span>
+                        </template>
+                        <span v-else-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>
+                        <details v-else>
+                          <summary>{{ tableCellSummary(column, row[column]) }}</summary>
+                          <pre>{{ formatJson(row[column]) }}</pre>
+                        </details>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-if="selectedStageKey !== SPEECH_STAGE_KEY && stageMedia(selectedStage).length" class="flow-section">
               <h4>Media Preview</h4>
               <div class="media-grid">
                 <article v-for="asset in stageMedia(selectedStage)" :key="asset.url" class="media-item">
@@ -946,14 +1131,30 @@ onUnmounted(() => {
                     <a :href="asset.url" target="_blank" rel="noreferrer">打开</a>
                   </div>
                   <video v-if="asset.kind === 'video'" :src="asset.url" controls preload="metadata"></video>
-                  <audio v-else-if="asset.kind === 'audio'" :src="asset.url" controls preload="metadata"></audio>
+                  <template v-else-if="asset.kind === 'audio'">
+                    <button
+                      v-if="!activeAudioUrls[asset.url]"
+                      type="button"
+                      class="audio-play-button"
+                      @click="playLazyAudio(asset)"
+                    >
+                      Play
+                    </button>
+                    <audio
+                      v-else
+                      :ref="element => setAudioRef(asset.url, element)"
+                      :src="activeAudioUrls[asset.url]"
+                      controls
+                      preload="none"
+                    ></audio>
+                  </template>
                   <img v-else-if="asset.kind === 'image'" :src="asset.url" alt="" />
                   <p v-if="asset.objectName">{{ asset.objectName }}</p>
                 </article>
               </div>
             </div>
 
-            <div class="flow-section">
+            <div v-if="selectedStageKey !== SPEECH_STAGE_KEY" class="flow-section">
               <h4>Inputs / Outputs</h4>
               <div v-if="fieldRows(selectedStage).length" class="field-table">
                 <div class="field-row field-header">
@@ -976,7 +1177,7 @@ onUnmounted(() => {
               <p v-else class="flow-muted">No input or output fields.</p>
             </div>
 
-            <div class="flow-section">
+            <div v-if="selectedStageKey !== SPEECH_STAGE_KEY" class="flow-section">
               <h4>Database Rows</h4>
               <div v-if="selectedStage.tables?.length" class="table-stack">
                 <article v-for="table in selectedStage.tables" :key="table.name" class="raw-table">

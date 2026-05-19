@@ -41,6 +41,11 @@ a {
   padding: 28px 0 40px;
 }
 
+.flow-page-shell {
+  width: calc(100vw - 32px);
+  max-width: none;
+}
+
 .top-bar {
   display: flex;
   align-items: flex-end;
@@ -871,6 +876,7 @@ h1 {
   z-index: 1;
   display: flex;
   gap: 8px;
+  justify-content: space-between;
   overflow-x: auto;
   padding: 14px 20px;
   border-bottom: 1px solid #dde5ee;
@@ -882,12 +888,17 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  flex: 0 0 auto;
+  flex: 1 1 0;
   min-width: 88px;
   background: #ffffff;
   color: #243044;
   font-size: 13px;
   font-weight: 720;
+}
+
+.flow-tab-wide {
+  flex-grow: 2.6;
+  min-width: 260px;
 }
 
 .flow-tab-active {
@@ -985,6 +996,22 @@ h1 {
   width: 100%;
 }
 
+.audio-play-button {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 720;
+  padding: 0 12px;
+}
+
+.audio-play-button:hover {
+  background: #eef3f8;
+}
+
 .media-item video,
 .media-item img {
   display: block;
@@ -1078,6 +1105,10 @@ h1 {
   background: #ffffff;
 }
 
+.speech-table {
+  min-width: 1840px;
+}
+
 .raw-table th,
 .raw-table td {
   max-width: 320px;
@@ -1111,6 +1142,12 @@ h1 {
   max-height: 320px;
   margin: 8px 0 0;
   padding: 10px;
+}
+
+.raw-table audio,
+.speech-table audio {
+  width: 220px;
+  height: 34px;
 }
 
 @media (max-width: 920px) {
@@ -1416,6 +1453,10 @@ h1 {
     margin-right: -10px;
   }
 
+  .flow-page-shell {
+    width: 100%;
+  }
+
   .flow-header {
     flex-direction: column;
     padding: 14px 12px 12px;
@@ -1437,6 +1478,15 @@ h1 {
   .flow-tabs {
     top: 128px;
     padding: 12px;
+  }
+
+  .flow-tab {
+    flex-basis: auto;
+    min-width: 108px;
+  }
+
+  .flow-tab-wide {
+    min-width: 250px;
   }
 
   .flow-stage {
