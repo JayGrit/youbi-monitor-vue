@@ -20,6 +20,7 @@ const deleteTaskId = ref('')
 const openFailureKey = ref('')
 const selectedTaskFlow = ref(null)
 const selectedStageKey = ref('downloader')
+const flowPageOpen = ref(false)
 const flowLoading = ref(false)
 const flowError = ref('')
 let flowTimer = null
@@ -34,6 +35,16 @@ const statusText = {
   success: '成功',
   failed: '失败',
   skipped: '跳过',
+}
+
+const stageNameText = {
+  downloader: 'Downloader',
+  demucs: 'Demucs',
+  whisper: 'Whisper',
+  translator: 'Translator',
+  speaker: 'Speaker',
+  combiner: 'Combiner',
+  uploader: 'Uploader',
 }
 
 const summary = computed(() => {
@@ -287,6 +298,7 @@ function isTaskDeleteBusy(task) {
 
 async function openTaskFlow(task, stageKey = 'downloader') {
   if (!task?.taskId) return
+  flowPageOpen.value = true
   selectedStageKey.value = stageKey
   selectedTaskFlow.value = null
   await loadTaskFlow(task.taskId)
@@ -320,6 +332,7 @@ async function loadTaskFlow(taskId, quiet = false) {
 }
 
 function closeTaskFlow() {
+  flowPageOpen.value = false
   selectedTaskFlow.value = null
   flowError.value = ''
   if (flowTimer) {
@@ -333,6 +346,11 @@ function refreshTaskFlow() {
   if (taskId) {
     loadTaskFlow(taskId)
   }
+}
+
+function stageName(stageOrKey) {
+  const key = typeof stageOrKey === 'string' ? stageOrKey : stageOrKey?.key
+  return stageNameText[key] || key || ''
 }
 
 function failureDetails(node) {
@@ -451,7 +469,7 @@ function formatLastSeen(device) {
 
 function nodeTitle(node) {
   const parts = [
-    node.label,
+    stageName(node),
     statusText[node.status] || node.status,
   ]
   const progress = nodeProgress(node)
@@ -479,6 +497,10 @@ function flowTaskTitle(flow) {
 
 function flowCoverUrl(flow) {
   return flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || ''
+}
+
+function flowSourceUrl(flow) {
+  return flow?.task?.source_url || flow?.videoInfo?.source_url || flow?.videoInfo?.source_webpage_url || ''
 }
 
 function fieldValueText(value) {
@@ -520,18 +542,51 @@ function looksJson(value) {
   return (text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))
 }
 
-function tableColumns(rows) {
+function tableColumns(table) {
   const columns = []
   const seen = new Set()
-  for (const row of rows || []) {
+  for (const row of table?.rows || []) {
     for (const key of Object.keys(row || {})) {
-      if (!seen.has(key)) {
+      if (!seen.has(key) && !hiddenColumn(key)) {
         seen.add(key)
         columns.push(key)
       }
     }
   }
-  return columns
+  return columns.sort((left, right) => columnRank(left) - columnRank(right))
+}
+
+function hiddenColumn(column) {
+  return ['created_at', 'updated_at', 'words_json'].includes(column)
+}
+
+function columnRank(column) {
+  if (column === 'item_index' || column === 'index') return -20
+  if (column === 'id') return -10
+  return 0
+}
+
+function tableCellText(column, value) {
+  if (['start_time', 'end_time', 'actual_start_time', 'actual_end_time'].includes(column)) {
+    return formatTimeline(value)
+  }
+  return shortValue(value, 90)
+}
+
+function tableCellSummary(column, value) {
+  if (['start_time', 'end_time', 'actual_start_time', 'actual_end_time'].includes(column)) {
+    return formatTimeline(value)
+  }
+  return shortValue(value, 70)
+}
+
+function formatTimeline(value) {
+  if (value === null || value === undefined || value === '') return '-'
+  const totalMs = Math.max(0, Number(value || 0))
+  if (!Number.isFinite(totalMs)) return String(value)
+  const minutes = Math.floor(totalMs / 60000)
+  const seconds = (totalMs % 60000) / 1000
+  return `${minutes}:${seconds.toFixed(3).padStart(6, '0')}`
 }
 
 function stageMedia(stage) {
@@ -589,8 +644,8 @@ function kindForName(name) {
 
 function fieldRows(stage) {
   return [
-    ...(stage?.inputs || []).map(field => ({ ...field, direction: '入参' })),
-    ...(stage?.outputs || []).map(field => ({ ...field, direction: '出参' })),
+    ...(stage?.inputs || []).map(field => ({ ...field, direction: 'Input' })),
+    ...(stage?.outputs || []).map(field => ({ ...field, direction: 'Output' })),
   ]
 }
 
@@ -620,6 +675,7 @@ onUnmounted(() => {
 
 <template>
   <main class="page-shell">
+    <template v-if="!flowPageOpen">
     <header class="top-bar">
       <div>
         <h1>视频生成监控</h1>
@@ -784,7 +840,7 @@ onUnmounted(() => {
               :title="`${nodeTitle(node)}\n点击查看任务流详情`"
               @click="openTaskFlow(task, node.key)"
             >
-              <span class="stage-label">{{ node.label }}</span>
+              <span class="stage-label">{{ stageName(node) }}</span>
               <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
               <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
             </button>
@@ -802,16 +858,17 @@ onUnmounted(() => {
           class="failure-panel"
         >
           <div class="failure-panel-head">
-            <strong>{{ node.label }}失败原因</strong>
+            <strong>{{ stageName(node) }}失败原因</strong>
             <button type="button" @click="openFailureKey = ''">收起</button>
           </div>
           <pre>{{ failureDetails(node) }}</pre>
         </div>
       </article>
     </section>
+    </template>
 
-    <div v-if="selectedTaskFlow || flowLoading || flowError" class="flow-overlay" @click.self="closeTaskFlow">
-      <aside class="flow-drawer" aria-label="任务流详情">
+    <template v-else>
+      <section class="flow-page" aria-label="任务流详情">
         <header class="flow-header">
           <div>
             <h2>{{ flowTaskTitle(selectedTaskFlow) }}</h2>
@@ -821,26 +878,26 @@ onUnmounted(() => {
                 · {{ statusText[selectedTaskFlow.task.status] || selectedTaskFlow.task.status }}
               </template>
               <template v-if="selectedTaskFlow?.task?.current_stage">
-                · 当前 {{ selectedTaskFlow.task.current_stage }}
+                · current {{ selectedTaskFlow.task.current_stage }}
               </template>
             </p>
           </div>
           <div class="flow-actions">
             <button type="button" :disabled="flowLoading" @click="refreshTaskFlow">
-              {{ flowLoading ? '刷新中' : '刷新' }}
+              {{ flowLoading ? 'Refreshing' : 'Refresh' }}
             </button>
-            <button type="button" @click="closeTaskFlow">关闭</button>
+            <button type="button" @click="closeTaskFlow">Back</button>
           </div>
         </header>
 
-        <div v-if="flowError" class="flow-error">任务流接口异常：{{ flowError }}</div>
-        <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">正在加载任务流</div>
+        <div v-if="flowError" class="flow-error">Task flow API error: {{ flowError }}</div>
+        <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">Loading task flow</div>
         <template v-else-if="selectedTaskFlow">
           <div class="flow-summary">
             <a
-              v-if="selectedTaskFlow.task.source_url"
+              v-if="flowSourceUrl(selectedTaskFlow)"
               class="source-cover-link"
-              :href="selectedTaskFlow.task.source_url"
+              :href="flowSourceUrl(selectedTaskFlow)"
               target="_blank"
               rel="noreferrer"
               title="打开原视频"
@@ -859,14 +916,14 @@ onUnmounted(() => {
               @click="selectedStageKey = stage.key"
             >
               <span :class="['dot', stage.status === 'failed' ? 'dot-failed' : stage.status === 'success' ? 'dot-success' : stage.status === 'running' ? 'dot-running' : 'dot-muted']"></span>
-              <span>{{ stage.label }}</span>
+              <span>{{ stageName(stage) }}</span>
             </button>
           </nav>
 
           <section v-if="selectedStage" class="flow-stage">
             <div class="flow-stage-head">
               <div>
-                <h3>{{ selectedStage.label }}</h3>
+                <h3>{{ stageName(selectedStage) }}</h3>
                 <p>
                   {{ statusText[selectedStage.status] || selectedStage.status }}
                   · 耗时 {{ formatDuration(selectedStage.elapsedSeconds) }}
@@ -881,7 +938,7 @@ onUnmounted(() => {
             <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
 
             <div v-if="stageMedia(selectedStage).length" class="flow-section">
-              <h4>媒体预览</h4>
+              <h4>Media Preview</h4>
               <div class="media-grid">
                 <article v-for="asset in stageMedia(selectedStage)" :key="asset.url" class="media-item">
                   <div class="media-title">
@@ -897,12 +954,12 @@ onUnmounted(() => {
             </div>
 
             <div class="flow-section">
-              <h4>入参 / 出参</h4>
+              <h4>Inputs / Outputs</h4>
               <div v-if="fieldRows(selectedStage).length" class="field-table">
                 <div class="field-row field-header">
-                  <span>类型</span>
-                  <span>字段</span>
-                  <span>值</span>
+                  <span>Type</span>
+                  <span>Field</span>
+                  <span>Value</span>
                 </div>
                 <div v-for="field in fieldRows(selectedStage)" :key="`${field.direction}-${field.name}`" class="field-row">
                   <strong>{{ field.direction }}</strong>
@@ -916,30 +973,30 @@ onUnmounted(() => {
                   <pre v-if="isLongValue(field.value)" class="field-long">{{ formatJson(field.value) }}</pre>
                 </div>
               </div>
-              <p v-else class="flow-muted">暂无入参或出参字段</p>
+              <p v-else class="flow-muted">No input or output fields.</p>
             </div>
 
             <div class="flow-section">
-              <h4>数据库记录</h4>
+              <h4>Database Rows</h4>
               <div v-if="selectedStage.tables?.length" class="table-stack">
                 <article v-for="table in selectedStage.tables" :key="table.name" class="raw-table">
                   <div class="raw-table-head">
                     <strong>{{ table.name }}</strong>
-                    <span>{{ table.rows.length }} 行<template v-if="table.truncated">，已截断</template></span>
+                    <span>{{ table.rows.length }} rows<template v-if="table.truncated">, truncated</template></span>
                   </div>
                   <div class="raw-table-scroll">
                     <table>
                       <thead>
                         <tr>
-                          <th v-for="column in tableColumns(table.rows)" :key="column">{{ column }}</th>
+                          <th v-for="column in tableColumns(table)" :key="column">{{ column }}</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="(row, rowIndex) in table.rows" :key="row.id || row.task_id || rowIndex">
-                          <td v-for="column in tableColumns(table.rows)" :key="column">
-                            <span v-if="!isLongValue(row[column])">{{ shortValue(row[column], 90) }}</span>
+                          <td v-for="column in tableColumns(table)" :key="column">
+                            <span v-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>
                             <details v-else>
-                              <summary>{{ shortValue(row[column], 70) }}</summary>
+                              <summary>{{ tableCellSummary(column, row[column]) }}</summary>
                               <pre>{{ formatJson(row[column]) }}</pre>
                             </details>
                           </td>
@@ -949,28 +1006,11 @@ onUnmounted(() => {
                   </div>
                 </article>
               </div>
-              <p v-else class="flow-muted">暂无数据库记录</p>
-            </div>
-
-            <div v-if="selectedTaskFlow.minioObjects?.length" class="flow-section">
-              <h4>任务 MinIO 对象</h4>
-              <div class="object-list">
-                <a
-                  v-for="asset in selectedTaskFlow.minioObjects"
-                  :key="asset.objectName"
-                  :href="asset.url || undefined"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <span>{{ asset.stage || '-' }}</span>
-                  <strong>{{ asset.objectName }}</strong>
-                  <em>{{ asset.kind }}</em>
-                </a>
-              </div>
+              <p v-else class="flow-muted">No database rows.</p>
             </div>
           </section>
         </template>
-      </aside>
-    </div>
+      </section>
+    </template>
   </main>
 </template>

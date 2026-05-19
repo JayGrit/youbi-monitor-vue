@@ -745,22 +745,12 @@ h1 {
   white-space: pre-wrap;
 }
 
-.flow-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  justify-content: flex-end;
-  background: rgb(15 23 42 / 0.28);
-}
-
-.flow-drawer {
-  width: min(1120px, 100vw);
-  height: 100vh;
-  overflow: auto;
+.flow-page {
+  min-height: calc(100vh - 68px);
   background: #f8fafc;
-  border-left: 1px solid #cfd8e3;
-  box-shadow: -18px 0 40px rgb(15 23 42 / 0.18);
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .flow-header {
@@ -1123,39 +1113,6 @@ h1 {
   padding: 10px;
 }
 
-.object-list {
-  display: grid;
-  gap: 6px;
-}
-
-.object-list a {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) 64px;
-  gap: 10px;
-  align-items: center;
-  min-height: 34px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
-  padding: 0 10px;
-  color: #344156;
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.object-list strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.object-list span,
-.object-list em {
-  color: #65758a;
-  font-style: normal;
-}
-
 @media (max-width: 920px) {
   .page-shell {
     width: min(100vw - 20px, 920px);
@@ -1451,9 +1408,12 @@ h1 {
     font-size: 11px;
   }
 
-  .flow-drawer {
-    width: 100vw;
+  .flow-page {
     border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+    margin-left: -10px;
+    margin-right: -10px;
   }
 
   .flow-header {
@@ -1511,9 +1471,6 @@ h1 {
     grid-column: 1 / -1;
   }
 
-  .object-list a {
-    grid-template-columns: 70px minmax(0, 1fr) 52px;
-  }
 }
 
 @media (max-width: 380px) {
