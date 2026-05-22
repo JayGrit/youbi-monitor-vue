@@ -80,6 +80,16 @@ const stageNameText = {
   uploader: 'Uploader',
 }
 
+async function readJsonResponse(response) {
+  const text = await response.text()
+  try {
+    return text ? JSON.parse(text) : null
+  } catch (err) {
+    const preview = text.replace(/\s+/g, ' ').trim().slice(0, 180)
+    throw new Error(preview || `HTTP ${response.status}`)
+  }
+}
+
 const summary = computed(() => {
   const counts = { running: 0, failed: 0, success: 0, total: tasks.value.length }
   for (const task of tasks.value) {
@@ -460,7 +470,7 @@ async function startDouyinQrLogin(row) {
     const key = row?.accountKey || '_auto'
     douyinBusyKey.value = rowKey(row)
     const response = await fetch(`${apiBase}/douyin/account/qrcode?accountKey=${encodeURIComponent(key)}`, { method: 'POST' })
-    const payload = await response.json()
+    const payload = await readJsonResponse(response)
     if (!response.ok) {
       throw new Error(payload.message || `HTTP ${response.status}`)
     }
@@ -488,7 +498,7 @@ async function refreshDouyinQrCode() {
     const response = await fetch(`${apiBase}/douyin/account/${encodeURIComponent(key)}/qrcode/${encodeURIComponent(douyinQrCode.value.authCode)}/poll`, {
       method: 'POST',
     })
-    const payload = await response.json()
+    const payload = await readJsonResponse(response)
     if (!response.ok) {
       throw new Error(payload.message || `HTTP ${response.status}`)
     }
@@ -517,7 +527,7 @@ async function refreshDouyinRow(row) {
   if (!row?.accountKey) return
   try {
     const response = await fetch(`${apiBase}/douyin/account?accountKey=${encodeURIComponent(row.accountKey)}`)
-    const account = await response.json()
+    const account = await readJsonResponse(response)
     if (!response.ok) {
       throw new Error(account.message || `HTTP ${response.status}`)
     }
@@ -539,7 +549,7 @@ async function saveDouyinKey(row) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newAccountKey: nextKey }),
     })
-    const payload = await response.json()
+    const payload = await readJsonResponse(response)
     if (!response.ok) {
       throw new Error(payload.message || `HTTP ${response.status}`)
     }
