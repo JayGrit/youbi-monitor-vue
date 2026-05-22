@@ -90,6 +90,12 @@ async function readJsonResponse(response) {
   }
 }
 
+async function throwApiError(response) {
+  const payload = await readJsonResponse(response)
+  const message = payload?.message || payload?.detail || payload?.error || payload?.title
+  throw new Error(message ? `${message} (HTTP ${response.status})` : `HTTP ${response.status}`)
+}
+
 const summary = computed(() => {
   const counts = { running: 0, failed: 0, success: 0, total: tasks.value.length }
   for (const task of tasks.value) {
@@ -569,7 +575,7 @@ async function markTaskReady(task) {
       method: 'POST',
     })
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      await throwApiError(response)
     }
     task.status = 'ready'
     task.errorMessage = ''
@@ -595,7 +601,7 @@ async function stopTask(task) {
       method: 'POST',
     })
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      await throwApiError(response)
     }
     task.status = 'failed'
     task.errorMessage = '手动停止任务'
@@ -621,7 +627,7 @@ async function restartTask(task) {
       method: 'POST',
     })
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      await throwApiError(response)
     }
     task.status = 'ready'
     task.currentStage = 'downloader'
@@ -648,12 +654,13 @@ async function deleteTask(task) {
       method: 'DELETE',
     })
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+      await throwApiError(response)
     }
     tasks.value = tasks.value.filter(item => item.taskId !== task.taskId)
     await loadTasks()
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
+    window.alert(`删除失败：${error.value}`)
   } finally {
     deleteTaskId.value = ''
   }
