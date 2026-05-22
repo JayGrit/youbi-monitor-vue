@@ -473,6 +473,48 @@ h1 {
   gap: 10px;
 }
 
+.task-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.task-filter-button {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344156;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+}
+
+.task-filter-button strong {
+  min-width: 24px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #536277;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.task-filter-button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.task-filter-button.active strong {
+  background: #2563eb;
+  color: #ffffff;
+}
+
 .empty-state,
 .task-row {
   border: 1px solid #dde5ee;
@@ -1304,6 +1346,17 @@ h1 {
   .summary-strip span {
     min-width: 0;
     padding: 8px 9px;
+  }
+
+  .task-filter-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .task-filter-button {
+    justify-content: space-between;
+    min-width: 0;
   }
 
   .status-line {

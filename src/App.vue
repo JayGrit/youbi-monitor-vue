@@ -22,10 +22,18 @@ const xiaohongshuError = ref('')
 const xiaohongshuQrCode = ref(null)
 const xiaohongshuQrMessage = ref('')
 const xiaohongshuBusyKey = ref('')
+const douyinAccount = ref(null)
+const douyinAccounts = ref([])
+const douyinRows = ref(accountRows([]))
+const douyinError = ref('')
+const douyinQrCode = ref(null)
+const douyinQrMessage = ref('')
+const douyinBusyKey = ref('')
 const readyTaskId = ref('')
 const stopTaskId = ref('')
 const restartTaskId = ref('')
 const deleteTaskId = ref('')
+const taskStatusFilter = ref('all')
 const openFailureKey = ref('')
 const selectedTaskFlow = ref(null)
 const selectedStageKey = ref('downloader')
@@ -38,6 +46,7 @@ let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
 let xiaohongshuQrTimer = null
+let douyinQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
 const SPEECH_STAGE_KEY = 'speech'
 const SPEECH_STAGE_KEYS = ['whisper', 'translator', 'speaker']
@@ -50,6 +59,15 @@ const statusText = {
   failed: '失败',
   skipped: '跳过',
 }
+
+const taskStatusFilters = [
+  { key: 'all', label: '全部' },
+  { key: 'success', label: '已完成' },
+  { key: 'unfinished', label: '未完成' },
+  { key: 'running', label: '执行中' },
+  { key: 'failed', label: '已失败' },
+  { key: 'ready', label: '排队中' },
+]
 
 const stageNameText = {
   downloader: 'Downloader',
@@ -70,6 +88,35 @@ const summary = computed(() => {
     if (task.status === 'success') counts.success += 1
   }
   return counts
+})
+
+const taskFilterCounts = computed(() => {
+  const counts = {
+    all: tasks.value.length,
+    success: 0,
+    unfinished: 0,
+    running: 0,
+    failed: 0,
+    ready: 0,
+  }
+  for (const task of tasks.value) {
+    if (task.status === 'success') counts.success += 1
+    if (task.status !== 'success' && task.status !== 'failed') counts.unfinished += 1
+    if (task.status === 'running') counts.running += 1
+    if (task.status === 'failed') counts.failed += 1
+    if (task.status === 'ready') counts.ready += 1
+  }
+  return counts
+})
+
+const filteredTasks = computed(() => {
+  if (taskStatusFilter.value === 'all') {
+    return tasks.value
+  }
+  if (taskStatusFilter.value === 'unfinished') {
+    return tasks.value.filter(task => task.status !== 'success' && task.status !== 'failed')
+  }
+  return tasks.value.filter(task => task.status === taskStatusFilter.value)
 })
 
 const onlineSummary = computed(() => {
@@ -159,7 +206,7 @@ async function loadBiliupStatus() {
 }
 
 async function loadAccountPage() {
-  await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus()])
+  await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus(), loadDouyinStatus()])
 }
 
 async function loadBilibiliAccounts() {
@@ -188,6 +235,25 @@ async function loadXiaohongshuAccounts() {
   }
   xiaohongshuAccounts.value = await response.json()
   xiaohongshuRows.value = accountRows(xiaohongshuAccounts.value)
+}
+
+async function loadDouyinStatus() {
+  try {
+    await loadDouyinAccounts()
+    douyinAccount.value = douyinRows.value.find(row => row.accountKey) || douyinRows.value[0]
+    douyinError.value = ''
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function loadDouyinAccounts() {
+  const response = await fetch(`${apiBase}/douyin/accounts`)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  douyinAccounts.value = await response.json()
+  douyinRows.value = accountRows(douyinAccounts.value)
 }
 
 async function startBilibiliQrLogin(row) {
@@ -386,6 +452,102 @@ async function saveXiaohongshuKey(row) {
     xiaohongshuError.value = ''
   } catch (err) {
     xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function startDouyinQrLogin(row) {
+  try {
+    const key = row?.accountKey || '_auto'
+    douyinBusyKey.value = rowKey(row)
+    const response = await fetch(`${apiBase}/douyin/account/qrcode?accountKey=${encodeURIComponent(key)}`, { method: 'POST' })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    douyinQrCode.value = payload
+    douyinQrMessage.value = '等待扫码确认'
+    pollDouyinQrCode()
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    douyinBusyKey.value = ''
+  }
+}
+
+async function pollDouyinQrCode() {
+  if (!douyinQrCode.value?.authCode) return
+  if (douyinQrTimer) window.clearInterval(douyinQrTimer)
+  await refreshDouyinQrCode()
+  douyinQrTimer = window.setInterval(refreshDouyinQrCode, 1500)
+}
+
+async function refreshDouyinQrCode() {
+  if (!douyinQrCode.value?.authCode) return
+  try {
+    const key = douyinQrCode.value.accountKey || '_auto'
+    const response = await fetch(`${apiBase}/douyin/account/${encodeURIComponent(key)}/qrcode/${encodeURIComponent(douyinQrCode.value.authCode)}/poll`, {
+      method: 'POST',
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    douyinQrMessage.value = payload.message || '等待扫码确认'
+    if (payload.code === 'expired') {
+      if (douyinQrTimer) {
+        window.clearInterval(douyinQrTimer)
+        douyinQrTimer = null
+      }
+    }
+    if (payload.loggedIn) {
+      douyinAccount.value = payload.account
+      await loadDouyinAccounts()
+      douyinQrCode.value = null
+      if (douyinQrTimer) {
+        window.clearInterval(douyinQrTimer)
+        douyinQrTimer = null
+      }
+    }
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function refreshDouyinRow(row) {
+  if (!row?.accountKey) return
+  try {
+    const response = await fetch(`${apiBase}/douyin/account?accountKey=${encodeURIComponent(row.accountKey)}`)
+    const account = await response.json()
+    if (!response.ok) {
+      throw new Error(account.message || `HTTP ${response.status}`)
+    }
+    mergeDouyinRow(account)
+    douyinAccount.value = account
+    douyinError.value = ''
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function saveDouyinKey(row) {
+  if (!row?.accountKey) return
+  const nextKey = (row.draftKey || '').trim()
+  if (!nextKey || nextKey === row.accountKey) return
+  try {
+    const response = await fetch(`${apiBase}/douyin/account/${encodeURIComponent(row.accountKey)}/key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newAccountKey: nextKey }),
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    mergeDouyinRow(payload, row.slot)
+    await loadDouyinAccounts()
+    douyinError.value = ''
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
   }
 }
 
@@ -643,6 +805,26 @@ function mergeXiaohongshuRow(account, preferredSlot) {
     draftKey: account.accountKey || '',
   }
   xiaohongshuRows.value = accountRows(rows.filter(row => row.accountKey))
+}
+
+function mergeDouyinRow(account, preferredSlot) {
+  const rows = [...douyinRows.value]
+  let index = rows.findIndex(row => row.accountKey === account.accountKey)
+  if (index < 0 && preferredSlot) {
+    index = rows.findIndex(row => row.slot === preferredSlot)
+  }
+  if (index < 0) {
+    index = rows.findIndex(row => !row.accountKey)
+  }
+  if (index < 0) {
+    index = 0
+  }
+  rows[index] = {
+    ...account,
+    slot: rows[index]?.slot || index + 1,
+    draftKey: account.accountKey || '',
+  }
+  douyinRows.value = accountRows(rows.filter(row => row.accountKey))
 }
 
 function rowKey(row) {
@@ -1031,6 +1213,9 @@ onUnmounted(() => {
   if (xiaohongshuQrTimer) {
     window.clearInterval(xiaohongshuQrTimer)
   }
+  if (douyinQrTimer) {
+    window.clearInterval(douyinQrTimer)
+  }
   if (flowTimer) {
     window.clearInterval(flowTimer)
   }
@@ -1097,11 +1282,27 @@ onUnmounted(() => {
     </section>
 
     <section class="task-list" aria-label="任务列表">
+      <div class="task-filter-bar" aria-label="任务状态筛选">
+        <button
+          v-for="filter in taskStatusFilters"
+          :key="filter.key"
+          type="button"
+          :class="['task-filter-button', { active: taskStatusFilter === filter.key }]"
+          @click="taskStatusFilter = filter.key"
+        >
+          <span>{{ filter.label }}</span>
+          <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
+        </button>
+      </div>
+
       <div v-if="!loading && tasks.length === 0" class="empty-state">
         暂无任务
       </div>
+      <div v-else-if="!loading && filteredTasks.length === 0" class="empty-state">
+        当前筛选下暂无任务
+      </div>
 
-      <article v-for="task in tasks" :key="task.taskId" class="task-row">
+      <article v-for="task in filteredTasks" :key="task.taskId" class="task-row">
         <div class="task-meta">
           <div class="task-title-row">
             <h2>
@@ -1299,6 +1500,52 @@ onUnmounted(() => {
           </div>
 
           <p v-if="xiaohongshuError" class="inline-error">{{ xiaohongshuError }}</p>
+        </section>
+
+        <section class="biliup-panel" aria-label="抖音账号管理">
+          <div class="biliup-head">
+            <div>
+              <h2>抖音账号</h2>
+              <p v-if="douyinAccount">已保存 {{ douyinAccounts.length }} 个账号</p>
+              <p v-else>{{ douyinError ? `抖音账号异常：${douyinError}` : '正在检测抖音账号' }}</p>
+            </div>
+            <div class="biliup-actions">
+              <button type="button" @click="loadDouyinStatus">刷新状态</button>
+            </div>
+          </div>
+
+          <div class="account-table" aria-label="抖音账号表">
+            <div class="account-row account-header">
+              <span>槽位</span>
+              <span>Key</span>
+              <span>账号</span>
+              <span>状态</span>
+              <span>操作</span>
+            </div>
+            <div v-for="row in douyinRows" :key="row.slot" class="account-row">
+              <strong>{{ row.slot }}</strong>
+              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
+              <span>{{ accountDisplay(row, 'douyin') }}</span>
+              <span>{{ rowStatus(row) }}</span>
+              <span class="account-actions">
+                <button type="button" @click="startDouyinQrLogin(row)">
+                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
+                </button>
+                <button type="button" :disabled="!row.accountKey" @click="refreshDouyinRow(row)">刷新</button>
+                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveDouyinKey(row)">保存Key</button>
+              </span>
+            </div>
+          </div>
+
+          <div v-if="douyinQrCode" class="bilibili-login">
+            <img :src="douyinQrCode.imageDataUrl" alt="抖音登录二维码" />
+            <div>
+              <strong>{{ douyinQrMessage }}</strong>
+              <span>请用抖音 App 扫码并确认登录</span>
+            </div>
+          </div>
+
+          <p v-if="douyinError" class="inline-error">{{ douyinError }}</p>
         </section>
       </section>
     </template>
