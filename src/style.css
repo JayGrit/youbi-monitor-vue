@@ -72,6 +72,29 @@ h1 {
   font-size: 14px;
 }
 
+.page-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.page-tabs button {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344156;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.page-tabs button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .summary-strip {
   display: flex;
   align-items: center;
@@ -112,6 +135,12 @@ h1 {
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 14px;
+}
+
+.account-page {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 
 .heartbeat-panel {

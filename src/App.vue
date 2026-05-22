@@ -6,6 +6,7 @@ const serviceHeartbeats = ref([])
 const serverTime = ref('')
 const loading = ref(true)
 const error = ref('')
+const activePage = ref('monitor')
 const bilibiliAccount = ref(null)
 const bilibiliAccounts = ref([])
 const bilibiliRows = ref(accountRows([]))
@@ -14,6 +15,13 @@ const bilibiliQrCode = ref(null)
 const bilibiliQrMessage = ref('')
 const bilibiliRenewing = ref(false)
 const bilibiliBusyKey = ref('')
+const xiaohongshuAccount = ref(null)
+const xiaohongshuAccounts = ref([])
+const xiaohongshuRows = ref(accountRows([]))
+const xiaohongshuError = ref('')
+const xiaohongshuQrCode = ref(null)
+const xiaohongshuQrMessage = ref('')
+const xiaohongshuBusyKey = ref('')
 const readyTaskId = ref('')
 const stopTaskId = ref('')
 const restartTaskId = ref('')
@@ -29,6 +37,7 @@ const audioRefs = ref({})
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
+let xiaohongshuQrTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
 const SPEECH_STAGE_KEY = 'speech'
 const SPEECH_STAGE_KEYS = ['whisper', 'translator', 'speaker']
@@ -149,6 +158,10 @@ async function loadBiliupStatus() {
   }
 }
 
+async function loadAccountPage() {
+  await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus()])
+}
+
 async function loadBilibiliAccounts() {
   const response = await fetch(`${apiBase}/bilibili/accounts`)
   if (!response.ok) {
@@ -156,6 +169,25 @@ async function loadBilibiliAccounts() {
   }
   bilibiliAccounts.value = await response.json()
   bilibiliRows.value = accountRows(bilibiliAccounts.value)
+}
+
+async function loadXiaohongshuStatus() {
+  try {
+    await loadXiaohongshuAccounts()
+    xiaohongshuAccount.value = xiaohongshuRows.value.find(row => row.accountKey) || xiaohongshuRows.value[0]
+    xiaohongshuError.value = ''
+  } catch (err) {
+    xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function loadXiaohongshuAccounts() {
+  const response = await fetch(`${apiBase}/xiaohongshu/accounts`)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  xiaohongshuAccounts.value = await response.json()
+  xiaohongshuRows.value = accountRows(xiaohongshuAccounts.value)
 }
 
 async function startBilibiliQrLogin(row) {
@@ -264,6 +296,96 @@ async function saveBilibiliKey(row) {
     bilibiliError.value = ''
   } catch (err) {
     bilibiliError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function startXiaohongshuQrLogin(row) {
+  try {
+    const key = row?.accountKey || '_auto'
+    xiaohongshuBusyKey.value = rowKey(row)
+    const response = await fetch(`${apiBase}/xiaohongshu/account/qrcode?accountKey=${encodeURIComponent(key)}`, { method: 'POST' })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    xiaohongshuQrCode.value = payload
+    xiaohongshuQrMessage.value = '等待扫码确认'
+    pollXiaohongshuQrCode()
+  } catch (err) {
+    xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    xiaohongshuBusyKey.value = ''
+  }
+}
+
+async function pollXiaohongshuQrCode() {
+  if (!xiaohongshuQrCode.value?.authCode) return
+  if (xiaohongshuQrTimer) window.clearInterval(xiaohongshuQrTimer)
+  await refreshXiaohongshuQrCode()
+  xiaohongshuQrTimer = window.setInterval(refreshXiaohongshuQrCode, 1500)
+}
+
+async function refreshXiaohongshuQrCode() {
+  if (!xiaohongshuQrCode.value?.authCode) return
+  try {
+    const key = xiaohongshuQrCode.value.accountKey || '_auto'
+    const response = await fetch(`${apiBase}/xiaohongshu/account/${encodeURIComponent(key)}/qrcode/${encodeURIComponent(xiaohongshuQrCode.value.authCode)}/poll`, {
+      method: 'POST',
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    xiaohongshuQrMessage.value = payload.message || '等待扫码确认'
+    if (payload.loggedIn) {
+      xiaohongshuAccount.value = payload.account
+      await loadXiaohongshuAccounts()
+      xiaohongshuQrCode.value = null
+      if (xiaohongshuQrTimer) {
+        window.clearInterval(xiaohongshuQrTimer)
+        xiaohongshuQrTimer = null
+      }
+    }
+  } catch (err) {
+    xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function refreshXiaohongshuRow(row) {
+  if (!row?.accountKey) return
+  try {
+    const response = await fetch(`${apiBase}/xiaohongshu/account?accountKey=${encodeURIComponent(row.accountKey)}`)
+    const account = await response.json()
+    if (!response.ok) {
+      throw new Error(account.message || `HTTP ${response.status}`)
+    }
+    mergeXiaohongshuRow(account)
+    xiaohongshuAccount.value = account
+    xiaohongshuError.value = ''
+  } catch (err) {
+    xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function saveXiaohongshuKey(row) {
+  if (!row?.accountKey) return
+  const nextKey = (row.draftKey || '').trim()
+  if (!nextKey || nextKey === row.accountKey) return
+  try {
+    const response = await fetch(`${apiBase}/xiaohongshu/account/${encodeURIComponent(row.accountKey)}/key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newAccountKey: nextKey }),
+    })
+    const payload = await response.json()
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    mergeXiaohongshuRow(payload, row.slot)
+    await loadXiaohongshuAccounts()
+    xiaohongshuError.value = ''
+  } catch (err) {
+    xiaohongshuError.value = err instanceof Error ? err.message : String(err)
   }
 }
 
@@ -503,6 +625,26 @@ function mergeAccountRow(account, preferredSlot) {
   bilibiliRows.value = accountRows(rows.filter(row => row.accountKey))
 }
 
+function mergeXiaohongshuRow(account, preferredSlot) {
+  const rows = [...xiaohongshuRows.value]
+  let index = rows.findIndex(row => row.accountKey === account.accountKey)
+  if (index < 0 && preferredSlot) {
+    index = rows.findIndex(row => row.slot === preferredSlot)
+  }
+  if (index < 0) {
+    index = rows.findIndex(row => !row.accountKey)
+  }
+  if (index < 0) {
+    index = 0
+  }
+  rows[index] = {
+    ...account,
+    slot: rows[index]?.slot || index + 1,
+    draftKey: account.accountKey || '',
+  }
+  xiaohongshuRows.value = accountRows(rows.filter(row => row.accountKey))
+}
+
 function rowKey(row) {
   return row?.accountKey || `slot_${row?.slot || 0}`
 }
@@ -512,6 +654,14 @@ function rowStatus(row) {
   if (row.valid === true) return '已登录'
   if (row.valid === false) return '未登录'
   return row.message || '已保存'
+}
+
+function accountDisplay(row, platform) {
+  if (!row.accountKey) return '-'
+  if (platform === 'bilibili') {
+    return `${row.uname || '-'}${row.mid ? ` · UID ${row.mid}` : ''}`
+  }
+  return `${row.nickname || '-'}${row.userId ? ` · ${row.userId}` : ''}`
 }
 
 function formatDuration(seconds) {
@@ -867,7 +1017,7 @@ function qrImageUrl(url) {
 
 onMounted(() => {
   loadTasks()
-  loadBiliupStatus()
+  loadAccountPage()
   timer = window.setInterval(loadTasks, 2000)
 })
 
@@ -877,6 +1027,9 @@ onUnmounted(() => {
   }
   if (bilibiliQrTimer) {
     window.clearInterval(bilibiliQrTimer)
+  }
+  if (xiaohongshuQrTimer) {
+    window.clearInterval(xiaohongshuQrTimer)
   }
   if (flowTimer) {
     window.clearInterval(flowTimer)
@@ -892,6 +1045,10 @@ onUnmounted(() => {
         <h1>视频生成监控</h1>
         <p>任务链路实时状态</p>
       </div>
+      <nav class="page-tabs" aria-label="页面切换">
+        <button type="button" :class="{ active: activePage === 'monitor' }" @click="activePage = 'monitor'">监控</button>
+        <button type="button" :class="{ active: activePage === 'accounts' }" @click="activePage = 'accounts'; loadAccountPage()">账号管理</button>
+      </nav>
       <div class="summary-strip" aria-label="任务汇总">
         <span><strong>{{ summary.total }}</strong> 总数</span>
         <span><strong>{{ summary.running }}</strong> 处理中</span>
@@ -900,6 +1057,7 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <template v-if="activePage === 'monitor'">
     <section class="status-line">
       <span :class="['dot', error ? 'dot-failed' : 'dot-success']"></span>
       <span v-if="error">接口异常：{{ error }}</span>
@@ -936,60 +1094,6 @@ onUnmounted(() => {
           </span>
         </div>
       </div>
-    </section>
-
-    <section class="biliup-panel" aria-label="B站账号和上传管理">
-      <div class="biliup-head">
-        <div>
-          <h2>B站账号</h2>
-          <p v-if="bilibiliAccount">已保存 {{ bilibiliAccounts.length }} 个账号</p>
-          <p v-else>{{ bilibiliError ? `B站账号异常：${bilibiliError}` : '正在检测 B站账号' }}</p>
-        </div>
-        <div class="biliup-actions">
-          <button type="button" @click="loadBiliupStatus">刷新状态</button>
-        </div>
-      </div>
-
-      <div class="account-table" aria-label="B站账号表">
-        <div class="account-row account-header">
-          <span>槽位</span>
-          <span>Key</span>
-          <span>账号</span>
-          <span>状态</span>
-          <span>操作</span>
-        </div>
-        <div v-for="row in bilibiliRows" :key="row.slot" class="account-row">
-          <strong>{{ row.slot }}</strong>
-          <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
-          <span>
-            <template v-if="row.accountKey">
-              {{ row.uname || '-' }}<template v-if="row.mid"> · UID {{ row.mid }}</template>
-            </template>
-            <template v-else>-</template>
-          </span>
-          <span>{{ rowStatus(row) }}</span>
-          <span class="account-actions">
-            <button type="button" @click="startBilibiliQrLogin(row)">
-              {{ row.accountKey ? '重新扫码' : '扫码登录' }}
-            </button>
-            <button type="button" :disabled="!row.accountKey" @click="refreshBilibiliRow(row)">刷新</button>
-            <button type="button" :disabled="!row.accountKey || bilibiliRenewing" @click="renewBilibiliAccount(row)">
-              {{ bilibiliBusyKey === rowKey(row) ? '续期中' : '续期' }}
-            </button>
-            <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveBilibiliKey(row)">保存Key</button>
-          </span>
-        </div>
-      </div>
-
-      <div v-if="bilibiliQrCode" class="bilibili-login">
-        <img :src="qrImageUrl(bilibiliQrCode.url)" alt="B站登录二维码" />
-        <div>
-          <strong>{{ bilibiliQrMessage }}</strong>
-          <a :href="bilibiliQrCode.url" target="_blank" rel="noreferrer">打开登录链接</a>
-        </div>
-      </div>
-
-      <p v-if="bilibiliError" class="inline-error">{{ bilibiliError }}</p>
     </section>
 
     <section class="task-list" aria-label="任务列表">
@@ -1098,6 +1202,106 @@ onUnmounted(() => {
         </div>
       </article>
     </section>
+    </template>
+
+    <template v-else-if="activePage === 'accounts'">
+      <section class="account-page" aria-label="账号管理">
+        <section class="biliup-panel" aria-label="B站账号管理">
+          <div class="biliup-head">
+            <div>
+              <h2>B站账号</h2>
+              <p v-if="bilibiliAccount">已保存 {{ bilibiliAccounts.length }} 个账号</p>
+              <p v-else>{{ bilibiliError ? `B站账号异常：${bilibiliError}` : '正在检测 B站账号' }}</p>
+            </div>
+            <div class="biliup-actions">
+              <button type="button" @click="loadBiliupStatus">刷新状态</button>
+            </div>
+          </div>
+
+          <div class="account-table" aria-label="B站账号表">
+            <div class="account-row account-header">
+              <span>槽位</span>
+              <span>Key</span>
+              <span>账号</span>
+              <span>状态</span>
+              <span>操作</span>
+            </div>
+            <div v-for="row in bilibiliRows" :key="row.slot" class="account-row">
+              <strong>{{ row.slot }}</strong>
+              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
+              <span>{{ accountDisplay(row, 'bilibili') }}</span>
+              <span>{{ rowStatus(row) }}</span>
+              <span class="account-actions">
+                <button type="button" @click="startBilibiliQrLogin(row)">
+                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
+                </button>
+                <button type="button" :disabled="!row.accountKey" @click="refreshBilibiliRow(row)">刷新</button>
+                <button type="button" :disabled="!row.accountKey || bilibiliRenewing" @click="renewBilibiliAccount(row)">
+                  {{ bilibiliBusyKey === rowKey(row) ? '续期中' : '续期' }}
+                </button>
+                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveBilibiliKey(row)">保存Key</button>
+              </span>
+            </div>
+          </div>
+
+          <div v-if="bilibiliQrCode" class="bilibili-login">
+            <img :src="qrImageUrl(bilibiliQrCode.url)" alt="B站登录二维码" />
+            <div>
+              <strong>{{ bilibiliQrMessage }}</strong>
+              <a :href="bilibiliQrCode.url" target="_blank" rel="noreferrer">打开登录链接</a>
+            </div>
+          </div>
+
+          <p v-if="bilibiliError" class="inline-error">{{ bilibiliError }}</p>
+        </section>
+
+        <section class="biliup-panel" aria-label="小红书账号管理">
+          <div class="biliup-head">
+            <div>
+              <h2>小红书账号</h2>
+              <p v-if="xiaohongshuAccount">已保存 {{ xiaohongshuAccounts.length }} 个账号</p>
+              <p v-else>{{ xiaohongshuError ? `小红书账号异常：${xiaohongshuError}` : '正在检测小红书账号' }}</p>
+            </div>
+            <div class="biliup-actions">
+              <button type="button" @click="loadXiaohongshuStatus">刷新状态</button>
+            </div>
+          </div>
+
+          <div class="account-table" aria-label="小红书账号表">
+            <div class="account-row account-header">
+              <span>槽位</span>
+              <span>Key</span>
+              <span>账号</span>
+              <span>状态</span>
+              <span>操作</span>
+            </div>
+            <div v-for="row in xiaohongshuRows" :key="row.slot" class="account-row">
+              <strong>{{ row.slot }}</strong>
+              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
+              <span>{{ accountDisplay(row, 'xiaohongshu') }}</span>
+              <span>{{ rowStatus(row) }}</span>
+              <span class="account-actions">
+                <button type="button" @click="startXiaohongshuQrLogin(row)">
+                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
+                </button>
+                <button type="button" :disabled="!row.accountKey" @click="refreshXiaohongshuRow(row)">刷新</button>
+                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveXiaohongshuKey(row)">保存Key</button>
+              </span>
+            </div>
+          </div>
+
+          <div v-if="xiaohongshuQrCode" class="bilibili-login">
+            <img :src="xiaohongshuQrCode.imageDataUrl" alt="小红书登录二维码" />
+            <div>
+              <strong>{{ xiaohongshuQrMessage }}</strong>
+              <span>请用小红书 App 扫码并确认登录</span>
+            </div>
+          </div>
+
+          <p v-if="xiaohongshuError" class="inline-error">{{ xiaohongshuError }}</p>
+        </section>
+      </section>
+    </template>
     </template>
 
     <template v-else>
