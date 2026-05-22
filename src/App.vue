@@ -40,6 +40,10 @@ const selectedStageKey = ref('downloader')
 const flowPageOpen = ref(false)
 const flowLoading = ref(false)
 const flowError = ref('')
+const speechEditKey = ref('')
+const speechEditDraft = ref('')
+const speechEditSaving = ref(false)
+const speechEditError = ref('')
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
@@ -673,6 +677,7 @@ async function openTaskFlow(task, stageKey = 'downloader') {
   flowPageOpen.value = true
   selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
   selectedTaskFlow.value = null
+  cancelSpeechEdit()
   await loadTaskFlow(task.taskId)
   if (flowTimer) window.clearInterval(flowTimer)
   flowTimer = window.setInterval(() => {
@@ -707,6 +712,7 @@ function closeTaskFlow() {
   flowPageOpen.value = false
   selectedTaskFlow.value = null
   flowError.value = ''
+  cancelSpeechEdit()
   if (flowTimer) {
     window.clearInterval(flowTimer)
     flowTimer = null
@@ -1063,6 +1069,7 @@ function speechRows() {
     const asr = asrByIndex[index] || {}
     const segment = speakerByIndex[index] || {}
     return {
+      segment_id: segment.id || '',
       item_index: index,
       start_time: segment.start_time ?? asr.start_time,
       end_time: segment.end_time ?? asr.end_time,
@@ -1124,6 +1131,7 @@ function normalizeText(value) {
 
 function speechMoreRows(row) {
   return [
+    ['segment_id', row.segment_id || '-'],
     ['start_time', formatTimeline(row.start_time)],
     ['end_time', formatTimeline(row.end_time)],
     ['speaker', row.speaker || '-'],
@@ -1132,6 +1140,55 @@ function speechMoreRows(row) {
     ['speed_ratio', row.speed_ratio || '-'],
     ['error_message', row.error_message || '-'],
   ]
+}
+
+function speechRowKey(row) {
+  return row?.segment_id ? String(row.segment_id) : `index:${row?.item_index ?? ''}`
+}
+
+function canEditSpeechDstText(row) {
+  return Boolean(selectedTaskFlow.value?.task?.id && row?.segment_id)
+}
+
+function isEditingSpeechDstText(row) {
+  return speechEditKey.value === speechRowKey(row)
+}
+
+function beginSpeechEdit(row) {
+  if (!canEditSpeechDstText(row) || speechEditSaving.value) return
+  speechEditKey.value = speechRowKey(row)
+  speechEditDraft.value = row.dst_text || ''
+  speechEditError.value = ''
+}
+
+function cancelSpeechEdit() {
+  speechEditKey.value = ''
+  speechEditDraft.value = ''
+  speechEditError.value = ''
+}
+
+async function saveSpeechDstText(row) {
+  const taskId = selectedTaskFlow.value?.task?.id
+  if (!taskId || !row?.segment_id || speechEditSaving.value) return
+  speechEditSaving.value = true
+  speechEditError.value = ''
+  try {
+    const response = await fetch(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/speaker-segments/${encodeURIComponent(row.segment_id)}/dst-text`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dstText: speechEditDraft.value }),
+    })
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    await response.json()
+    cancelSpeechEdit()
+    await loadTaskFlow(taskId, true)
+  } catch (err) {
+    speechEditError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    speechEditSaving.value = false
+  }
 }
 
 function formatRatio(value) {
@@ -1687,6 +1744,36 @@ onUnmounted(() => {
                             </template>
                           </dl>
                         </details>
+                        <div v-else-if="column === 'dst_text'" class="speech-text-cell speech-edit-cell">
+                          <template v-if="isEditingSpeechDstText(row)">
+                            <textarea
+                              v-model="speechEditDraft"
+                              class="speech-edit-textarea"
+                              rows="5"
+                            ></textarea>
+                            <div class="speech-edit-actions">
+                              <button type="button" :disabled="speechEditSaving" @click="saveSpeechDstText(row)">
+                                {{ speechEditSaving ? 'Saving' : 'Save' }}
+                              </button>
+                              <button type="button" :disabled="speechEditSaving" @click="cancelSpeechEdit">Cancel</button>
+                            </div>
+                            <p v-if="speechEditError" class="speech-edit-error">{{ speechEditError }}</p>
+                          </template>
+                          <template v-else>
+                            <p>{{ row.dst_text || '-' }}</p>
+                            <button
+                              v-if="canEditSpeechDstText(row)"
+                              type="button"
+                              class="speech-edit-button"
+                              @click="beginSpeechEdit(row)"
+                            >
+                              Edit
+                            </button>
+                          </template>
+                        </div>
+                        <p v-else-if="column === 'asr_text' || column === 'src_text'" class="speech-text-cell">
+                          {{ row[column] || '-' }}
+                        </p>
                         <span v-else-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>
                         <details v-else>
                           <summary>{{ tableCellSummary(column, row[column]) }}</summary>

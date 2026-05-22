@@ -1183,7 +1183,18 @@ h1 {
 }
 
 .speech-table {
-  min-width: 1280px;
+  min-width: 1680px;
+}
+
+.speech-table th,
+.speech-table td {
+  max-width: none;
+}
+
+.speech-table th:nth-child(2),
+.speech-table th:nth-child(3),
+.speech-table th:nth-child(4) {
+  min-width: 320px;
 }
 
 .raw-table th,
@@ -1250,6 +1261,74 @@ h1 {
   margin: 0;
   color: #344156;
   overflow-wrap: anywhere;
+}
+
+.speech-text-cell {
+  margin: 0;
+  min-width: 320px;
+  max-width: 520px;
+  color: #243044;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.speech-edit-cell p {
+  margin: 0;
+}
+
+.speech-edit-button,
+.speech-edit-actions button {
+  min-height: 28px;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #243044;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  padding: 0 10px;
+}
+
+.speech-edit-button {
+  margin-top: 8px;
+}
+
+.speech-edit-button:hover,
+.speech-edit-actions button:hover:not(:disabled) {
+  background: #eef3f8;
+}
+
+.speech-edit-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.speech-edit-textarea {
+  width: 100%;
+  min-height: 116px;
+  resize: vertical;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  color: #243044;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 8px 10px;
+}
+
+.speech-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.speech-edit-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-size: 12px;
 }
 
 @media (max-width: 920px) {
