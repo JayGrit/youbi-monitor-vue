@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const tasks = ref([])
 const serviceHeartbeats = ref([])
@@ -40,8 +40,6 @@ const selectedStageKey = ref('downloader')
 const flowPageOpen = ref(false)
 const flowLoading = ref(false)
 const flowError = ref('')
-const activeAudioUrls = ref({})
-const audioRefs = ref({})
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
@@ -675,8 +673,6 @@ async function openTaskFlow(task, stageKey = 'downloader') {
   flowPageOpen.value = true
   selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
   selectedTaskFlow.value = null
-  activeAudioUrls.value = {}
-  audioRefs.value = {}
   await loadTaskFlow(task.taskId)
   if (flowTimer) window.clearInterval(flowTimer)
   flowTimer = window.setInterval(() => {
@@ -711,8 +707,6 @@ function closeTaskFlow() {
   flowPageOpen.value = false
   selectedTaskFlow.value = null
   flowError.value = ''
-  activeAudioUrls.value = {}
-  audioRefs.value = {}
   if (flowTimer) {
     window.clearInterval(flowTimer)
     flowTimer = null
@@ -731,20 +725,36 @@ function stageName(stageOrKey) {
   return stageNameText[key] || key || ''
 }
 
-function setAudioRef(url, element) {
-  if (element) {
-    audioRefs.value[url] = element
+function logAudioEvent(eventName, asset, event) {
+  const audio = event?.target
+  const error = audio?.error
+  const payload = {
+    name: asset?.name || '',
+    url: asset?.url || '',
+    networkState: audio?.networkState,
+    readyState: audio?.readyState,
+    currentTime: audio?.currentTime,
+    duration: audio?.duration,
+    errorCode: error?.code,
+    errorMessage: error ? audioErrorMessage(error.code) : '',
   }
+  const logger = eventName === 'error' ? console.error : console.info
+  logger('[monitor-audio]', eventName, payload)
 }
 
-async function playLazyAudio(asset) {
-  if (!asset?.url) return
-  activeAudioUrls.value = {
-    ...activeAudioUrls.value,
-    [asset.url]: asset.url,
+function audioErrorMessage(code) {
+  switch (code) {
+    case 1:
+      return 'MEDIA_ERR_ABORTED'
+    case 2:
+      return 'MEDIA_ERR_NETWORK'
+    case 3:
+      return 'MEDIA_ERR_DECODE'
+    case 4:
+      return 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+    default:
+      return code ? `MEDIA_ERR_${code}` : ''
   }
-  await nextTick()
-  audioRefs.value[asset.url]?.play?.()
 }
 
 function failureDetails(node) {
@@ -1655,20 +1665,16 @@ onUnmounted(() => {
                       <td v-for="column in speechColumns()" :key="column">
                         <template v-if="!showSpeechColumn(row, column)"></template>
                         <template v-else-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
-                          <button
-                            v-if="speechAudioAsset(row, column) && !activeAudioUrls[speechAudioAsset(row, column).url]"
-                            type="button"
-                            class="audio-play-button"
-                            @click="playLazyAudio(speechAudioAsset(row, column))"
-                          >
-                            Play
-                          </button>
                           <audio
-                            v-else-if="speechAudioAsset(row, column)"
-                            :ref="element => setAudioRef(speechAudioAsset(row, column).url, element)"
-                            :src="activeAudioUrls[speechAudioAsset(row, column).url]"
+                            v-if="speechAudioAsset(row, column)"
+                            :src="speechAudioAsset(row, column).url"
                             controls
                             preload="none"
+                            @loadstart="event => logAudioEvent('loadstart', speechAudioAsset(row, column), event)"
+                            @play="event => logAudioEvent('play', speechAudioAsset(row, column), event)"
+                            @playing="event => logAudioEvent('playing', speechAudioAsset(row, column), event)"
+                            @waiting="event => logAudioEvent('waiting', speechAudioAsset(row, column), event)"
+                            @error="event => logAudioEvent('error', speechAudioAsset(row, column), event)"
                           ></audio>
                           <span v-else>-</span>
                         </template>
@@ -1702,23 +1708,17 @@ onUnmounted(() => {
                     <a :href="asset.url" target="_blank" rel="noreferrer">打开</a>
                   </div>
                   <video v-if="asset.kind === 'video'" :src="asset.url" controls preload="metadata"></video>
-                  <template v-else-if="asset.kind === 'audio'">
-                    <button
-                      v-if="!activeAudioUrls[asset.url]"
-                      type="button"
-                      class="audio-play-button"
-                      @click="playLazyAudio(asset)"
-                    >
-                      Play
-                    </button>
-                    <audio
-                      v-else
-                      :ref="element => setAudioRef(asset.url, element)"
-                      :src="activeAudioUrls[asset.url]"
-                      controls
-                      preload="none"
-                    ></audio>
-                  </template>
+                  <audio
+                    v-else-if="asset.kind === 'audio'"
+                    :src="asset.url"
+                    controls
+                    preload="none"
+                    @loadstart="event => logAudioEvent('loadstart', asset, event)"
+                    @play="event => logAudioEvent('play', asset, event)"
+                    @playing="event => logAudioEvent('playing', asset, event)"
+                    @waiting="event => logAudioEvent('waiting', asset, event)"
+                    @error="event => logAudioEvent('error', asset, event)"
+                  ></audio>
                   <img v-else-if="asset.kind === 'image'" :src="asset.url" alt="" />
                   <p v-if="asset.objectName">{{ asset.objectName }}</p>
                 </article>

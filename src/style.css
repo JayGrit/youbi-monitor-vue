@@ -1089,22 +1089,6 @@ h1 {
   width: 100%;
 }
 
-.audio-play-button {
-  min-height: 34px;
-  border: 1px solid #cfd8e3;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #243044;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 720;
-  padding: 0 12px;
-}
-
-.audio-play-button:hover {
-  background: #eef3f8;
-}
-
 .media-item video,
 .media-item img {
   display: block;
