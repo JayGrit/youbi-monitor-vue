@@ -44,14 +44,65 @@ const speechEditKey = ref('')
 const speechEditDraft = ref('')
 const speechEditSaving = ref(false)
 const speechEditError = ref('')
+const submitterVideos = ref([])
+const submitterLoading = ref(false)
+const submitterError = ref('')
+const submitterMessage = ref('')
+const submitterUrl = ref('')
+const submitterAuthor = ref('')
+const submitterBusy = ref(false)
+const submitterAuthorBusy = ref(false)
+const submitterUploader = ref('')
+const submitterDurationMin = ref('')
+const submitterDurationMax = ref('')
+const submitterSort = ref('updated_desc')
+const submitterAuthors = ref([])
+const submitterFields = ref([])
+const submitterVisibleFields = ref(new Set())
+const submitterFieldsInitialized = ref(false)
+const submitterFieldsOpen = ref(false)
+const submitterListDetail = ref(false)
+const submitterActiveBatch = ref('')
+const submitterFocusedBatch = ref('')
+const submitterActiveStatus = ref(null)
+const submitterJsonTitle = ref('')
+const submitterJsonPayload = ref(null)
+const submitterThumbUrls = ref({})
+const submitterSubmittingId = ref('')
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
 let xiaohongshuQrTimer = null
 let douyinQrTimer = null
+let submitterTimer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
+const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const SPEECH_STAGE_KEY = 'speech'
 const SPEECH_STAGE_KEYS = ['whisper', 'translator', 'speaker']
+const SUBMITTER_FIXED_FIELDS = new Set(['thumbnail', 'title', 'duration', 'view_count'])
+const SUBMITTER_PREFERRED_FIELDS = [
+  '__detail', 'import_status', 'import_error', 'import_author', 'import_index',
+  'uploader', 'channel', 'channel_id', 'duration', 'view_count', 'like_count',
+  'comment_count', 'webpage_url', 'id', 'upload_date', 'release_timestamp',
+  'timestamp', 'language', 'fps', 'categories', 'tags', 'description',
+  'automatic_captions', 'subtitles', 'formats', 'requested_formats',
+]
+const SUBMITTER_COMMON_FIELDS = new Set([
+  '__detail', 'import_status', 'import_error', 'import_author', 'import_index',
+  'uploader', 'duration', 'view_count', 'like_count', 'comment_count',
+  'language', 'fps', 'id', 'webpage_url', 'categories', 'tags', 'description',
+])
+const SUBMITTER_NUMERIC_FIELDS = new Set([
+  'duration', 'view_count', 'like_count', 'comment_count', 'fps',
+  'filesize', 'filesize_approx', 'timestamp', 'release_timestamp',
+])
+const SUBMITTER_SORT_OPTIONS = [
+  { value: 'updated_desc', label: '最近更新' },
+  { value: 'view_desc', label: '播放量从高到低' },
+  { value: 'view_asc', label: '播放量从低到高' },
+  { value: 'like_desc', label: '点赞量从高到低' },
+  { value: 'like_asc', label: '点赞量从低到高' },
+]
 
 const statusText = {
   pending: '未开始',
@@ -135,6 +186,18 @@ const filteredTasks = computed(() => {
     return tasks.value.filter(task => task.status !== 'success' && task.status !== 'failed')
   }
   return tasks.value.filter(task => task.status === taskStatusFilter.value)
+})
+
+const submitterFilteredVideos = computed(() => {
+  return submitterVideos.value
+})
+
+const submitterVisibleFieldList = computed(() => {
+  return submitterFields.value.filter(field => submitterVisibleFields.value.has(field))
+})
+
+const submitterActiveRows = computed(() => {
+  return submitterVideos.value.filter(item => ['pending', 'running'].includes(item.import_status)).length
 })
 
 const onlineSummary = computed(() => {
@@ -1281,6 +1344,393 @@ function qrImageUrl(url) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}`
 }
 
+function submitterSource(item) {
+  return item?.raw_info_json || item?.info_json || item || {}
+}
+
+function submitterFieldValue(item, key) {
+  if (Object.prototype.hasOwnProperty.call(item || {}, key)) return item[key]
+  return submitterSource(item)[key]
+}
+
+function submitterFieldLabel(key) {
+  return key === '__detail' ? '详情' : key
+}
+
+function buildSubmitterFields() {
+  const keys = new Set(['__detail'])
+  for (const item of submitterVideos.value) {
+    for (const key of Object.keys(item || {})) {
+      if (!SUBMITTER_FIXED_FIELDS.has(key)) keys.add(key)
+    }
+    for (const key of Object.keys(submitterSource(item))) {
+      if (!SUBMITTER_FIXED_FIELDS.has(key)) keys.add(key)
+    }
+  }
+  submitterFields.value = [...keys].sort((left, right) => {
+    const leftIndex = SUBMITTER_PREFERRED_FIELDS.indexOf(left)
+    const rightIndex = SUBMITTER_PREFERRED_FIELDS.indexOf(right)
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex)
+    }
+    return left.localeCompare(right)
+  })
+  if (!submitterFieldsInitialized.value) {
+    submitterVisibleFields.value = new Set(submitterFields.value.filter(key => SUBMITTER_COMMON_FIELDS.has(key)))
+    submitterFieldsInitialized.value = true
+  } else {
+    submitterVisibleFields.value = new Set([...submitterVisibleFields.value].filter(key => keys.has(key)))
+  }
+}
+
+function selectAllSubmitterFields() {
+  submitterVisibleFields.value = new Set(submitterFields.value)
+}
+
+function selectCommonSubmitterFields() {
+  submitterVisibleFields.value = new Set(submitterFields.value.filter(key => SUBMITTER_COMMON_FIELDS.has(key)))
+}
+
+function selectNoSubmitterFields() {
+  submitterVisibleFields.value = new Set()
+}
+
+function toggleSubmitterField(key, checked) {
+  const next = new Set(submitterVisibleFields.value)
+  if (checked) next.add(key)
+  else next.delete(key)
+  submitterVisibleFields.value = next
+}
+
+async function loadSubmitterVideos(quiet = false) {
+  if (!quiet) submitterLoading.value = true
+  try {
+    const params = new URLSearchParams()
+    if (submitterListDetail.value || submitterFocusedBatch.value) params.set('detail', '1')
+    if (submitterFocusedBatch.value) {
+      params.set('batch', submitterFocusedBatch.value)
+      params.set('limit', '1000')
+    }
+    if (submitterUploader.value) params.set('uploader', submitterUploader.value)
+    if (submitterDurationMin.value !== '') params.set('duration_min', submitterDurationMin.value)
+    if (submitterDurationMax.value !== '') params.set('duration_max', submitterDurationMax.value)
+    if (submitterSort.value) params.set('sort', submitterSort.value)
+    const query = params.toString()
+    const response = await fetch(`${submitterApiBase}/videos${query ? `?${query}` : ''}`)
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.error || `HTTP ${response.status}`)
+    }
+    submitterVideos.value = payload?.items || []
+    buildSubmitterFields()
+    warmSubmitterThumbnails()
+    submitterError.value = ''
+    updateSubmitterPolling()
+    if (!submitterMessage.value) submitterMessage.value = '素材库已加载。'
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    submitterLoading.value = false
+  }
+}
+
+async function loadSubmitterAuthors() {
+  try {
+    const response = await fetch(`${submitterApiBase}/authors`)
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.error || `HTTP ${response.status}`)
+    }
+    submitterAuthors.value = payload?.items || []
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function toggleSubmitterFieldsPanel() {
+  submitterFieldsOpen.value = !submitterFieldsOpen.value
+  if (submitterFieldsOpen.value && !submitterListDetail.value) {
+    submitterListDetail.value = true
+    await loadSubmitterVideos()
+  }
+}
+
+async function resetSubmitterFilters() {
+  submitterUploader.value = ''
+  submitterDurationMin.value = ''
+  submitterDurationMax.value = ''
+  submitterSort.value = 'updated_desc'
+  submitterFocusedBatch.value = ''
+  await loadSubmitterVideos()
+}
+
+async function clearSubmitterBatchFocus() {
+  submitterFocusedBatch.value = ''
+  await loadSubmitterVideos()
+}
+
+async function submitVideoToYoubi(item) {
+  const rowId = submitterFieldValue(item, 'id')
+  if (!rowId || item.ydbi_submitted || submitterSubmittingId.value) return
+  submitterSubmittingId.value = String(rowId)
+  submitterError.value = ''
+  try {
+    const response = await fetch(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, {
+      method: 'POST',
+    })
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.error || `HTTP ${response.status}`)
+    }
+    Object.assign(item, {
+      ydbi_submitted: 1,
+      ydbi_submission_id: payload.submission_id,
+      ydbi_submitted_at: new Date().toISOString(),
+    })
+    submitterMessage.value = '已提交到 YouBi 下载队列。'
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+    await loadSubmitterVideos(true)
+  } finally {
+    submitterSubmittingId.value = ''
+  }
+}
+
+async function createSubmitterVideo() {
+  const url = submitterUrl.value.trim()
+  if (!url || submitterBusy.value) return
+  submitterBusy.value = true
+  submitterMessage.value = '正在抓取 yt-dlp JSON 并写入数据库...'
+  submitterError.value = ''
+  try {
+    const response = await fetch(`${submitterApiBase}/videos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.error || `HTTP ${response.status}`)
+    }
+    submitterUrl.value = ''
+    submitterMessage.value = '已保存视频信息。'
+    await loadSubmitterVideos(true)
+    await loadSubmitterAuthors()
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    submitterBusy.value = false
+  }
+}
+
+async function importSubmitterAuthor() {
+  const author = submitterAuthor.value.trim()
+  if (!author || submitterAuthorBusy.value) return
+  submitterAuthorBusy.value = true
+  submitterBusy.value = true
+  submitterMessage.value = '正在创建作者后台导入任务...'
+  submitterError.value = ''
+  try {
+    const response = await fetch(`${submitterApiBase}/authors/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author }),
+    })
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.error || `HTTP ${response.status}`)
+    }
+    submitterAuthor.value = ''
+    submitterActiveBatch.value = payload.batch || ''
+    submitterFocusedBatch.value = payload.batch || ''
+    submitterActiveStatus.value = payload
+    submitterListDetail.value = true
+    submitterMessage.value = payload.source_url ? `已开始扫描：${payload.source_url}` : '已开始后台扫描。'
+    await loadSubmitterVideos(true)
+    await loadSubmitterAuthors()
+    await refreshSubmitterImportStatus()
+    updateSubmitterPolling()
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    submitterAuthorBusy.value = false
+    submitterBusy.value = false
+  }
+}
+
+async function refreshSubmitterImportStatus() {
+  if (!submitterActiveBatch.value) return
+  const response = await fetch(`${submitterApiBase}/authors/import/${encodeURIComponent(submitterActiveBatch.value)}`)
+  const payload = await readJsonResponse(response)
+  if (!response.ok) {
+    submitterActiveBatch.value = ''
+    submitterActiveStatus.value = null
+    submitterMessage.value = payload?.error || '导入任务状态不可用。'
+    return
+  }
+  submitterActiveStatus.value = payload
+  submitterMessage.value = submitterImportStatusText(payload)
+  if (['done', 'failed'].includes(payload.status)) {
+    submitterActiveBatch.value = ''
+  }
+}
+
+function updateSubmitterPolling() {
+  const shouldPoll = submitterActiveRows.value > 0 || Boolean(submitterActiveBatch.value)
+  if (shouldPoll && !submitterTimer) {
+    submitterTimer = window.setInterval(async () => {
+      try {
+        await refreshSubmitterImportStatus()
+        await loadSubmitterVideos(true)
+      } catch (err) {
+        submitterError.value = err instanceof Error ? err.message : String(err)
+      }
+    }, 3000)
+  } else if (!shouldPoll && submitterTimer) {
+    window.clearInterval(submitterTimer)
+    submitterTimer = null
+  }
+}
+
+function submitterImportStatusText(status) {
+  const discovered = formatNumber(status?.discovered || status?.registered || 0)
+  const skipped = formatNumber(status?.skipped || 0)
+  const saved = formatNumber(status?.saved || 0)
+  const failed = formatNumber(status?.failed || 0)
+  const current = status?.current_title ? ` 当前：${status.current_title}` : ''
+  if (status?.status === 'scanning') {
+    return `正在扫描频道，新增 ${discovered} 个视频，跳过已存在 ${skipped} 个。`
+  }
+  if (status?.status === 'processing') {
+    return `正在处理新增视频，已保存 ${saved} 个，跳过 ${skipped} 个，失败 ${failed} 个。${current}`
+  }
+  if (status?.status === 'done') {
+    return `导入完成：新增 ${discovered} 个视频，跳过 ${skipped} 个，已保存 ${saved} 个，失败 ${failed} 个。`
+  }
+  if (status?.status === 'failed') {
+    return `导入失败：${status.error || '未知错误'}。新增 ${discovered} 个视频，跳过 ${skipped} 个，已保存 ${saved} 个，失败 ${failed} 个。`
+  }
+  return '导入任务正在后台运行。'
+}
+
+function submitterVideoHref(item) {
+  const data = submitterSource(item)
+  return submitterFieldValue(item, 'webpage_url') || data.original_url || item?.input_url || ''
+}
+
+function submitterVideoTitle(item) {
+  return submitterFieldValue(item, 'title') || '-'
+}
+
+function submitterVideoThumb(item) {
+  return submitterFieldValue(item, 'thumbnail') || ''
+}
+
+function submitterCachedThumb(item) {
+  const url = submitterVideoThumb(item)
+  return submitterThumbUrls.value[url] || url
+}
+
+async function cacheSubmitterThumbnail(url) {
+  if (!url || submitterThumbUrls.value[url]) return
+  if (!('caches' in window)) return
+  try {
+    const cache = await caches.open('submitter-thumbnails-v1')
+    const cached = await cache.match(url)
+    if (cached) {
+      const blob = await cached.blob()
+      if (blob.size > 0) {
+        submitterThumbUrls.value = { ...submitterThumbUrls.value, [url]: URL.createObjectURL(blob) }
+        return
+      }
+    }
+    const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
+    if (!response.ok) return
+    await cache.put(url, response.clone())
+    const blob = await response.blob()
+    if (blob.size > 0) {
+      submitterThumbUrls.value = { ...submitterThumbUrls.value, [url]: URL.createObjectURL(blob) }
+    }
+  } catch (err) {
+    // Fall back to the remote URL when a thumbnail host does not allow CORS.
+  }
+}
+
+function warmSubmitterThumbnails() {
+  for (const item of submitterVideos.value.slice(0, 100)) {
+    cacheSubmitterThumbnail(submitterVideoThumb(item))
+  }
+}
+
+function submitterValueKind(key, value) {
+  if (key === '__detail') return 'detail'
+  if (value === null || value === undefined || value === '') return 'empty'
+  if (key === 'duration') return 'duration'
+  if (key === 'timestamp' || key === 'release_timestamp') return 'unix'
+  if (key === 'webpage_url' || key.endsWith('_url') || key === 'url' || key === 'original_url') return 'link'
+  if (Array.isArray(value)) return 'array'
+  if (typeof value === 'object') return 'object'
+  if (SUBMITTER_NUMERIC_FIELDS.has(key)) return 'number'
+  return 'text'
+}
+
+function summarizeSubmitterObject(value) {
+  const output = {}
+  for (const key of Object.keys(value || {}).slice(0, 12)) {
+    const entry = value[key]
+    if (Array.isArray(entry)) output[key] = `[${entry.length} items]`
+    else if (entry && typeof entry === 'object') output[key] = '{...}'
+    else output[key] = entry
+  }
+  const rest = Object.keys(value || {}).length - Object.keys(output).length
+  if (rest > 0) output.__more = `${rest} more keys`
+  return output
+}
+
+function submitterJsonPreview(value) {
+  return JSON.stringify(summarizeSubmitterObject(value), null, 2)
+}
+
+function submitterArrayPreview(value) {
+  if (!Array.isArray(value)) return []
+  return value.slice(0, 20)
+}
+
+async function showSubmitterJson(item) {
+  try {
+    let detail = item
+    if (item?.id) {
+      const response = await fetch(`${submitterApiBase}/videos/${encodeURIComponent(item.id)}`)
+      const payload = await readJsonResponse(response)
+      if (!response.ok) {
+        throw new Error(payload?.error || `HTTP ${response.status}`)
+      }
+      detail = payload?.item || item
+    }
+    const data = submitterSource(detail)
+    submitterJsonTitle.value = data.title || data.id || '完整 yt-dlp JSON'
+    submitterJsonPayload.value = data
+  } catch (err) {
+    submitterError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+function closeSubmitterJson() {
+  submitterJsonTitle.value = ''
+  submitterJsonPayload.value = null
+}
+
+function formatUnixSeconds(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number) || number <= 0) return '-'
+  return new Date(number * 1000).toLocaleString()
+}
+
+function formatNumber(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number.toLocaleString() : '-'
+}
+
 onMounted(() => {
   loadTasks()
   loadAccountPage()
@@ -1303,6 +1753,12 @@ onUnmounted(() => {
   if (flowTimer) {
     window.clearInterval(flowTimer)
   }
+  if (submitterTimer) {
+    window.clearInterval(submitterTimer)
+  }
+  for (const url of Object.values(submitterThumbUrls.value)) {
+    if (String(url).startsWith('blob:')) URL.revokeObjectURL(url)
+  }
 })
 </script>
 
@@ -1317,6 +1773,7 @@ onUnmounted(() => {
       <nav class="page-tabs" aria-label="页面切换">
         <button type="button" :class="{ active: activePage === 'monitor' }" @click="activePage = 'monitor'">监控</button>
         <button type="button" :class="{ active: activePage === 'accounts' }" @click="activePage = 'accounts'; loadAccountPage()">账号管理</button>
+        <button type="button" :class="{ active: activePage === 'submitter' }" @click="activePage = 'submitter'; loadSubmitterAuthors(); loadSubmitterVideos()">素材采集</button>
       </nav>
       <div class="summary-strip" aria-label="任务汇总">
         <span><strong>{{ summary.total }}</strong> 总数</span>
@@ -1487,6 +1944,193 @@ onUnmounted(() => {
         </div>
       </article>
     </section>
+    </template>
+
+    <template v-else-if="activePage === 'submitter'">
+      <section class="submitter-page" aria-label="素材采集">
+        <section class="submitter-status">
+          <span :class="['dot', submitterError ? 'dot-failed' : submitterLoading ? 'dot-running' : 'dot-success']"></span>
+          <span v-if="submitterError">Submitter API 异常：{{ submitterError }}</span>
+          <span v-else-if="submitterLoading">正在加载素材库</span>
+          <span v-else>{{ submitterFocusedBatch ? `当前批次：${submitterFocusedBatch.slice(0, 8)}。` : '' }}{{ submitterMessage || '素材库已就绪。' }}</span>
+        </section>
+
+        <section class="submitter-actions-panel">
+          <form class="submitter-submit-row" @submit.prevent="createSubmitterVideo">
+            <label>
+              <span>视频链接</span>
+              <input v-model="submitterUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required />
+            </label>
+            <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '抓取中' : '抓取并保存' }}</button>
+          </form>
+          <form class="submitter-submit-row" @submit.prevent="importSubmitterAuthor">
+            <label>
+              <span>频道链接</span>
+              <input v-model="submitterAuthor" type="text" placeholder="@handle 或 https://www.youtube.com/@channel" required />
+            </label>
+            <button type="submit" :disabled="submitterAuthorBusy">{{ submitterAuthorBusy ? '导入中' : '导入作者全部视频' }}</button>
+          </form>
+        </section>
+
+        <section class="submitter-controls">
+          <form class="submitter-filter-grid" @submit.prevent="loadSubmitterVideos">
+            <label>
+              <span>作者</span>
+              <select v-model="submitterUploader">
+                <option value="">全部作者</option>
+                <option v-for="author in submitterAuthors" :key="author" :value="author">{{ author }}</option>
+              </select>
+            </label>
+            <fieldset class="submitter-duration-field">
+              <legend>视频时长</legend>
+              <div>
+                <input v-model="submitterDurationMin" type="number" min="0" placeholder="最短秒数" />
+                <span>至</span>
+                <input v-model="submitterDurationMax" type="number" min="0" placeholder="最长秒数" />
+              </div>
+            </fieldset>
+            <label>
+              <span>排序</span>
+              <select v-model="submitterSort">
+                <option v-for="option in SUBMITTER_SORT_OPTIONS" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+            <div class="submitter-filter-actions">
+              <button type="submit" :disabled="submitterLoading">{{ submitterLoading ? '筛选中' : '应用' }}</button>
+              <button type="button" @click="resetSubmitterFilters">重置</button>
+              <button v-if="submitterFocusedBatch" type="button" @click="clearSubmitterBatchFocus">查看全部</button>
+              <button type="button" :disabled="submitterLoading" @click="loadSubmitterVideos">{{ submitterLoading ? '刷新中' : '刷新' }}</button>
+            </div>
+          </form>
+
+          <section class="submitter-fields-section">
+            <button type="button" class="submitter-fields-toggle" @click="toggleSubmitterFieldsPanel">
+              <span>字段选择</span>
+              <strong>{{ submitterVisibleFields.size }}/{{ submitterFields.length }}</strong>
+            </button>
+            <div v-if="submitterFieldsOpen" class="submitter-fields-body">
+              <div class="submitter-columns-head">
+                <strong>附加字段</strong>
+                <div>
+                  <button type="button" @click="selectAllSubmitterFields">全选</button>
+                  <button type="button" @click="selectCommonSubmitterFields">常用字段</button>
+                  <button type="button" @click="selectNoSubmitterFields">只看固定列</button>
+                </div>
+              </div>
+              <div class="submitter-field-panel">
+                <label v-for="field in submitterFields" :key="field" class="submitter-column-toggle">
+                  <input
+                    type="checkbox"
+                    :checked="submitterVisibleFields.has(field)"
+                    @change="event => toggleSubmitterField(field, event.target.checked)"
+                  />
+                  <span>{{ submitterFieldLabel(field) }}</span>
+                </label>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="submitter-table-panel">
+          <div class="submitter-table-wrap">
+            <table class="submitter-table">
+              <thead>
+                <tr>
+                  <th class="submitter-fixed-col">视频</th>
+                  <th v-for="field in submitterVisibleFieldList" :key="field">{{ submitterFieldLabel(field) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!submitterLoading && submitterFilteredVideos.length === 0">
+                  <td :colspan="submitterVisibleFieldList.length + 1" class="submitter-empty">
+                    {{ submitterFocusedBatch ? '当前批次暂无记录，频道扫描完成后会自动刷新。' : '暂无匹配记录' }}
+                  </td>
+                </tr>
+                <tr v-for="item in submitterFilteredVideos" :key="item.id || item.video_id || item.webpage_url">
+                  <td class="submitter-fixed-col">
+                    <div class="submitter-video-card">
+                      <img v-if="submitterVideoThumb(item)" :src="submitterCachedThumb(item)" alt="" loading="lazy" decoding="async" />
+                      <div v-else class="submitter-thumb-empty"></div>
+                      <div>
+                        <a
+                          v-if="submitterVideoHref(item)"
+                          :href="submitterVideoHref(item)"
+                          target="_blank"
+                          rel="noreferrer"
+                          class="submitter-video-title"
+                        >
+                          {{ submitterVideoTitle(item) }}
+                        </a>
+                        <strong v-else class="submitter-video-title">{{ submitterVideoTitle(item) }}</strong>
+                        <div class="submitter-video-meta">
+                          <span>{{ formatDuration(submitterFieldValue(item, 'duration')) }}</span>
+                          <span>{{ formatNumber(submitterFieldValue(item, 'view_count')) }} 播放</span>
+                        </div>
+                        <button
+                          type="button"
+                          :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"
+                          :disabled="Boolean(item.ydbi_submitted) || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
+                          @click="submitVideoToYoubi(item)"
+                        >
+                          <span v-if="item.ydbi_submitted">已上传</span>
+                          <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
+                          <span v-else>上传到 YouBi</span>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  <td
+                    v-for="field in submitterVisibleFieldList"
+                    :key="field"
+                    :class="{ 'submitter-num': SUBMITTER_NUMERIC_FIELDS.has(field) }"
+                  >
+                    <template v-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'detail'">
+                      <button type="button" class="submitter-json-button" @click="showSubmitterJson(item)">查看</button>
+                    </template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'empty'">-</template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'duration'">
+                      {{ formatDuration(submitterFieldValue(item, field)) }}
+                      <span class="submitter-muted">({{ formatNumber(submitterFieldValue(item, field)) }}s)</span>
+                    </template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'unix'">
+                      {{ formatUnixSeconds(submitterFieldValue(item, field)) }}
+                    </template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'number'">
+                      {{ formatNumber(submitterFieldValue(item, field)) }}
+                    </template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'link'">
+                      <a class="submitter-cell" :href="String(submitterFieldValue(item, field))" target="_blank" rel="noreferrer">
+                        {{ submitterFieldValue(item, field) }}
+                      </a>
+                    </template>
+                    <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'array'">
+                      <div class="submitter-chips">
+                        <span v-for="entry in submitterArrayPreview(submitterFieldValue(item, field))" :key="String(entry)" class="submitter-chip">
+                          {{ typeof entry === 'object' ? JSON.stringify(entry).slice(0, 80) : entry }}
+                        </span>
+                      </div>
+                    </template>
+                    <pre v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'object'" class="submitter-cell">{{ submitterJsonPreview(submitterFieldValue(item, field)) }}</pre>
+                    <div v-else class="submitter-cell">{{ submitterFieldValue(item, field) }}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div v-if="submitterJsonPayload" class="submitter-modal-backdrop" @click.self="closeSubmitterJson">
+          <section class="submitter-modal" role="dialog" aria-modal="true">
+            <header>
+              <strong>{{ submitterJsonTitle }}</strong>
+              <button type="button" @click="closeSubmitterJson">关闭</button>
+            </header>
+            <pre>{{ JSON.stringify(submitterJsonPayload, null, 2) }}</pre>
+          </section>
+        </div>
+      </section>
     </template>
 
     <template v-else-if="activePage === 'accounts'">
