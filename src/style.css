@@ -786,8 +786,13 @@ h1 {
   background: #ffffff;
 }
 
+.task-row.status-running {
+  border-color: #dde6f0;
+  background: #ffffff;
+}
+
 .task-row.status-failed {
-  border-color: #fca5a5;
+  border: 2px solid #fca5a5;
   background: #ffffff;
 }
 
@@ -913,6 +918,7 @@ h1 {
 }
 
 .stage-node.status-failed {
+  border-width: 2px;
   border-color: #fca5a5;
   background: #ffffff;
   color: #991b1b;
