@@ -183,16 +183,26 @@ h1 {
   justify-content: center;
   gap: 6px;
   border-radius: 8px;
-  border: 1px solid #dbe4ee;
-  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  background: #334155;
   padding: 8px;
+}
+
+.service-device-cell.online {
+  border-color: #15803d;
+  background: #16a34a;
+}
+
+.service-device-cell.offline {
+  border-color: #1f2937;
+  background: #374151;
 }
 
 .service-device-cell strong {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #243044;
+  color: #ffffff;
   font-size: 13px;
   white-space: nowrap;
 }
@@ -201,7 +211,7 @@ h1 {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #166534;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 760;
   text-align: center;
@@ -209,7 +219,7 @@ h1 {
 }
 
 .service-device-name.offline {
-  color: #374151;
+  color: #e5e7eb;
 }
 
 .device-pill {
@@ -590,6 +600,7 @@ h1 {
 }
 
 .task-title-row h2 {
+  flex: 1 1 auto;
   font-size: 16px;
   line-height: 1.35;
   font-weight: 720;
@@ -651,11 +662,15 @@ h1 {
   padding: 5px 8px;
 }
 
-.task-actions-toggle {
+.task-actions-toggle.task-filter-button {
   margin-left: auto;
+  min-height: 34px;
+  border-radius: 8px;
+  line-height: normal;
+  padding: 0 10px;
 }
 
-.task-actions-toggle.active {
+.task-actions-toggle.task-filter-button.active {
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
@@ -681,7 +696,7 @@ h1 {
 .stop-button:hover:not(:disabled),
 .restart-button:hover:not(:disabled),
 .delete-button:hover:not(:disabled),
-.task-actions-toggle:hover:not(:disabled) {
+.task-actions-toggle.task-filter-button:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
 }
@@ -754,6 +769,21 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.task-row.status-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.task-row.status-failed {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
+.task-row.status-success .task-cover,
+.task-row.status-failed .task-cover {
+  background: #ffffff;
 }
 
 .stage-chain {
@@ -922,7 +952,7 @@ h1 {
 
 .flow-header {
   position: sticky;
-  top: 0;
+  top: var(--navbar-height);
   z-index: 2;
   display: flex;
   align-items: flex-start;
@@ -1034,7 +1064,7 @@ h1 {
 
 .flow-tabs {
   position: sticky;
-  top: 69px;
+  top: calc(var(--navbar-height) + 64px);
   z-index: 1;
   display: flex;
   gap: 8px;
@@ -2385,7 +2415,7 @@ a.submitter-cell:hover {
   }
 
   .flow-tabs {
-    top: 128px;
+    top: calc(var(--navbar-height) + 88px);
     padding: 12px;
   }
 

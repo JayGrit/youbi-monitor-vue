@@ -305,6 +305,9 @@ async function loadAccountPage() {
 }
 
 function openPage(page) {
+  if (flowPageOpen.value) {
+    closeTaskFlow()
+  }
   activePage.value = page
   if (accountTimer) {
     window.clearInterval(accountTimer)
@@ -1029,6 +1032,10 @@ function onlineDeviceText(service) {
     .map(device => String(device.deviceName || '').trim())
     .filter(Boolean)
   return names.length > 0 ? names.join(' & ') : '离线'
+}
+
+function serviceOnline(service) {
+  return (service?.devices || []).some(device => device.online)
 }
 
 function onlineDeviceTitle(service) {
@@ -1925,28 +1932,26 @@ onUnmounted(() => {
 
 <template>
   <main :class="['page-shell', flowPageOpen ? 'flow-page-shell' : '']">
-    <template v-if="!flowPageOpen">
     <header class="top-bar">
       <nav class="page-tabs" aria-label="页面切换">
-        <button type="button" :class="{ active: activePage === 'submitter' }" @click="openPage('submitter')">素材</button>
-        <button type="button" :class="{ active: activePage === 'monitor' }" @click="openPage('monitor')">监控</button>
-        <button type="button" :class="{ active: activePage === 'accounts' }" @click="openPage('accounts')">账号</button>
+        <button type="button" :class="{ active: activePage === 'submitter' && !flowPageOpen }" @click="openPage('submitter')">素材</button>
+        <button type="button" :class="{ active: activePage === 'monitor' || flowPageOpen }" @click="openPage('monitor')">监控</button>
+        <button type="button" :class="{ active: activePage === 'accounts' && !flowPageOpen }" @click="openPage('accounts')">账号</button>
       </nav>
     </header>
 
+    <template v-if="!flowPageOpen">
     <template v-if="activePage === 'monitor'">
     <section class="status-line">
       <span :class="['dot', error ? 'dot-failed' : 'dot-success']"></span>
       <span v-if="error">接口异常：{{ error }}</span>
       <span v-else-if="loading">正在加载</span>
-      <span v-else>监控正常</span>
     </section>
 
     <section class="heartbeat-panel" aria-label="服务设备在线状态">
       <div class="heartbeat-head">
         <div>
           <h2>服务设备</h2>
-          <p>{{ onlineSummary.online }} / {{ onlineSummary.total }} 在线 · 60 秒内有数据库查询记录</p>
         </div>
       </div>
 
@@ -1954,7 +1959,7 @@ onUnmounted(() => {
         <div
           v-for="service in serviceHeartbeats"
           :key="service.serviceName"
-          class="service-device-cell"
+          :class="['service-device-cell', serviceOnline(service) ? 'online' : 'offline']"
           :title="onlineDeviceTitle(service)"
         >
           <strong>{{ service.serviceName }}</strong>
@@ -1986,7 +1991,7 @@ onUnmounted(() => {
         当前筛选下暂无任务
       </div>
 
-      <article v-for="task in filteredTasks" :key="task.taskId" class="task-row">
+      <article v-for="task in filteredTasks" :key="task.taskId" :class="['task-row', `status-${task.status}`]">
         <a
           v-if="taskThumbnailUrl(task)"
           class="task-cover"
@@ -2013,12 +2018,9 @@ onUnmounted(() => {
               </a>
               <template v-else>{{ displayTitle(task) }}</template>
             </h2>
-            <span :class="['task-badge', `status-${task.status}`]">
-              {{ statusText[task.status] || task.status }}
-            </span>
             <button
               type="button"
-              :class="['task-actions-toggle', { active: taskActionsOpen(task) }]"
+              :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsOpen(task) }]"
               @click="toggleTaskActions(task)"
             >
               操作
@@ -2026,8 +2028,8 @@ onUnmounted(() => {
           </div>
           <div class="task-details">
             <span>{{ task.taskId }}</span>
-            <span v-if="sourceDurationSeconds(task) !== null">视频时长 {{ formatDuration(sourceDurationSeconds(task)) }}</span>
-            <span class="task-type">类型 {{ taskTypeText(task) }}</span>
+            <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
+            <span class="task-type">type {{ taskTypeText(task) }}</span>
           </div>
           <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
         </div>
@@ -2511,7 +2513,7 @@ onUnmounted(() => {
                 · current {{ selectedTaskFlow.task.current_stage }}
               </template>
               <template v-if="flowDurationSeconds(selectedTaskFlow) !== null">
-                · 视频时长 {{ formatDuration(flowDurationSeconds(selectedTaskFlow)) }}
+                · {{ formatDuration(flowDurationSeconds(selectedTaskFlow)) }}
               </template>
             </p>
           </div>
@@ -2556,16 +2558,10 @@ onUnmounted(() => {
           <section v-if="selectedStage" class="flow-stage">
             <div class="flow-stage-head">
               <div>
-                <h3>{{ stageName(selectedStage) }}</h3>
                 <p>
-                  {{ statusText[selectedStage.status] || selectedStage.status }}
-                  · 耗时 {{ formatDuration(selectedStage.elapsedSeconds) }}
-                  <template v-if="selectedStage.operator"> · {{ selectedStage.operator }}</template>
+                  耗时 {{ formatDuration(selectedStage.elapsedSeconds) }}
                 </p>
               </div>
-              <span :class="['task-badge', `status-${selectedStage.status}`]">
-                {{ statusText[selectedStage.status] || selectedStage.status }}
-              </span>
             </div>
 
             <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
