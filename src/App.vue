@@ -33,8 +33,9 @@ const readyTaskId = ref('')
 const stopTaskId = ref('')
 const restartTaskId = ref('')
 const deleteTaskId = ref('')
-const openTaskActionsId = ref('')
 const taskStatusFilter = ref('all')
+const taskTypeFilter = ref('all')
+const taskActionsExpanded = ref(false)
 const openFailureKey = ref('')
 const selectedTaskFlow = ref(null)
 const selectedStageKey = ref('downloader')
@@ -71,6 +72,7 @@ const submitterJsonTitle = ref('')
 const submitterJsonPayload = ref(null)
 const submitterThumbUrls = ref({})
 const taskThumbUrls = ref({})
+const brokenImageUrls = ref({})
 const submitterSubmittingId = ref('')
 const submitterPage = ref(1)
 const submitterAuthorTypeOpen = ref(false)
@@ -183,11 +185,17 @@ const taskFilterCounts = computed(() => {
   return counts
 })
 
+const taskTypeFilters = computed(() => {
+  return [...new Set(tasks.value.map(task => taskTypeText(task)).filter(type => type !== '-'))]
+    .sort((left, right) => left.localeCompare(right))
+})
+
 const filteredTasks = computed(() => {
-  if (taskStatusFilter.value === 'all') {
-    return tasks.value
-  }
-  return tasks.value.filter(task => task.status === taskStatusFilter.value)
+  return tasks.value.filter(task => {
+    if (taskStatusFilter.value !== 'all' && task.status !== taskStatusFilter.value) return false
+    if (taskTypeFilter.value !== 'all' && taskTypeText(task) !== taskTypeFilter.value) return false
+    return true
+  })
 })
 
 const submitterFilteredVideos = computed(() => {
@@ -987,13 +995,39 @@ function taskSourceUrl(task) {
   return String(task?.sourceWebpageUrl || task?.sourceUrl || '').trim()
 }
 
-function taskThumbnailUrl(task) {
+function taskPrimaryThumbnailUrl(task) {
   return String(task?.sourceThumbnailUrl || '').trim()
+}
+
+function youtubeThumbnailUrl(sourceUrl) {
+  try {
+    const parsed = new URL(sourceUrl)
+    let videoId = ''
+    if (['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(parsed.hostname)) {
+      videoId = parsed.searchParams.get('v') || ''
+    } else if (['youtu.be', 'www.youtu.be'].includes(parsed.hostname)) {
+      videoId = parsed.pathname.replace(/^\/+/, '').split('/')[0] || ''
+    }
+    return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : ''
+  } catch {
+    return ''
+  }
+}
+
+function taskThumbnailUrl(task) {
+  const primary = taskPrimaryThumbnailUrl(task)
+  if (primary && !brokenImageUrls.value[primary]) return primary
+  return youtubeThumbnailUrl(taskSourceUrl(task))
 }
 
 function taskCachedThumbnailUrl(task) {
   const url = taskThumbnailUrl(task)
   return taskThumbUrls.value[url] || url
+}
+
+function markImageBroken(url) {
+  if (!url) return
+  brokenImageUrls.value = { ...brokenImageUrls.value, [url]: true }
 }
 
 async function cacheImageUrl(url, cacheName, targetRef) {
@@ -1052,6 +1086,10 @@ function taskTypeText(task) {
   return String(task?.taskType || '').trim() || '-'
 }
 
+function setTaskTypeFilter(value) {
+  taskTypeFilter.value = value
+}
+
 function formatDateTime(value) {
   if (!value) return '-'
   return String(value).replace('T', ' ').slice(0, 19)
@@ -1079,13 +1117,12 @@ function onlineDeviceTitle(service) {
     .join('\n')
 }
 
-function toggleTaskActions(task) {
-  const taskId = task?.taskId || ''
-  openTaskActionsId.value = openTaskActionsId.value === taskId ? '' : taskId
+function toggleTaskActions() {
+  taskActionsExpanded.value = !taskActionsExpanded.value
 }
 
-function taskActionsOpen(task) {
-  return openTaskActionsId.value === task?.taskId
+function taskActionsOpen() {
+  return taskActionsExpanded.value
 }
 
 function nodeTitle(node) {
@@ -1116,12 +1153,18 @@ function flowTaskTitle(flow) {
   return task.title || flow?.videoInfo?.title || task.id || '任务详情'
 }
 
-function flowCoverUrl(flow) {
+function flowPrimaryCoverUrl(flow) {
   return flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || ''
 }
 
 function flowSourceUrl(flow) {
   return flow?.videoInfo?.source_webpage_url || flow?.videoInfo?.source_url || flow?.task?.source_url || ''
+}
+
+function flowCoverUrl(flow) {
+  const primary = flowPrimaryCoverUrl(flow)
+  if (primary && !brokenImageUrls.value[primary]) return primary
+  return youtubeThumbnailUrl(flowSourceUrl(flow))
 }
 
 function flowDurationSeconds(flow) {
@@ -1972,19 +2015,12 @@ onUnmounted(() => {
 
     <template v-if="!flowPageOpen">
     <template v-if="activePage === 'monitor'">
-    <section class="status-line">
-      <span :class="['dot', error ? 'dot-failed' : 'dot-success']"></span>
+    <section v-if="error || loading" class="status-line">
       <span v-if="error">接口异常：{{ error }}</span>
       <span v-else-if="loading">正在加载</span>
     </section>
 
     <section class="heartbeat-panel" aria-label="服务设备在线状态">
-      <div class="heartbeat-head">
-        <div>
-          <h2>服务设备</h2>
-        </div>
-      </div>
-
       <div class="service-device-row">
         <div
           v-for="service in serviceHeartbeats"
@@ -2012,6 +2048,17 @@ onUnmounted(() => {
           <span>{{ filter.label }}</span>
           <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
         </button>
+        <select class="task-type-filter" :value="taskTypeFilter" aria-label="按任务 type 筛选" @change="setTaskTypeFilter($event.target.value)">
+          <option value="all">全部 type</option>
+          <option v-for="type in taskTypeFilters" :key="type" :value="type">{{ type }}</option>
+        </select>
+        <button
+          type="button"
+          :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsExpanded }]"
+          @click="toggleTaskActions"
+        >
+          {{ taskActionsExpanded ? '收起操作' : '展开操作' }}
+        </button>
       </div>
 
       <div v-if="!loading && tasks.length === 0" class="empty-state">
@@ -2030,7 +2077,12 @@ onUnmounted(() => {
           rel="noreferrer"
           :title="displayTitle(task)"
         >
-          <img :src="taskCachedThumbnailUrl(task)" :alt="displayTitle(task)" loading="lazy" />
+          <img
+            :src="taskCachedThumbnailUrl(task)"
+            :alt="displayTitle(task)"
+            loading="lazy"
+            @error="markImageBroken(taskThumbnailUrl(task))"
+          />
         </a>
         <div v-else class="task-cover task-cover-empty" aria-hidden="true">无封面</div>
 
@@ -2048,18 +2100,11 @@ onUnmounted(() => {
               </a>
               <template v-else>{{ displayTitle(task) }}</template>
             </h2>
-            <button
-              type="button"
-              :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsOpen(task) }]"
-              @click="toggleTaskActions(task)"
-            >
-              操作
-            </button>
           </div>
           <div class="task-details">
             <span>{{ task.taskId }}</span>
             <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
-            <span class="task-type">type {{ taskTypeText(task) }}</span>
+            <span class="task-type">{{ taskTypeText(task) }}</span>
           </div>
           <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
         </div>
@@ -2083,7 +2128,7 @@ onUnmounted(() => {
             ></div>
           </template>
         </div>
-        <div class="task-action-rail" :class="{ open: taskActionsOpen(task) }">
+        <div class="task-action-rail" :class="{ open: taskActionsOpen() }">
           <button
             v-if="task.status === 'failed'"
             type="button"
@@ -2143,10 +2188,8 @@ onUnmounted(() => {
 
     <template v-else-if="activePage === 'submitter'">
       <section class="submitter-page" aria-label="素材采集">
-        <section class="submitter-status">
-          <span :class="['dot', submitterError ? 'dot-failed' : submitterLoading ? 'dot-running' : 'dot-success']"></span>
+        <section v-if="submitterError || (!submitterLoading && (submitterFocusedBatch || submitterMessage))" class="submitter-status">
           <span v-if="submitterError">Submitter API 异常：{{ submitterError }}</span>
-          <span v-else-if="submitterLoading">正在加载素材库</span>
           <span v-else>{{ submitterFocusedBatch ? `当前批次：${submitterFocusedBatch.slice(0, 8)}。` : '' }}{{ submitterMessage || '素材库已就绪。' }}</span>
         </section>
 
@@ -2562,17 +2605,15 @@ onUnmounted(() => {
         <div v-if="flowError" class="flow-error">Task flow API error: {{ flowError }}</div>
         <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">Loading task flow</div>
         <template v-else-if="selectedTaskFlow">
-          <div class="flow-summary">
+          <div v-if="flowCoverUrl(selectedTaskFlow)" class="flow-summary">
             <a
-              v-if="flowSourceUrl(selectedTaskFlow)"
               class="source-cover-link"
-              :href="flowSourceUrl(selectedTaskFlow)"
+              :href="flowSourceUrl(selectedTaskFlow) || flowCoverUrl(selectedTaskFlow)"
               target="_blank"
               rel="noreferrer"
               title="打开原视频"
             >
-              <img v-if="flowCoverUrl(selectedTaskFlow)" :src="flowCoverUrl(selectedTaskFlow)" alt="" />
-              <span v-else>原视频</span>
+              <img :src="flowCoverUrl(selectedTaskFlow)" alt="" @error="markImageBroken(flowCoverUrl(selectedTaskFlow))" />
             </a>
           </div>
 

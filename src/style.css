@@ -183,26 +183,26 @@ h1 {
   justify-content: center;
   gap: 6px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background: #334155;
+  border: 1px solid rgb(148 163 184 / 0.35);
+  background: rgb(241 245 249 / 0.72);
   padding: 8px;
 }
 
 .service-device-cell.online {
-  border-color: #15803d;
-  background: #16a34a;
+  border-color: rgb(134 239 172 / 0.62);
+  background: rgb(220 252 231 / 0.58);
 }
 
 .service-device-cell.offline {
-  border-color: #1f2937;
-  background: #374151;
+  border-color: rgb(148 163 184 / 0.32);
+  background: rgb(226 232 240 / 0.46);
 }
 
 .service-device-cell strong {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #ffffff;
+  color: #243044;
   font-size: 13px;
   white-space: nowrap;
 }
@@ -211,7 +211,7 @@ h1 {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #ffffff;
+  color: #37506b;
   font-size: 12px;
   font-weight: 760;
   text-align: center;
@@ -219,7 +219,7 @@ h1 {
 }
 
 .service-device-name.offline {
-  color: #e5e7eb;
+  color: #64748b;
 }
 
 .device-pill {
@@ -518,6 +518,16 @@ h1 {
   padding: 0 10px;
 }
 
+.task-type-filter {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344156;
+  cursor: pointer;
+  padding: 0 30px 0 10px;
+}
+
 .task-filter-button strong {
   min-width: 24px;
   border-radius: 999px;
@@ -542,7 +552,7 @@ h1 {
 .empty-state,
 .task-row {
   border: 1px solid #dde5ee;
-  background: #ffffff;
+  background: #f8fafc;
   border-radius: 8px;
 }
 
@@ -772,13 +782,13 @@ h1 {
 }
 
 .task-row.status-success {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: #86efac;
+  background: #dcfce7;
 }
 
 .task-row.status-failed {
-  border-color: #fecaca;
-  background: #fff1f2;
+  border-color: #fca5a5;
+  background: #ffe4e6;
 }
 
 .task-row.status-success .task-cover,
@@ -2192,6 +2202,12 @@ a.submitter-cell:hover {
   .task-filter-button {
     justify-content: space-between;
     min-width: 0;
+  }
+
+  .task-type-filter,
+  .task-actions-toggle.task-filter-button {
+    width: 100%;
+    margin-left: 0;
   }
 
   .status-line {
