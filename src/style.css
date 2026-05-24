@@ -38,7 +38,7 @@ a {
 .page-shell {
   width: min(1600px, calc(100vw - 32px));
   margin: 0 auto;
-  padding: 28px 0 40px;
+  padding: 12px 0 40px;
 }
 
 .flow-page-shell {
@@ -48,10 +48,10 @@ a {
 
 .top-bar {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 18px;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-bottom: 12px;
 }
 
 h1,
@@ -76,47 +76,24 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
 }
 
 .page-tabs button {
-  min-height: 34px;
+  min-height: 30px;
   border: 1px solid #cfd8e3;
   border-radius: 8px;
   background: #ffffff;
   color: #344156;
-  padding: 0 12px;
+  padding: 0 14px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .page-tabs button.active {
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
-}
-
-.summary-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.summary-strip span {
-  min-width: 88px;
-  border: 1px solid #dce3ea;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 8px 11px;
-  color: #536277;
-  font-size: 13px;
-}
-
-.summary-strip strong {
-  color: #172033;
-  font-size: 18px;
-  margin-right: 4px;
 }
 
 .status-line {
@@ -1492,7 +1469,7 @@ h1 {
 
 .submitter-filter-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(190px, 0.9fr) auto;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.2fr) minmax(190px, 0.9fr) minmax(130px, 0.6fr) auto;
   gap: 12px;
   align-items: end;
 }
@@ -1714,7 +1691,6 @@ th.submitter-fixed-col {
 
 .submitter-upload-button {
   min-height: 32px;
-  margin-top: 10px;
   border: 1px solid #111827;
   border-radius: 8px;
   background: #111827;
@@ -1739,6 +1715,57 @@ th.submitter-fixed-col {
   border-color: #cfd8e3;
   background: #f8fafc;
   color: #607086;
+}
+
+.submitter-action-col {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  min-width: 94px;
+  width: 94px;
+  text-align: center;
+  border-left: 1px solid #d9dee7;
+  box-shadow: -8px 0 16px rgb(15 23 42 / 0.04);
+}
+
+th.submitter-action-col {
+  z-index: 4;
+  text-align: center;
+}
+
+.submitter-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border-top: 1px solid #edf0f4;
+  color: #607086;
+  font-size: 13px;
+}
+
+.submitter-pagination div {
+  display: flex;
+  gap: 8px;
+}
+
+.submitter-pagination button {
+  min-height: 30px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.submitter-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .submitter-pill,
@@ -1900,11 +1927,6 @@ a.submitter-cell:hover {
   }
 
   .top-bar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .summary-strip {
     justify-content: flex-start;
   }
 
@@ -1959,18 +1981,6 @@ a.submitter-cell:hover {
   .heartbeat-head p,
   .biliup-head p {
     font-size: 12px;
-  }
-
-  .summary-strip {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .summary-strip span {
-    min-width: 0;
-    padding: 8px 9px;
   }
 
   .task-filter-bar {
@@ -2278,10 +2288,6 @@ a.submitter-cell:hover {
 }
 
 @media (max-width: 380px) {
-  .summary-strip {
-    grid-template-columns: 1fr;
-  }
-
   .account-actions,
   .stage-chain {
     grid-template-columns: 1fr;

@@ -50,12 +50,12 @@ const submitterError = ref('')
 const submitterMessage = ref('')
 const submitterUrl = ref('')
 const submitterAuthor = ref('')
-const submitterType = ref('')
 const submitterBusy = ref(false)
 const submitterAuthorBusy = ref(false)
 const submitterUploader = ref('')
 const submitterDurationMin = ref('')
 const submitterDurationMax = ref('')
+const submitterUploadFilter = ref('all')
 const submitterSort = ref('updated_desc')
 const submitterAuthors = ref([])
 const submitterFields = ref([])
@@ -70,6 +70,8 @@ const submitterJsonTitle = ref('')
 const submitterJsonPayload = ref(null)
 const submitterThumbUrls = ref({})
 const submitterSubmittingId = ref('')
+const submitterPage = ref(1)
+const SUBMITTER_PAGE_SIZE = 20
 let flowTimer = null
 let timer = null
 let bilibiliQrTimer = null
@@ -89,9 +91,9 @@ const SUBMITTER_PREFERRED_FIELDS = [
   'automatic_captions', 'subtitles', 'formats', 'requested_formats',
 ]
 const SUBMITTER_COMMON_FIELDS = new Set([
-  '__detail', 'import_status', 'import_error', 'import_author', 'import_index',
+  'import_status', 'import_error', 'import_author', 'import_index',
   'uploader', 'duration', 'view_count', 'like_count', 'comment_count',
-  'language', 'fps', 'id', 'webpage_url', 'categories', 'tags', 'description',
+  'language', 'fps', 'categories', 'tags', 'description',
 ])
 const SUBMITTER_NUMERIC_FIELDS = new Set([
   'duration', 'view_count', 'like_count', 'comment_count', 'fps',
@@ -103,6 +105,10 @@ const SUBMITTER_SORT_OPTIONS = [
   { value: 'view_asc', label: '播放量从低到高' },
   { value: 'like_desc', label: '点赞量从高到低' },
   { value: 'like_asc', label: '点赞量从低到高' },
+]
+const SUBMITTER_UPLOAD_FILTERS = [
+  { value: 'all', label: '全部' },
+  { value: 'unuploaded', label: '未上传' },
 ]
 
 const statusText = {
@@ -156,16 +162,6 @@ async function throwApiError(response) {
   throw new Error(message ? `${message} (HTTP ${response.status})` : `HTTP ${response.status}`)
 }
 
-const summary = computed(() => {
-  const counts = { running: 0, failed: 0, success: 0, total: tasks.value.length }
-  for (const task of tasks.value) {
-    if (task.status === 'running') counts.running += 1
-    if (task.status === 'failed') counts.failed += 1
-    if (task.status === 'success') counts.success += 1
-  }
-  return counts
-})
-
 const taskFilterCounts = computed(() => {
   const counts = {
     all: tasks.value.length,
@@ -196,7 +192,21 @@ const filteredTasks = computed(() => {
 })
 
 const submitterFilteredVideos = computed(() => {
-  return submitterVideos.value
+  const rows = submitterUploadFilter.value === 'unuploaded'
+    ? submitterVideos.value.filter(item => !item.ydbi_submitted)
+    : submitterVideos.value
+  const start = (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE
+  return rows.slice(start, start + SUBMITTER_PAGE_SIZE)
+})
+
+const submitterFilteredTotal = computed(() => {
+  return submitterUploadFilter.value === 'unuploaded'
+    ? submitterVideos.value.filter(item => !item.ydbi_submitted).length
+    : submitterVideos.value.length
+})
+
+const submitterPageCount = computed(() => {
+  return Math.max(1, Math.ceil(submitterFilteredTotal.value / SUBMITTER_PAGE_SIZE))
 })
 
 const submitterVisibleFieldList = computed(() => {
@@ -1449,6 +1459,11 @@ async function loadSubmitterVideos(quiet = false) {
   }
 }
 
+async function applySubmitterFilters() {
+  submitterPage.value = 1
+  await loadSubmitterVideos()
+}
+
 async function loadSubmitterAuthors() {
   try {
     const response = await fetch(`${submitterApiBase}/authors`)
@@ -1474,27 +1489,33 @@ async function resetSubmitterFilters() {
   submitterUploader.value = ''
   submitterDurationMin.value = ''
   submitterDurationMax.value = ''
+  submitterUploadFilter.value = 'all'
   submitterSort.value = 'updated_desc'
   submitterFocusedBatch.value = ''
+  submitterPage.value = 1
   await loadSubmitterVideos()
 }
 
 async function clearSubmitterBatchFocus() {
   submitterFocusedBatch.value = ''
+  submitterPage.value = 1
   await loadSubmitterVideos()
 }
 
 async function submitVideoToYoubi(item) {
   const rowId = submitterFieldValue(item, 'id')
-  const type = submitterType.value.trim()
   if (!rowId || item.ydbi_submitted || submitterSubmittingId.value) return
-  if (!type) {
-    submitterError.value = '请先填写投稿类型 type'
-    return
-  }
   submitterSubmittingId.value = String(rowId)
   submitterError.value = ''
   try {
+    const author = submitterAuthorName(item)
+    const type = await loadSubmitterAuthorType(author)
+    if (!type) {
+      submitterError.value = author
+        ? `作者 ${author} 未配置投稿 type，请先维护 yd_submitter_author_type。`
+        : '当前素材没有作者信息，无法读取投稿 type。'
+      return
+    }
     const response = await fetch(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1509,6 +1530,9 @@ async function submitVideoToYoubi(item) {
       ydbi_submission_id: payload.submission_id,
       ydbi_submitted_at: new Date().toISOString(),
     })
+    if (submitterPage.value > submitterPageCount.value) {
+      submitterPage.value = submitterPageCount.value
+    }
     submitterMessage.value = `已提交到 YouBi 下载队列，type=${type}。`
   } catch (err) {
     submitterError.value = err instanceof Error ? err.message : String(err)
@@ -1516,6 +1540,30 @@ async function submitVideoToYoubi(item) {
   } finally {
     submitterSubmittingId.value = ''
   }
+}
+
+function submitterAuthorName(item) {
+  return String(
+    submitterFieldValue(item, 'uploader')
+    || submitterFieldValue(item, 'import_author')
+    || submitterFieldValue(item, 'channel')
+    || ''
+  ).trim()
+}
+
+async function loadSubmitterAuthorType(author) {
+  if (!author) return ''
+  const params = new URLSearchParams({ author })
+  const response = await fetch(`${apiBase}/submitter-author-types?${params}`)
+  const payload = await readJsonResponse(response)
+  if (!response.ok) {
+    throw new Error(payload?.message || payload?.error || `HTTP ${response.status}`)
+  }
+  return String(payload?.type || '').trim()
+}
+
+function setSubmitterPage(page) {
+  submitterPage.value = Math.min(Math.max(1, page), submitterPageCount.value)
 }
 
 async function createSubmitterVideo() {
@@ -1788,21 +1836,11 @@ onUnmounted(() => {
   <main :class="['page-shell', flowPageOpen ? 'flow-page-shell' : '']">
     <template v-if="!flowPageOpen">
     <header class="top-bar">
-      <div>
-        <h1>视频生成监控</h1>
-        <p>任务链路实时状态</p>
-      </div>
       <nav class="page-tabs" aria-label="页面切换">
+        <button type="button" :class="{ active: activePage === 'submitter' }" @click="activePage = 'submitter'; loadSubmitterAuthors(); loadSubmitterVideos()">素材</button>
         <button type="button" :class="{ active: activePage === 'monitor' }" @click="activePage = 'monitor'">监控</button>
-        <button type="button" :class="{ active: activePage === 'accounts' }" @click="activePage = 'accounts'; loadAccountPage()">账号管理</button>
-        <button type="button" :class="{ active: activePage === 'submitter' }" @click="activePage = 'submitter'; loadSubmitterAuthors(); loadSubmitterVideos()">素材采集</button>
+        <button type="button" :class="{ active: activePage === 'accounts' }" @click="activePage = 'accounts'; loadAccountPage()">账号</button>
       </nav>
-      <div class="summary-strip" aria-label="任务汇总">
-        <span><strong>{{ summary.total }}</strong> 总数</span>
-        <span><strong>{{ summary.running }}</strong> 处理中</span>
-        <span><strong>{{ summary.failed }}</strong> 失败</span>
-        <span><strong>{{ summary.success }}</strong> 成功</span>
-      </div>
     </header>
 
     <template v-if="activePage === 'monitor'">
@@ -1978,12 +2016,6 @@ onUnmounted(() => {
         </section>
 
         <section class="submitter-actions-panel">
-          <div class="submitter-submit-row">
-            <label>
-              <span>投稿类型 type</span>
-              <input v-model="submitterType" type="text" placeholder="必须精确匹配三个平台账号 Key" required />
-            </label>
-          </div>
           <form class="submitter-submit-row" @submit.prevent="createSubmitterVideo">
             <label>
               <span>视频链接</span>
@@ -2001,10 +2033,10 @@ onUnmounted(() => {
         </section>
 
         <section class="submitter-controls">
-          <form class="submitter-filter-grid" @submit.prevent="loadSubmitterVideos">
+          <div class="submitter-filter-grid">
             <label>
               <span>作者</span>
-              <select v-model="submitterUploader">
+              <select v-model="submitterUploader" @change="applySubmitterFilters">
                 <option value="">全部作者</option>
                 <option v-for="author in submitterAuthors" :key="author" :value="author">{{ author }}</option>
               </select>
@@ -2012,26 +2044,32 @@ onUnmounted(() => {
             <fieldset class="submitter-duration-field">
               <legend>视频时长</legend>
               <div>
-                <input v-model="submitterDurationMin" type="number" min="0" placeholder="最短秒数" />
+                <input v-model="submitterDurationMin" type="number" min="0" placeholder="最短秒数" @change="applySubmitterFilters" />
                 <span>至</span>
-                <input v-model="submitterDurationMax" type="number" min="0" placeholder="最长秒数" />
+                <input v-model="submitterDurationMax" type="number" min="0" placeholder="最长秒数" @change="applySubmitterFilters" />
               </div>
             </fieldset>
             <label>
               <span>排序</span>
-              <select v-model="submitterSort">
+              <select v-model="submitterSort" @change="applySubmitterFilters">
                 <option v-for="option in SUBMITTER_SORT_OPTIONS" :key="option.value" :value="option.value">
                   {{ option.label }}
                 </option>
               </select>
             </label>
+            <label>
+              <span>上传</span>
+              <select v-model="submitterUploadFilter" @change="applySubmitterFilters">
+                <option v-for="option in SUBMITTER_UPLOAD_FILTERS" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
             <div class="submitter-filter-actions">
-              <button type="submit" :disabled="submitterLoading">{{ submitterLoading ? '筛选中' : '应用' }}</button>
               <button type="button" @click="resetSubmitterFilters">重置</button>
               <button v-if="submitterFocusedBatch" type="button" @click="clearSubmitterBatchFocus">查看全部</button>
-              <button type="button" :disabled="submitterLoading" @click="loadSubmitterVideos">{{ submitterLoading ? '刷新中' : '刷新' }}</button>
             </div>
-          </form>
+          </div>
 
           <section class="submitter-fields-section">
             <button type="button" class="submitter-fields-toggle" @click="toggleSubmitterFieldsPanel">
@@ -2068,11 +2106,12 @@ onUnmounted(() => {
                 <tr>
                   <th class="submitter-fixed-col">视频</th>
                   <th v-for="field in submitterVisibleFieldList" :key="field">{{ submitterFieldLabel(field) }}</th>
+                  <th class="submitter-action-col">操作</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="!submitterLoading && submitterFilteredVideos.length === 0">
-                  <td :colspan="submitterVisibleFieldList.length + 1" class="submitter-empty">
+                  <td :colspan="submitterVisibleFieldList.length + 2" class="submitter-empty">
                     {{ submitterFocusedBatch ? '当前批次暂无记录，频道扫描完成后会自动刷新。' : '暂无匹配记录' }}
                   </td>
                 </tr>
@@ -2096,16 +2135,6 @@ onUnmounted(() => {
                           <span>{{ formatDuration(submitterFieldValue(item, 'duration')) }}</span>
                           <span>{{ formatNumber(submitterFieldValue(item, 'view_count')) }} 播放</span>
                         </div>
-                        <button
-                          type="button"
-                          :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"
-                          :disabled="Boolean(item.ydbi_submitted) || !submitterType.trim() || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
-                          @click="submitVideoToYoubi(item)"
-                        >
-                          <span v-if="item.ydbi_submitted">已上传</span>
-                          <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
-                          <span v-else>上传到 YouBi</span>
-                        </button>
                       </div>
                     </div>
                   </td>
@@ -2143,9 +2172,28 @@ onUnmounted(() => {
                     <pre v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'object'" class="submitter-cell">{{ submitterJsonPreview(submitterFieldValue(item, field)) }}</pre>
                     <div v-else class="submitter-cell">{{ submitterFieldValue(item, field) }}</div>
                   </td>
+                  <td class="submitter-action-col">
+                    <button
+                      type="button"
+                      :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"
+                      :disabled="Boolean(item.ydbi_submitted) || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
+                      @click="submitVideoToYoubi(item)"
+                    >
+                      <span v-if="item.ydbi_submitted">已上传</span>
+                      <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
+                      <span v-else>上传</span>
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div class="submitter-pagination" v-if="submitterFilteredTotal > 0">
+            <span>第 {{ submitterPage }} / {{ submitterPageCount }} 页 · 共 {{ submitterFilteredTotal }} 条</span>
+            <div>
+              <button type="button" :disabled="submitterPage <= 1" @click="setSubmitterPage(submitterPage - 1)">上一页</button>
+              <button type="button" :disabled="submitterPage >= submitterPageCount" @click="setSubmitterPage(submitterPage + 1)">下一页</button>
+            </div>
           </div>
         </section>
 
