@@ -397,7 +397,7 @@ async function loadDouyinStatus() {
 }
 
 async function loadDouyinAccounts() {
-  const response = await fetch(`${apiBase}/douyin/accounts`)
+  const response = await fetch(`${apiBase}/douyin/cdp-sessions`)
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }
@@ -700,6 +700,51 @@ async function saveDouyinKey(row) {
   }
 }
 
+function addDouyinCdpRow() {
+  const rows = [...douyinRows.value]
+  const slot = rows.reduce((max, row) => Math.max(max, Number(row.slot || 0)), 0) + 1
+  rows.push({
+    slot,
+    accountKey: '',
+    cdpPort: null,
+    draftKey: '',
+    draftPort: '',
+  })
+  douyinRows.value = rows
+}
+
+async function saveDouyinCdpSession(row) {
+  const accountKey = (row?.draftKey || '').trim()
+  const cdpPort = Number(row?.draftPort)
+  if (!accountKey) {
+    douyinError.value = 'Key 不能为空'
+    return
+  }
+  if (!Number.isInteger(cdpPort) || cdpPort < 1 || cdpPort > 65535) {
+    douyinError.value = '端口号必须是 1-65535'
+    return
+  }
+  try {
+    const response = await fetch(`${apiBase}/douyin/cdp-sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        originalAccountKey: row.accountKey || '',
+        accountKey,
+        cdpPort,
+      }),
+    })
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload.message || `HTTP ${response.status}`)
+    }
+    await loadDouyinAccounts()
+    douyinError.value = ''
+  } catch (err) {
+    douyinError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
 async function markTaskReady(task) {
   if (!task?.taskId || task.status !== 'failed' || readyTaskId.value) return
   readyTaskId.value = task.taskId
@@ -916,6 +961,7 @@ function accountRows(accounts) {
     ...account,
     slot: index + 1,
     draftKey: account.accountKey || '',
+    draftPort: account.cdpPort == null ? '' : String(account.cdpPort),
   }))
 }
 
@@ -2566,41 +2612,34 @@ onUnmounted(() => {
           <div class="biliup-head">
             <div>
               <h2>抖音账号</h2>
-              <p v-if="douyinAccount">已保存 {{ douyinAccounts.length }} 个账号</p>
-              <p v-else>{{ douyinError ? `抖音账号异常：${douyinError}` : '正在检测抖音账号' }}</p>
+              <p v-if="douyinAccount">已配置 {{ douyinAccounts.length }} 个 CDP 会话</p>
+              <p v-else>{{ douyinError ? `抖音配置异常：${douyinError}` : '正在检测抖音 CDP 配置' }}</p>
             </div>
             <div class="biliup-actions">
-              <button type="button" @click="startDouyinQrLogin(null)">扫码登录新账号</button>
+              <button type="button" @click="addDouyinCdpRow">新增配置</button>
             </div>
           </div>
 
           <div class="account-table" aria-label="抖音账号表">
-            <div class="account-row account-header">
+            <div class="account-row account-header douyin-cdp-row">
               <span>槽位</span>
               <span>Key</span>
-              <span>账号</span>
-              <span>状态</span>
+              <span>CDP端口</span>
               <span>操作</span>
             </div>
-            <div v-for="row in douyinRows" :key="row.slot" class="account-row">
+            <div v-for="row in douyinRows" :key="row.slot" class="account-row douyin-cdp-row">
               <strong>{{ row.slot }}</strong>
-              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
-              <span>{{ accountDisplay(row, 'douyin') }}</span>
-              <span>{{ rowStatus(row) }}</span>
+              <input v-model="row.draftKey" type="text" placeholder="例如 animal / knowledge" />
+              <input v-model="row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="例如 9333" />
               <span class="account-actions">
-                <button type="button" @click="startDouyinQrLogin(row)">
-                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
+                <button
+                  type="button"
+                  :disabled="row.draftKey === row.accountKey && String(row.draftPort || '') === String(row.cdpPort || '')"
+                  @click="saveDouyinCdpSession(row)"
+                >
+                  保存
                 </button>
-                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveDouyinKey(row)">保存Key</button>
               </span>
-            </div>
-          </div>
-
-          <div v-if="douyinQrCode" class="bilibili-login">
-            <img :src="douyinQrCode.imageDataUrl" alt="抖音登录二维码" />
-            <div>
-              <strong>{{ douyinQrMessage }}</strong>
-              <span>请用抖音 App 扫码并确认登录</span>
             </div>
           </div>
 
