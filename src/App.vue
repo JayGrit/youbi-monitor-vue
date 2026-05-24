@@ -72,9 +72,14 @@ const submitterJsonPayload = ref(null)
 const submitterThumbUrls = ref({})
 const submitterSubmittingId = ref('')
 const submitterPage = ref(1)
+const submitterAuthorTypeOpen = ref(false)
+const submitterAuthorTypeRows = ref([])
+const submitterAuthorTypeSaving = ref('')
+const submitterAuthorTypeError = ref('')
 const SUBMITTER_PAGE_SIZE = 20
 let flowTimer = null
 let timer = null
+let accountTimer = null
 let bilibiliQrTimer = null
 let xiaohongshuQrTimer = null
 let douyinQrTimer = null
@@ -297,6 +302,22 @@ async function loadBiliupStatus() {
 
 async function loadAccountPage() {
   await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus(), loadDouyinStatus()])
+}
+
+function openPage(page) {
+  activePage.value = page
+  if (accountTimer) {
+    window.clearInterval(accountTimer)
+    accountTimer = null
+  }
+  if (page === 'submitter') {
+    loadSubmitterAuthors()
+    loadSubmitterVideos()
+  }
+  if (page === 'accounts') {
+    loadAccountPage()
+    accountTimer = window.setInterval(loadAccountPage, 30000)
+  }
 }
 
 async function loadBilibiliAccounts() {
@@ -853,23 +874,11 @@ function toggleFailureDetails(task, node) {
 }
 
 function accountRows(accounts) {
-  const rows = accounts.slice(0, 3).map((account, index) => ({
+  return accounts.map((account, index) => ({
     ...account,
     slot: index + 1,
     draftKey: account.accountKey || '',
   }))
-  while (rows.length < 3) {
-    rows.push({
-      slot: rows.length + 1,
-      accountKey: '',
-      draftKey: '',
-      uname: '',
-      mid: '',
-      valid: false,
-      message: '空',
-    })
-  }
-  return rows
 }
 
 function mergeAccountRow(account, preferredSlot) {
@@ -1454,10 +1463,10 @@ async function loadSubmitterVideos(quiet = false) {
   if (!quiet) submitterLoading.value = true
   try {
     const params = new URLSearchParams()
+    params.set('limit', '100000')
     if (submitterListDetail.value || submitterFocusedBatch.value) params.set('detail', '1')
     if (submitterFocusedBatch.value) {
       params.set('batch', submitterFocusedBatch.value)
-      params.set('limit', '1000')
     }
     if (submitterUploader.value) params.set('uploader', submitterUploader.value)
     if (submitterDurationMin.value !== '') params.set('duration_min', submitterDurationMin.value)
@@ -1583,6 +1592,63 @@ async function loadSubmitterAuthorType(author) {
     throw new Error(payload?.message || payload?.error || `HTTP ${response.status}`)
   }
   return String(payload?.type || '').trim()
+}
+
+async function openSubmitterAuthorTypes() {
+  submitterAuthorTypeOpen.value = true
+  submitterAuthorTypeError.value = ''
+  await loadSubmitterAuthorTypes()
+}
+
+async function loadSubmitterAuthorTypes() {
+  try {
+    const [typesResponse] = await Promise.all([
+      fetch(`${apiBase}/submitter-author-types/all`),
+      submitterAuthors.value.length ? Promise.resolve() : loadSubmitterAuthors(),
+    ])
+    const payload = await readJsonResponse(typesResponse)
+    if (!typesResponse.ok) {
+      throw new Error(payload?.message || payload?.error || `HTTP ${typesResponse.status}`)
+    }
+    const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), String(item.type || '')]))
+    const authors = new Set([...submitterAuthors.value, ...byAuthor.keys()].filter(Boolean))
+    submitterAuthorTypeRows.value = [...authors].sort((left, right) => left.localeCompare(right)).map(author => ({
+      author,
+      type: byAuthor.get(author) || '',
+      draftType: byAuthor.get(author) || '',
+    }))
+  } catch (err) {
+    submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function saveSubmitterAuthorType(row) {
+  const type = String(row?.draftType || '').trim()
+  if (!row?.author || !type) return
+  submitterAuthorTypeSaving.value = row.author
+  submitterAuthorTypeError.value = ''
+  try {
+    const response = await fetch(`${apiBase}/submitter-author-types`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ author: row.author, type }),
+    })
+    const payload = await readJsonResponse(response)
+    if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || `HTTP ${response.status}`)
+    }
+    row.type = String(payload?.type || type)
+    row.draftType = row.type
+  } catch (err) {
+    submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    submitterAuthorTypeSaving.value = ''
+  }
+}
+
+function closeSubmitterAuthorTypes() {
+  submitterAuthorTypeOpen.value = false
+  submitterAuthorTypeError.value = ''
 }
 
 function setSubmitterPage(page) {
@@ -1826,13 +1892,15 @@ function formatNumber(value) {
 
 onMounted(() => {
   loadTasks()
-  loadAccountPage()
   timer = window.setInterval(loadTasks, 2000)
 })
 
 onUnmounted(() => {
   if (timer) {
     window.clearInterval(timer)
+  }
+  if (accountTimer) {
+    window.clearInterval(accountTimer)
   }
   if (bilibiliQrTimer) {
     window.clearInterval(bilibiliQrTimer)
@@ -1860,9 +1928,9 @@ onUnmounted(() => {
     <template v-if="!flowPageOpen">
     <header class="top-bar">
       <nav class="page-tabs" aria-label="页面切换">
-        <button type="button" :class="{ active: activePage === 'submitter' }" @click="activePage = 'submitter'; loadSubmitterAuthors(); loadSubmitterVideos()">素材</button>
-        <button type="button" :class="{ active: activePage === 'monitor' }" @click="activePage = 'monitor'">监控</button>
-        <button type="button" :class="{ active: activePage === 'accounts' }" @click="activePage = 'accounts'; loadAccountPage()">账号</button>
+        <button type="button" :class="{ active: activePage === 'submitter' }" @click="openPage('submitter')">素材</button>
+        <button type="button" :class="{ active: activePage === 'monitor' }" @click="openPage('monitor')">监控</button>
+        <button type="button" :class="{ active: activePage === 'accounts' }" @click="openPage('accounts')">账号</button>
       </nav>
     </header>
 
@@ -2101,6 +2169,7 @@ onUnmounted(() => {
               </select>
             </label>
             <div class="submitter-filter-actions">
+              <button type="button" @click="openSubmitterAuthorTypes">作者 Type</button>
               <button type="button" @click="resetSubmitterFilters">重置</button>
               <button v-if="submitterFocusedBatch" type="button" @click="clearSubmitterBatchFocus">查看全部</button>
             </div>
@@ -2241,6 +2310,47 @@ onUnmounted(() => {
             <pre>{{ JSON.stringify(submitterJsonPayload, null, 2) }}</pre>
           </section>
         </div>
+
+        <div v-if="submitterAuthorTypeOpen" class="submitter-modal-backdrop" @click.self="closeSubmitterAuthorTypes">
+          <section class="submitter-modal submitter-author-type-modal" role="dialog" aria-modal="true">
+            <header>
+              <strong>作者 Type</strong>
+              <button type="button" @click="closeSubmitterAuthorTypes">关闭</button>
+            </header>
+            <div class="submitter-author-type-body">
+              <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
+              <table class="submitter-author-type-table">
+                <thead>
+                  <tr>
+                    <th>作者</th>
+                    <th>Type</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="submitterAuthorTypeRows.length === 0">
+                    <td colspan="3" class="submitter-empty">暂无作者</td>
+                  </tr>
+                  <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
+                    <td>{{ row.author }}</td>
+                    <td>
+                      <input v-model="row.draftType" type="text" placeholder="投稿 type" />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        :disabled="!row.draftType.trim() || row.draftType === row.type || submitterAuthorTypeSaving === row.author"
+                        @click="saveSubmitterAuthorType(row)"
+                      >
+                        {{ submitterAuthorTypeSaving === row.author ? '保存中' : '保存' }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </section>
     </template>
 
@@ -2254,7 +2364,7 @@ onUnmounted(() => {
               <p v-else>{{ bilibiliError ? `B站账号异常：${bilibiliError}` : '正在检测 B站账号' }}</p>
             </div>
             <div class="biliup-actions">
-              <button type="button" @click="loadBiliupStatus">刷新状态</button>
+              <button type="button" @click="startBilibiliQrLogin(null)">扫码登录新账号</button>
             </div>
           </div>
 
@@ -2275,7 +2385,6 @@ onUnmounted(() => {
                 <button type="button" @click="startBilibiliQrLogin(row)">
                   {{ row.accountKey ? '重新扫码' : '扫码登录' }}
                 </button>
-                <button type="button" :disabled="!row.accountKey" @click="refreshBilibiliRow(row)">刷新</button>
                 <button type="button" :disabled="!row.accountKey || bilibiliRenewing" @click="renewBilibiliAccount(row)">
                   {{ bilibiliBusyKey === rowKey(row) ? '续期中' : '续期' }}
                 </button>
@@ -2303,7 +2412,7 @@ onUnmounted(() => {
               <p v-else>{{ xiaohongshuError ? `小红书账号异常：${xiaohongshuError}` : '正在检测小红书账号' }}</p>
             </div>
             <div class="biliup-actions">
-              <button type="button" @click="loadXiaohongshuStatus">刷新状态</button>
+              <button type="button" @click="startXiaohongshuQrLogin(null)">扫码登录新账号</button>
             </div>
           </div>
 
@@ -2324,7 +2433,6 @@ onUnmounted(() => {
                 <button type="button" @click="startXiaohongshuQrLogin(row)">
                   {{ row.accountKey ? '重新扫码' : '扫码登录' }}
                 </button>
-                <button type="button" :disabled="!row.accountKey" @click="refreshXiaohongshuRow(row)">刷新</button>
                 <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveXiaohongshuKey(row)">保存Key</button>
               </span>
             </div>
@@ -2349,7 +2457,7 @@ onUnmounted(() => {
               <p v-else>{{ douyinError ? `抖音账号异常：${douyinError}` : '正在检测抖音账号' }}</p>
             </div>
             <div class="biliup-actions">
-              <button type="button" @click="loadDouyinStatus">刷新状态</button>
+              <button type="button" @click="startDouyinQrLogin(null)">扫码登录新账号</button>
             </div>
           </div>
 
@@ -2370,7 +2478,6 @@ onUnmounted(() => {
                 <button type="button" @click="startDouyinQrLogin(row)">
                   {{ row.accountKey ? '重新扫码' : '扫码登录' }}
                 </button>
-                <button type="button" :disabled="!row.accountKey" @click="refreshDouyinRow(row)">刷新</button>
                 <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveDouyinKey(row)">保存Key</button>
               </span>
             </div>
