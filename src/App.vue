@@ -33,6 +33,7 @@ const readyTaskId = ref('')
 const stopTaskId = ref('')
 const restartTaskId = ref('')
 const deleteTaskId = ref('')
+const openTaskActionsId = ref('')
 const taskStatusFilter = ref('all')
 const openFailureKey = ref('')
 const selectedTaskFlow = ref(null)
@@ -122,11 +123,9 @@ const statusText = {
 
 const taskStatusFilters = [
   { key: 'all', label: '全部' },
-  { key: 'success', label: '已完成' },
-  { key: 'unfinished', label: '未完成' },
+  { key: 'success', label: '成功' },
+  { key: 'failed', label: '失败' },
   { key: 'running', label: '执行中' },
-  { key: 'failed', label: '已失败' },
-  { key: 'ready', label: '排队中' },
 ]
 
 const stageNameText = {
@@ -166,17 +165,13 @@ const taskFilterCounts = computed(() => {
   const counts = {
     all: tasks.value.length,
     success: 0,
-    unfinished: 0,
-    running: 0,
     failed: 0,
-    ready: 0,
+    running: 0,
   }
   for (const task of tasks.value) {
     if (task.status === 'success') counts.success += 1
-    if (task.status !== 'success' && task.status !== 'failed') counts.unfinished += 1
-    if (task.status === 'running') counts.running += 1
     if (task.status === 'failed') counts.failed += 1
-    if (task.status === 'ready') counts.ready += 1
+    if (task.status === 'running') counts.running += 1
   }
   return counts
 })
@@ -184,9 +179,6 @@ const taskFilterCounts = computed(() => {
 const filteredTasks = computed(() => {
   if (taskStatusFilter.value === 'all') {
     return tasks.value
-  }
-  if (taskStatusFilter.value === 'unfinished') {
-    return tasks.value.filter(task => task.status !== 'success' && task.status !== 'failed')
   }
   return tasks.value.filter(task => task.status === taskStatusFilter.value)
 })
@@ -984,6 +976,10 @@ function taskSourceUrl(task) {
   return String(task?.sourceWebpageUrl || task?.sourceUrl || '').trim()
 }
 
+function taskThumbnailUrl(task) {
+  return String(task?.sourceThumbnailUrl || '').trim()
+}
+
 function sourceDurationSeconds(task) {
   const value = Number(task?.sourceDurationSeconds)
   return Number.isFinite(value) && value > 0 ? value : null
@@ -1005,6 +1001,10 @@ function uploadAccountText(task) {
   return name || (uid ? `UID ${uid}` : '')
 }
 
+function taskTypeText(task) {
+  return String(task?.taskType || '').trim() || '-'
+}
+
 function formatDateTime(value) {
   if (!value) return '-'
   return String(value).replace('T', ' ').slice(0, 19)
@@ -1012,6 +1012,29 @@ function formatDateTime(value) {
 
 function formatLastSeen(device) {
   return device?.online ? '在线' : '离线'
+}
+
+function onlineDeviceText(service) {
+  const names = (service?.devices || [])
+    .filter(device => device.online)
+    .map(device => String(device.deviceName || '').trim())
+    .filter(Boolean)
+  return names.length > 0 ? names.join(' & ') : '离线'
+}
+
+function onlineDeviceTitle(service) {
+  return (service?.devices || [])
+    .map(device => `${device.deviceName}: ${formatLastSeen(device)}${device.lastSeenAt ? ` ${formatDateTime(device.lastSeenAt)}` : ''}`)
+    .join('\n')
+}
+
+function toggleTaskActions(task) {
+  const taskId = task?.taskId || ''
+  openTaskActionsId.value = openTaskActionsId.value === taskId ? '' : taskId
+}
+
+function taskActionsOpen(task) {
+  return openTaskActionsId.value === task?.taskId
 }
 
 function nodeTitle(node) {
@@ -1848,7 +1871,7 @@ onUnmounted(() => {
       <span :class="['dot', error ? 'dot-failed' : 'dot-success']"></span>
       <span v-if="error">接口异常：{{ error }}</span>
       <span v-else-if="loading">正在加载</span>
-      <span v-else>最后刷新：{{ serverTime || '本地时间' }}</span>
+      <span v-else>监控正常</span>
     </section>
 
     <section class="heartbeat-panel" aria-label="服务设备在线状态">
@@ -1859,24 +1882,16 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="heartbeat-table">
-        <div class="heartbeat-row heartbeat-header">
-          <span>服务</span>
-          <span v-for="device in serviceHeartbeats[0]?.devices || []" :key="device.deviceName">
-            {{ device.deviceName }}
-          </span>
-        </div>
-        <div v-for="service in serviceHeartbeats" :key="service.serviceName" class="heartbeat-row">
+      <div class="service-device-row">
+        <div
+          v-for="service in serviceHeartbeats"
+          :key="service.serviceName"
+          class="service-device-cell"
+          :title="onlineDeviceTitle(service)"
+        >
           <strong>{{ service.serviceName }}</strong>
-          <span
-            v-for="device in service.devices"
-            :key="device.deviceName"
-            :class="['device-pill', device.online ? 'device-online' : 'device-offline']"
-            :title="formatDateTime(device.lastSeenAt)"
-          >
-            <span :class="['dot', device.online ? 'dot-success' : 'dot-muted']"></span>
-            <span class="device-name">{{ device.deviceName }}</span>
-            {{ formatLastSeen(device) }}
+          <span :class="['service-device-name', { offline: onlineDeviceText(service) === '离线' }]">
+            {{ onlineDeviceText(service) }}
           </span>
         </div>
       </div>
@@ -1904,6 +1919,18 @@ onUnmounted(() => {
       </div>
 
       <article v-for="task in filteredTasks" :key="task.taskId" class="task-row">
+        <a
+          v-if="taskThumbnailUrl(task)"
+          class="task-cover"
+          :href="taskSourceUrl(task) || taskThumbnailUrl(task)"
+          target="_blank"
+          rel="noreferrer"
+          :title="displayTitle(task)"
+        >
+          <img :src="taskThumbnailUrl(task)" :alt="displayTitle(task)" loading="lazy" />
+        </a>
+        <div v-else class="task-cover task-cover-empty" aria-hidden="true">无封面</div>
+
         <div class="task-meta">
           <div class="task-title-row">
             <h2>
@@ -1922,51 +1949,17 @@ onUnmounted(() => {
               {{ statusText[task.status] || task.status }}
             </span>
             <button
-              v-if="task.status === 'failed'"
               type="button"
-              class="retry-button"
-              :disabled="isTaskReadyBusy(task)"
-              title="把任务切回排队中"
-              @click="markTaskReady(task)"
+              :class="['task-actions-toggle', { active: taskActionsOpen(task) }]"
+              @click="toggleTaskActions(task)"
             >
-              {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
-            </button>
-            <button
-              v-if="task.status === 'running'"
-              type="button"
-              class="stop-button"
-              :disabled="isTaskStopBusy(task)"
-              title="停止任务并阻止后续阶段继续排队"
-              @click="stopTask(task)"
-            >
-              {{ isTaskStopBusy(task) ? '处理中' : '停止' }}
-            </button>
-            <button
-              v-if="task.status !== 'running'"
-              type="button"
-              class="restart-button"
-              :disabled="isTaskRestartBusy(task)"
-              title="删除已生成结果并从 downloader 重新开始"
-              @click="restartTask(task)"
-            >
-              {{ isTaskRestartBusy(task) ? '处理中' : '从头开始' }}
-            </button>
-            <button
-              v-if="task.status !== 'running'"
-              type="button"
-              class="delete-button"
-              :disabled="isTaskDeleteBusy(task)"
-              title="永久删除任务数据库记录和 MinIO 文件"
-              @click="deleteTask(task)"
-            >
-              {{ isTaskDeleteBusy(task) ? '处理中' : '删除' }}
+              操作
             </button>
           </div>
           <div class="task-details">
             <span>{{ task.taskId }}</span>
             <span v-if="sourceDurationSeconds(task) !== null">视频时长 {{ formatDuration(sourceDurationSeconds(task)) }}</span>
-            <span v-if="uploadAccountText(task)" class="upload-account">投稿账号 {{ uploadAccountText(task) }}</span>
-            <span>总耗时 {{ formatDuration(task.elapsedSeconds) }}</span>
+            <span class="task-type">类型 {{ taskTypeText(task) }}</span>
           </div>
           <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
         </div>
@@ -1989,6 +1982,48 @@ onUnmounted(() => {
               aria-hidden="true"
             ></div>
           </template>
+        </div>
+        <div class="task-action-rail" :class="{ open: taskActionsOpen(task) }">
+          <button
+            v-if="task.status === 'failed'"
+            type="button"
+            class="retry-button"
+            :disabled="isTaskReadyBusy(task)"
+            title="把任务切回排队中"
+            @click="markTaskReady(task)"
+          >
+            {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
+          </button>
+          <button
+            v-if="task.status === 'running'"
+            type="button"
+            class="stop-button"
+            :disabled="isTaskStopBusy(task)"
+            title="停止任务并阻止后续阶段继续排队"
+            @click="stopTask(task)"
+          >
+            {{ isTaskStopBusy(task) ? '处理中' : '停止' }}
+          </button>
+          <button
+            v-if="task.status !== 'running'"
+            type="button"
+            class="restart-button"
+            :disabled="isTaskRestartBusy(task)"
+            title="删除已生成结果并从 downloader 重新开始"
+            @click="restartTask(task)"
+          >
+            {{ isTaskRestartBusy(task) ? '处理中' : '从头开始' }}
+          </button>
+          <button
+            v-if="task.status !== 'running'"
+            type="button"
+            class="delete-button"
+            :disabled="isTaskDeleteBusy(task)"
+            title="永久删除任务数据库记录和 MinIO 文件"
+            @click="deleteTask(task)"
+          >
+            {{ isTaskDeleteBusy(task) ? '处理中' : '删除' }}
+          </button>
         </div>
         <div
           v-for="node in task.nodes"
