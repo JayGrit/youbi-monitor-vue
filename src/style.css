@@ -1617,30 +1617,10 @@ h1 {
   min-width: 0;
 }
 
-.submitter-filter-grid label > span,
-.submitter-duration-field legend {
+.submitter-filter-grid label > span {
   color: #516174;
   font-size: 12px;
   font-weight: 680;
-}
-
-.submitter-duration-field {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.submitter-duration-field div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.submitter-duration-field div span {
-  color: #748196;
-  font-size: 12px;
 }
 
 .submitter-filter-actions {

@@ -55,8 +55,7 @@ const submitterAuthor = ref('')
 const submitterBusy = ref(false)
 const submitterAuthorBusy = ref(false)
 const submitterUploader = ref('')
-const submitterDurationMin = ref('')
-const submitterDurationMax = ref('')
+const submitterDurationFilter = ref('all')
 const submitterUploadFilter = ref('unuploaded')
 const submitterSort = ref('updated_desc')
 const submitterAuthors = ref([])
@@ -119,6 +118,12 @@ const SUBMITTER_UPLOAD_FILTERS = [
   { value: 'unuploaded', label: '未上传' },
   { value: 'uploaded', label: '已上传' },
   { value: 'all', label: '全部' },
+]
+const SUBMITTER_DURATION_FILTERS = [
+  { value: 'all', label: '全部时长' },
+  { value: 'short', label: '短视频（0-120 秒）' },
+  { value: 'medium', label: '中视频（121-1200 秒）' },
+  { value: 'long', label: '长视频（1201 秒以上）' },
 ]
 
 const statusText = {
@@ -1554,8 +1559,6 @@ async function loadSubmitterVideos(quiet = false) {
       params.set('batch', submitterFocusedBatch.value)
     }
     if (submitterUploader.value) params.set('uploader', submitterUploader.value)
-    if (submitterDurationMin.value !== '') params.set('duration_min', submitterDurationMin.value)
-    if (submitterDurationMax.value !== '') params.set('duration_max', submitterDurationMax.value)
     if (submitterSort.value) params.set('sort', submitterSort.value)
     const query = params.toString()
     const response = await fetch(`${submitterApiBase}/videos${query ? `?${query}` : ''}`)
@@ -1604,8 +1607,7 @@ async function toggleSubmitterFieldsPanel() {
 
 async function resetSubmitterFilters() {
   submitterUploader.value = ''
-  submitterDurationMin.value = ''
-  submitterDurationMax.value = ''
+  submitterDurationFilter.value = 'all'
   submitterUploadFilter.value = 'unuploaded'
   submitterSort.value = 'updated_desc'
   submitterFocusedBatch.value = ''
@@ -1614,13 +1616,21 @@ async function resetSubmitterFilters() {
 }
 
 function filterSubmitterVideos(rows) {
-  if (submitterUploadFilter.value === 'unuploaded') {
-    return rows.filter(item => !item.ydbi_submitted)
-  }
-  if (submitterUploadFilter.value === 'uploaded') {
-    return rows.filter(item => item.ydbi_submitted)
-  }
-  return rows
+  return rows.filter(item => {
+    if (submitterUploadFilter.value === 'unuploaded' && item.ydbi_submitted) return false
+    if (submitterUploadFilter.value === 'uploaded' && !item.ydbi_submitted) return false
+    return matchesSubmitterDurationFilter(item)
+  })
+}
+
+function matchesSubmitterDurationFilter(item) {
+  if (submitterDurationFilter.value === 'all') return true
+  const duration = Number(item?.duration)
+  if (!Number.isFinite(duration)) return false
+  if (submitterDurationFilter.value === 'short') return duration >= 0 && duration <= 120
+  if (submitterDurationFilter.value === 'medium') return duration >= 121 && duration <= 1200
+  if (submitterDurationFilter.value === 'long') return duration >= 1201
+  return true
 }
 
 async function clearSubmitterBatchFocus() {
@@ -2219,14 +2229,14 @@ onUnmounted(() => {
                 <option v-for="author in submitterAuthors" :key="author" :value="author">{{ author }}</option>
               </select>
             </label>
-            <fieldset class="submitter-duration-field">
-              <legend>视频时长</legend>
-              <div>
-                <input v-model="submitterDurationMin" type="number" min="0" placeholder="最短秒数" @change="applySubmitterFilters" />
-                <span>至</span>
-                <input v-model="submitterDurationMax" type="number" min="0" placeholder="最长秒数" @change="applySubmitterFilters" />
-              </div>
-            </fieldset>
+            <label>
+              <span>视频时长</span>
+              <select v-model="submitterDurationFilter" @change="applySubmitterFilters">
+                <option v-for="option in SUBMITTER_DURATION_FILTERS" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
             <label>
               <span>排序</span>
               <select v-model="submitterSort" @change="applySubmitterFilters">
