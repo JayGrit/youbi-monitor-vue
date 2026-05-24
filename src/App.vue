@@ -50,6 +50,7 @@ const submitterError = ref('')
 const submitterMessage = ref('')
 const submitterUrl = ref('')
 const submitterAuthor = ref('')
+const submitterType = ref('')
 const submitterBusy = ref(false)
 const submitterAuthorBusy = ref(false)
 const submitterUploader = ref('')
@@ -1485,12 +1486,19 @@ async function clearSubmitterBatchFocus() {
 
 async function submitVideoToYoubi(item) {
   const rowId = submitterFieldValue(item, 'id')
+  const type = submitterType.value.trim()
   if (!rowId || item.ydbi_submitted || submitterSubmittingId.value) return
+  if (!type) {
+    submitterError.value = '请先填写投稿类型 type'
+    return
+  }
   submitterSubmittingId.value = String(rowId)
   submitterError.value = ''
   try {
     const response = await fetch(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
     })
     const payload = await readJsonResponse(response)
     if (!response.ok) {
@@ -1501,7 +1509,7 @@ async function submitVideoToYoubi(item) {
       ydbi_submission_id: payload.submission_id,
       ydbi_submitted_at: new Date().toISOString(),
     })
-    submitterMessage.value = '已提交到 YouBi 下载队列。'
+    submitterMessage.value = `已提交到 YouBi 下载队列，type=${type}。`
   } catch (err) {
     submitterError.value = err instanceof Error ? err.message : String(err)
     await loadSubmitterVideos(true)
@@ -1970,6 +1978,12 @@ onUnmounted(() => {
         </section>
 
         <section class="submitter-actions-panel">
+          <div class="submitter-submit-row">
+            <label>
+              <span>投稿类型 type</span>
+              <input v-model="submitterType" type="text" placeholder="必须精确匹配各平台账号 route_key" required />
+            </label>
+          </div>
           <form class="submitter-submit-row" @submit.prevent="createSubmitterVideo">
             <label>
               <span>视频链接</span>
@@ -2085,7 +2099,7 @@ onUnmounted(() => {
                         <button
                           type="button"
                           :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"
-                          :disabled="Boolean(item.ydbi_submitted) || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
+                          :disabled="Boolean(item.ydbi_submitted) || !submitterType.trim() || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
                           @click="submitVideoToYoubi(item)"
                         >
                           <span v-if="item.ydbi_submitted">已上传</span>
