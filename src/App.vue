@@ -1164,6 +1164,32 @@ function setTaskTypeFilter(value) {
   taskTypeFilter.value = value
 }
 
+async function copyText(value) {
+  const text = String(value || '').trim()
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return
+    }
+  } catch {
+    // Fall back to execCommand for non-secure contexts or older WebViews.
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
+
+function copyTaskId(task) {
+  copyText(task?.taskId)
+}
+
 function formatDateTime(value) {
   if (!value) return '-'
   return String(value).replace('T', ' ').slice(0, 19)
@@ -2181,7 +2207,14 @@ onUnmounted(() => {
             </h2>
           </div>
           <div class="task-details">
-            <span>{{ task.taskId }}</span>
+            <span
+              role="button"
+              tabindex="0"
+              title="点击复制任务 ID"
+              @click="copyTaskId(task)"
+              @keydown.enter.prevent="copyTaskId(task)"
+              @keydown.space.prevent="copyTaskId(task)"
+            >{{ task.taskId }}</span>
             <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
             <span class="task-type">{{ taskTypeText(task) }}</span>
           </div>
