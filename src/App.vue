@@ -56,7 +56,7 @@ const submitterAuthorBusy = ref(false)
 const submitterUploader = ref('')
 const submitterDurationMin = ref('')
 const submitterDurationMax = ref('')
-const submitterUploadFilter = ref('all')
+const submitterUploadFilter = ref('unuploaded')
 const submitterSort = ref('updated_desc')
 const submitterAuthors = ref([])
 const submitterFields = ref([])
@@ -70,6 +70,7 @@ const submitterActiveStatus = ref(null)
 const submitterJsonTitle = ref('')
 const submitterJsonPayload = ref(null)
 const submitterThumbUrls = ref({})
+const taskThumbUrls = ref({})
 const submitterSubmittingId = ref('')
 const submitterPage = ref(1)
 const submitterAuthorTypeOpen = ref(false)
@@ -113,8 +114,9 @@ const SUBMITTER_SORT_OPTIONS = [
   { value: 'like_asc', label: '点赞量从低到高' },
 ]
 const SUBMITTER_UPLOAD_FILTERS = [
-  { value: 'all', label: '全部' },
   { value: 'unuploaded', label: '未上传' },
+  { value: 'uploaded', label: '已上传' },
+  { value: 'all', label: '全部' },
 ]
 
 const statusText = {
@@ -189,17 +191,13 @@ const filteredTasks = computed(() => {
 })
 
 const submitterFilteredVideos = computed(() => {
-  const rows = submitterUploadFilter.value === 'unuploaded'
-    ? submitterVideos.value.filter(item => !item.ydbi_submitted)
-    : submitterVideos.value
+  const rows = filterSubmitterVideos(submitterVideos.value)
   const start = (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE
   return rows.slice(start, start + SUBMITTER_PAGE_SIZE)
 })
 
 const submitterFilteredTotal = computed(() => {
-  return submitterUploadFilter.value === 'unuploaded'
-    ? submitterVideos.value.filter(item => !item.ydbi_submitted).length
-    : submitterVideos.value.length
+  return filterSubmitterVideos(submitterVideos.value).length
 })
 
 const submitterPageCount = computed(() => {
@@ -282,6 +280,7 @@ async function loadTasks() {
     tasks.value = payload.tasks || []
     serviceHeartbeats.value = payload.serviceHeartbeats || []
     serverTime.value = payload.serverTime || ''
+    warmTaskThumbnails()
     error.value = ''
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err)
@@ -992,6 +991,42 @@ function taskThumbnailUrl(task) {
   return String(task?.sourceThumbnailUrl || '').trim()
 }
 
+function taskCachedThumbnailUrl(task) {
+  const url = taskThumbnailUrl(task)
+  return taskThumbUrls.value[url] || url
+}
+
+async function cacheImageUrl(url, cacheName, targetRef) {
+  if (!url || targetRef.value[url]) return
+  if (!('caches' in window)) return
+  try {
+    const cache = await caches.open(cacheName)
+    const cached = await cache.match(url)
+    if (cached) {
+      const blob = await cached.blob()
+      if (blob.size > 0) {
+        targetRef.value = { ...targetRef.value, [url]: URL.createObjectURL(blob) }
+        return
+      }
+    }
+    const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
+    if (!response.ok) return
+    await cache.put(url, response.clone())
+    const blob = await response.blob()
+    if (blob.size > 0) {
+      targetRef.value = { ...targetRef.value, [url]: URL.createObjectURL(blob) }
+    }
+  } catch (err) {
+    // Fall back to the original URL when a thumbnail host does not allow CORS.
+  }
+}
+
+function warmTaskThumbnails() {
+  for (const task of tasks.value.slice(0, 100)) {
+    cacheImageUrl(taskThumbnailUrl(task), 'monitor-task-thumbnails-v1', taskThumbUrls)
+  }
+}
+
 function sourceDurationSeconds(task) {
   const value = Number(task?.sourceDurationSeconds)
   return Number.isFinite(value) && value > 0 ? value : null
@@ -1528,11 +1563,21 @@ async function resetSubmitterFilters() {
   submitterUploader.value = ''
   submitterDurationMin.value = ''
   submitterDurationMax.value = ''
-  submitterUploadFilter.value = 'all'
+  submitterUploadFilter.value = 'unuploaded'
   submitterSort.value = 'updated_desc'
   submitterFocusedBatch.value = ''
   submitterPage.value = 1
   await loadSubmitterVideos()
+}
+
+function filterSubmitterVideos(rows) {
+  if (submitterUploadFilter.value === 'unuploaded') {
+    return rows.filter(item => !item.ydbi_submitted)
+  }
+  if (submitterUploadFilter.value === 'uploaded') {
+    return rows.filter(item => item.ydbi_submitted)
+  }
+  return rows
 }
 
 async function clearSubmitterBatchFocus() {
@@ -1631,7 +1676,8 @@ async function loadSubmitterAuthorTypes() {
 
 async function saveSubmitterAuthorType(row) {
   const type = String(row?.draftType || '').trim()
-  if (!row?.author || !type) return
+  if (submitterAuthorTypeSaving.value === row?.author) return
+  if (!row?.author || !type || type === row.type) return
   submitterAuthorTypeSaving.value = row.author
   submitterAuthorTypeError.value = ''
   try {
@@ -1651,6 +1697,11 @@ async function saveSubmitterAuthorType(row) {
   } finally {
     submitterAuthorTypeSaving.value = ''
   }
+}
+
+async function autosaveSubmitterAuthorType(row) {
+  row.draftType = String(row?.draftType || '').trim()
+  await saveSubmitterAuthorType(row)
 }
 
 function closeSubmitterAuthorTypes() {
@@ -1798,28 +1849,7 @@ function submitterCachedThumb(item) {
 }
 
 async function cacheSubmitterThumbnail(url) {
-  if (!url || submitterThumbUrls.value[url]) return
-  if (!('caches' in window)) return
-  try {
-    const cache = await caches.open('submitter-thumbnails-v1')
-    const cached = await cache.match(url)
-    if (cached) {
-      const blob = await cached.blob()
-      if (blob.size > 0) {
-        submitterThumbUrls.value = { ...submitterThumbUrls.value, [url]: URL.createObjectURL(blob) }
-        return
-      }
-    }
-    const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
-    if (!response.ok) return
-    await cache.put(url, response.clone())
-    const blob = await response.blob()
-    if (blob.size > 0) {
-      submitterThumbUrls.value = { ...submitterThumbUrls.value, [url]: URL.createObjectURL(blob) }
-    }
-  } catch (err) {
-    // Fall back to the remote URL when a thumbnail host does not allow CORS.
-  }
+  await cacheImageUrl(url, 'submitter-thumbnails-v1', submitterThumbUrls)
 }
 
 function warmSubmitterThumbnails() {
@@ -2000,7 +2030,7 @@ onUnmounted(() => {
           rel="noreferrer"
           :title="displayTitle(task)"
         >
-          <img :src="taskThumbnailUrl(task)" :alt="displayTitle(task)" loading="lazy" />
+          <img :src="taskCachedThumbnailUrl(task)" :alt="displayTitle(task)" loading="lazy" />
         </a>
         <div v-else class="task-cover task-cover-empty" aria-hidden="true">无封面</div>
 
@@ -2326,7 +2356,7 @@ onUnmounted(() => {
                   <tr>
                     <th>作者</th>
                     <th>Type</th>
-                    <th>操作</th>
+                    <th>状态</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2336,16 +2366,20 @@ onUnmounted(() => {
                   <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
                     <td>{{ row.author }}</td>
                     <td>
-                      <input v-model="row.draftType" type="text" placeholder="投稿 type" />
+                      <input
+                        v-model="row.draftType"
+                        type="text"
+                        placeholder="投稿 type"
+                        :disabled="submitterAuthorTypeSaving === row.author"
+                        @change="autosaveSubmitterAuthorType(row)"
+                        @blur="autosaveSubmitterAuthorType(row)"
+                      />
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        :disabled="!row.draftType.trim() || row.draftType === row.type || submitterAuthorTypeSaving === row.author"
-                        @click="saveSubmitterAuthorType(row)"
-                      >
-                        {{ submitterAuthorTypeSaving === row.author ? '保存中' : '保存' }}
-                      </button>
+                      <span v-if="submitterAuthorTypeSaving === row.author">保存中</span>
+                      <span v-else-if="row.draftType.trim() && row.draftType !== row.type">未保存</span>
+                      <span v-else-if="row.type">已保存</span>
+                      <span v-else>-</span>
                     </td>
                   </tr>
                 </tbody>
