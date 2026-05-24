@@ -1981,7 +1981,7 @@ onUnmounted(() => {
           <div class="submitter-submit-row">
             <label>
               <span>投稿类型 type</span>
-              <input v-model="submitterType" type="text" placeholder="必须精确匹配各平台账号 route_key" required />
+              <input v-model="submitterType" type="text" placeholder="必须精确匹配三个平台账号 Key" required />
             </label>
           </div>
           <form class="submitter-submit-row" @submit.prevent="createSubmitterVideo">
