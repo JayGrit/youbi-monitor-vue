@@ -1501,6 +1501,13 @@ h1 {
   font-size: 13px;
 }
 
+.submitter-status-counts {
+  margin-left: auto;
+  color: #8a96a8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .submitter-actions-panel,
 .submitter-controls,
 .submitter-table-panel {

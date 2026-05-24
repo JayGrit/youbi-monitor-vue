@@ -225,6 +225,29 @@ const submitterActiveRows = computed(() => {
   return submitterVideos.value.filter(item => ['pending', 'running'].includes(item.import_status)).length
 })
 
+const submitterStatusCounts = computed(() => {
+  const labels = {
+    done: '完成',
+    pending: '等待',
+    running: '执行中',
+    failed: '失败',
+  }
+  const counts = new Map()
+  for (const item of submitterVideos.value) {
+    const status = String(item?.import_status || 'unknown').trim() || 'unknown'
+    counts.set(status, (counts.get(status) || 0) + 1)
+  }
+  return [...counts.entries()]
+    .sort(([left], [right]) => {
+      const order = ['running', 'pending', 'failed', 'done', 'unknown']
+      const leftIndex = order.indexOf(left)
+      const rightIndex = order.indexOf(right)
+      return (leftIndex === -1 ? order.length : leftIndex) - (rightIndex === -1 ? order.length : rightIndex)
+    })
+    .map(([status, count]) => `${labels[status] || status} ${formatNumber(count)}`)
+    .join(' · ')
+})
+
 const onlineSummary = computed(() => {
   let online = 0
   let total = 0
@@ -2201,6 +2224,7 @@ onUnmounted(() => {
         <section v-if="submitterError || (!submitterLoading && (submitterFocusedBatch || submitterMessage))" class="submitter-status">
           <span v-if="submitterError">Submitter API 异常：{{ submitterError }}</span>
           <span v-else>{{ submitterFocusedBatch ? `当前批次：${submitterFocusedBatch.slice(0, 8)}。` : '' }}{{ submitterMessage || '素材库已就绪。' }}</span>
+          <span v-if="submitterStatusCounts" class="submitter-status-counts">{{ submitterStatusCounts }}</span>
         </section>
 
         <section class="submitter-actions-panel">
