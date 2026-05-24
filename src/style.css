@@ -1052,6 +1052,60 @@ h1 {
   line-height: 1.35;
 }
 
+.upload-submission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.upload-submission-card {
+  min-width: 0;
+  border: 1px solid #d9e2ec;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.upload-submission-card.status-success {
+  border-left-color: #16a34a;
+}
+
+.upload-submission-card.status-running {
+  border-left-color: #2563eb;
+}
+
+.upload-submission-card.status-failed {
+  border-left-color: #dc2626;
+}
+
+.upload-submission-head,
+.upload-submission-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.upload-submission-head strong {
+  min-width: 0;
+  color: #172033;
+  font-size: 14px;
+}
+
+.upload-submission-meta {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.upload-submission-card p {
+  margin: 10px 0 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

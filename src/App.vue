@@ -133,6 +133,12 @@ const stageNameText = {
   uploader: 'Uploader',
 }
 
+const uploadPlatformText = {
+  bilibili: 'B站',
+  xiaohongshu: '小红书',
+  douyin: '抖音',
+}
+
 async function readJsonResponse(response) {
   const text = await response.text()
   try {
@@ -1152,6 +1158,14 @@ function speechRows() {
 
 function tableRows(stage, tableName) {
   return stage?.tables?.find(table => table.name === tableName)?.rows || []
+}
+
+function uploadSubmissionRows(stage) {
+  return tableRows(stage, 'yd_upload_submission')
+}
+
+function uploadPlatformName(platform) {
+  return uploadPlatformText[platform] || platform || ''
 }
 
 function rowsByIndex(rows) {
@@ -2351,6 +2365,32 @@ onUnmounted(() => {
             </div>
 
             <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
+
+            <div v-if="selectedStage.key === 'uploader' && uploadSubmissionRows(selectedStage).length" class="flow-section">
+              <h4>平台发送任务</h4>
+              <div class="upload-submission-grid">
+                <article
+                  v-for="submission in uploadSubmissionRows(selectedStage)"
+                  :key="submission.id || `${submission.platform}-${submission.account_key}`"
+                  :class="['upload-submission-card', `status-${submission.status}`]"
+                >
+                  <div class="upload-submission-head">
+                    <strong>{{ uploadPlatformName(submission.platform) }}</strong>
+                    <span :class="['task-badge', `status-${submission.status}`]">
+                      {{ statusText[submission.status] || submission.status }}
+                    </span>
+                  </div>
+                  <div class="upload-submission-meta">
+                    <span>{{ submission.account_key || 'default' }}</span>
+                    <span v-if="submission.next_upload_allowed_at">
+                      下次 {{ formatDateTime(submission.next_upload_allowed_at) }}
+                    </span>
+                  </div>
+                  <p v-if="submission.title">{{ submission.title }}</p>
+                  <pre v-if="submission.error_message" class="flow-stage-error">{{ submission.error_message }}</pre>
+                </article>
+              </div>
+            </div>
 
             <div v-if="selectedStageKey === SPEECH_STAGE_KEY" class="flow-section">
               <h4>Whisper / Translator / Speaker Joined Rows</h4>
