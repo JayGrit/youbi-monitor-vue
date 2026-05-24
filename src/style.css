@@ -782,13 +782,13 @@ h1 {
 }
 
 .task-row.status-success {
-  border-color: #86efac;
-  background: #dcfce7;
+  border-color: #dde6f0;
+  background: #ffffff;
 }
 
 .task-row.status-failed {
   border-color: #fca5a5;
-  background: #ffe4e6;
+  background: #ffffff;
 }
 
 .task-row.status-success .task-cover,
@@ -808,16 +808,17 @@ h1 {
   flex: 0 0 100px;
   width: 100px;
   min-height: 64px;
-  border: 0;
+  border: 1px solid #dde6f0;
   border-radius: 8px;
+  background: #ffffff;
   padding: 9px 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 4px;
-  color: #ffffff;
-  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12);
+  color: #334155;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .stage-node-button {
@@ -826,7 +827,8 @@ h1 {
 }
 
 .stage-node-button:hover:not(:disabled) {
-  filter: brightness(0.92);
+  border-color: #b8c4d4;
+  background: #f8fafc;
 }
 
 .stage-node-button:disabled {
@@ -898,6 +900,22 @@ h1 {
       #a7b0bd 8px,
       #a7b0bd 16px
     );
+}
+
+.stage-node.status-success,
+.stage-node.status-running,
+.stage-node.status-ready,
+.stage-node.status-pending,
+.stage-node.status-skipped {
+  border-color: #dde6f0;
+  background: #ffffff;
+  color: #334155;
+}
+
+.stage-node.status-failed {
+  border-color: #fca5a5;
+  background: #ffffff;
+  color: #991b1b;
 }
 
 .stage-link.status-success {
