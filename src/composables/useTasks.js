@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import {
   stageNameText,
   statusText,
+  uploadPlatformText,
 } from '../domain/constants'
 import {
   formatDateTime,
@@ -27,6 +28,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskActionsExpanded = ref(false)
   const openFailureKey = ref('')
   const taskThumbUrls = ref({})
+  const uploadRetryPlatform = ref('')
+  const uploadRetryRows = ref([])
+  const uploadRetryLoading = ref(false)
+  const uploadRetryBusy = ref(false)
+  const uploadRetrySelectedIds = ref([])
 
   const taskFilterCounts = computed(() => {
     const counts = {
@@ -68,6 +74,21 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     return { online, total }
   })
 
+  const uploadRetryPlatformOptions = computed(() => {
+    return Object.entries(uploadPlatformText).map(([value, label]) => ({ value, label }))
+  })
+
+  const uploadRetrySelectedSet = computed(() => new Set(uploadRetrySelectedIds.value))
+
+  const uploadRetrySelectableRows = computed(() => {
+    return uploadRetryRows.value.filter(row => !row.retryBlockedReason)
+  })
+
+  const uploadRetryAllSelected = computed(() => {
+    const rows = uploadRetrySelectableRows.value
+    return rows.length > 0 && rows.every(row => uploadRetrySelectedSet.value.has(row.id))
+  })
+
   async function loadTasks() {
     try {
       const payload = await monitorApi.loadMonitorTasks()
@@ -95,6 +116,65 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
       readyTaskId.value = ''
+    }
+  }
+
+  async function setUploadRetryPlatform(platform) {
+    uploadRetryPlatform.value = platform
+    uploadRetrySelectedIds.value = []
+    if (!platform) {
+      uploadRetryRows.value = []
+      return
+    }
+    await loadUploadRetryRows()
+  }
+
+  async function loadUploadRetryRows() {
+    const platform = uploadRetryPlatform.value
+    if (!platform || uploadRetryLoading.value) return
+    uploadRetryLoading.value = true
+    try {
+      const payload = await monitorApi.loadFailedUploadSubmissions(platform)
+      uploadRetryRows.value = payload.rows || []
+      uploadRetrySelectedIds.value = uploadRetrySelectedIds.value.filter(id => {
+        return uploadRetryRows.value.some(row => row.id === id && !row.retryBlockedReason)
+      })
+      error.value = ''
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      uploadRetryLoading.value = false
+    }
+  }
+
+  function toggleUploadRetryRow(row) {
+    if (!row?.id || row.retryBlockedReason) return
+    const selected = uploadRetrySelectedSet.value
+    uploadRetrySelectedIds.value = selected.has(row.id)
+      ? uploadRetrySelectedIds.value.filter(id => id !== row.id)
+      : [...uploadRetrySelectedIds.value, row.id]
+  }
+
+  function toggleUploadRetryAll() {
+    if (uploadRetryAllSelected.value) {
+      uploadRetrySelectedIds.value = []
+      return
+    }
+    uploadRetrySelectedIds.value = uploadRetrySelectableRows.value.map(row => row.id)
+  }
+
+  async function retrySelectedUploadSubmissions() {
+    if (!uploadRetryPlatform.value || uploadRetrySelectedIds.value.length === 0 || uploadRetryBusy.value) return
+    const ids = [...uploadRetrySelectedIds.value]
+    uploadRetryBusy.value = true
+    try {
+      await monitorApi.retryUploadSubmissions(uploadRetryPlatform.value, ids)
+      uploadRetrySelectedIds.value = []
+      await Promise.all([loadTasks(), loadUploadRetryRows()])
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      uploadRetryBusy.value = false
     }
   }
 
@@ -345,13 +425,27 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     taskActionsExpanded,
     openFailureKey,
     taskThumbUrls,
+    uploadRetryPlatform,
+    uploadRetryRows,
+    uploadRetryLoading,
+    uploadRetryBusy,
+    uploadRetrySelectedIds,
     taskFilterCounts,
     taskTypeFilters,
     filteredTasks,
     onlineSummary,
+    uploadRetryPlatformOptions,
+    uploadRetrySelectedSet,
+    uploadRetrySelectableRows,
+    uploadRetryAllSelected,
     loadTasks,
     markTaskReady,
     isTaskReadyBusy,
+    setUploadRetryPlatform,
+    loadUploadRetryRows,
+    toggleUploadRetryRow,
+    toggleUploadRetryAll,
+    retrySelectedUploadSubmissions,
     stopTask,
     isTaskStopBusy,
     restartTask,

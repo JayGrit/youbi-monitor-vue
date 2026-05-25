@@ -1,5 +1,5 @@
 <script setup>
-import { formatDuration } from '../utils/format'
+import { formatDateTime, formatDuration } from '../utils/format'
 
 defineProps({
   error: { type: String, default: '' },
@@ -14,6 +14,14 @@ defineProps({
   taskActionsExpanded: { type: Boolean, default: false },
   filteredTasks: { type: Array, default: () => [] },
   openFailureKey: { type: String, default: '' },
+  uploadRetryPlatform: { type: String, default: '' },
+  uploadRetryPlatformOptions: { type: Array, default: () => [] },
+  uploadRetryRows: { type: Array, default: () => [] },
+  uploadRetryLoading: { type: Boolean, default: false },
+  uploadRetryBusy: { type: Boolean, default: false },
+  uploadRetrySelectedIds: { type: Array, default: () => [] },
+  uploadRetrySelectedSet: { type: Object, required: true },
+  uploadRetryAllSelected: { type: Boolean, default: false },
   serviceOnline: { type: Function, required: true },
   onlineDeviceTitle: { type: Function, required: true },
   onlineDeviceText: { type: Function, required: true },
@@ -33,6 +41,11 @@ defineProps({
   openTaskFlow: { type: Function, required: true },
   isTaskReadyBusy: { type: Function, required: true },
   markTaskReady: { type: Function, required: true },
+  setUploadRetryPlatform: { type: Function, required: true },
+  loadUploadRetryRows: { type: Function, required: true },
+  toggleUploadRetryRow: { type: Function, required: true },
+  toggleUploadRetryAll: { type: Function, required: true },
+  retrySelectedUploadSubmissions: { type: Function, required: true },
   isTaskStopBusy: { type: Function, required: true },
   stopTask: { type: Function, required: true },
   isTaskRestartBusy: { type: Function, required: true },
@@ -100,6 +113,64 @@ const emit = defineEmits([
       >
         {{ taskActionsExpanded ? '收起操作' : '展开操作' }}
       </button>
+      <select
+        class="upload-retry-platform-select"
+        :value="uploadRetryPlatform"
+        aria-label="按平台选择失败上传任务"
+        @change="setUploadRetryPlatform($event.target.value)"
+      >
+        <option value="">上传重试</option>
+        <option v-for="platform in uploadRetryPlatformOptions" :key="platform.value" :value="platform.value">
+          {{ platform.label }}
+        </option>
+      </select>
+    </div>
+
+    <div v-if="uploadRetryPlatform" class="upload-retry-panel">
+      <div class="upload-retry-head">
+        <strong>{{ uploadRetryLoading ? '正在加载失败上传任务' : `失败上传任务 ${uploadRetryRows.length} 个` }}</strong>
+        <div class="upload-retry-actions">
+          <button type="button" :disabled="uploadRetryLoading || uploadRetryRows.length === 0" @click="toggleUploadRetryAll">
+            {{ uploadRetryAllSelected ? '取消全选' : '全选' }}
+          </button>
+          <button type="button" :disabled="uploadRetryLoading || uploadRetryBusy" @click="loadUploadRetryRows">
+            刷新
+          </button>
+          <button
+            type="button"
+            class="primary"
+            :disabled="uploadRetryBusy || uploadRetrySelectedIds.length === 0"
+            @click="retrySelectedUploadSubmissions"
+          >
+            {{ uploadRetryBusy ? '提交中' : `重试选中 ${uploadRetrySelectedIds.length}` }}
+          </button>
+        </div>
+      </div>
+      <div v-if="!uploadRetryLoading && uploadRetryRows.length === 0" class="upload-retry-empty">
+        当前平台暂无失败上传任务
+      </div>
+      <div v-else class="upload-retry-list">
+        <label
+          v-for="row in uploadRetryRows"
+          :key="row.id"
+          :class="['upload-retry-row', { blocked: row.retryBlockedReason }]"
+        >
+          <input
+            type="checkbox"
+            :checked="uploadRetrySelectedSet.has(row.id)"
+            :disabled="Boolean(row.retryBlockedReason)"
+            @change="toggleUploadRetryRow(row)"
+          />
+          <span class="upload-retry-main">
+            <span class="upload-retry-title">{{ row.title || row.taskId }}</span>
+            <span class="upload-retry-meta">
+              {{ row.taskId }} · {{ row.accountKey }} · {{ formatDateTime(row.completedAt || row.updatedAt) }}
+            </span>
+            <span v-if="row.retryBlockedReason" class="upload-retry-error">{{ row.retryBlockedReason }}</span>
+            <span v-else class="upload-retry-error">{{ row.errorMessage || '无失败原因' }}</span>
+          </span>
+        </label>
+      </div>
     </div>
 
     <div v-if="!loading && tasks.length === 0" class="empty-state">

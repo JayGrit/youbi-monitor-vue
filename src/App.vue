@@ -63,12 +63,25 @@ const {
   taskTypeFilter,
   taskActionsExpanded,
   openFailureKey,
+  uploadRetryPlatform,
+  uploadRetryRows,
+  uploadRetryLoading,
+  uploadRetryBusy,
+  uploadRetrySelectedIds,
   taskFilterCounts,
   taskTypeFilters,
   filteredTasks,
+  uploadRetryPlatformOptions,
+  uploadRetrySelectedSet,
+  uploadRetryAllSelected,
   loadTasks,
   markTaskReady,
   isTaskReadyBusy,
+  setUploadRetryPlatform,
+  loadUploadRetryRows,
+  toggleUploadRetryRow,
+  toggleUploadRetryAll,
+  retrySelectedUploadSubmissions,
   stopTask,
   isTaskStopBusy,
   restartTask,
@@ -305,6 +318,14 @@ onUnmounted(() => {
       :task-actions-expanded="taskActionsExpanded"
       :filtered-tasks="filteredTasks"
       :open-failure-key="openFailureKey"
+      :upload-retry-platform="uploadRetryPlatform"
+      :upload-retry-platform-options="uploadRetryPlatformOptions"
+      :upload-retry-rows="uploadRetryRows"
+      :upload-retry-loading="uploadRetryLoading"
+      :upload-retry-busy="uploadRetryBusy"
+      :upload-retry-selected-ids="uploadRetrySelectedIds"
+      :upload-retry-selected-set="uploadRetrySelectedSet"
+      :upload-retry-all-selected="uploadRetryAllSelected"
       :service-online="serviceOnline"
       :online-device-title="onlineDeviceTitle"
       :online-device-text="onlineDeviceText"
@@ -324,6 +345,11 @@ onUnmounted(() => {
       :open-task-flow="openTaskFlow"
       :is-task-ready-busy="isTaskReadyBusy"
       :mark-task-ready="markTaskReady"
+      :set-upload-retry-platform="setUploadRetryPlatform"
+      :load-upload-retry-rows="loadUploadRetryRows"
+      :toggle-upload-retry-row="toggleUploadRetryRow"
+      :toggle-upload-retry-all="toggleUploadRetryAll"
+      :retry-selected-upload-submissions="retrySelectedUploadSubmissions"
       :is-task-stop-busy="isTaskStopBusy"
       :stop-task="stopTask"
       :is-task-restart-busy="isTaskRestartBusy"

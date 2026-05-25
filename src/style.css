@@ -740,6 +740,127 @@ h1 {
   color: #1d4ed8;
 }
 
+.upload-retry-platform-select {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.upload-retry-panel {
+  margin-bottom: 14px;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.upload-retry-head,
+.upload-retry-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-retry-head {
+  justify-content: space-between;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.upload-retry-actions button {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+}
+
+.upload-retry-actions button.primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.upload-retry-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.upload-retry-empty {
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.upload-retry-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.upload-retry-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px;
+  cursor: pointer;
+}
+
+.upload-retry-row.blocked {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.upload-retry-row input {
+  margin-top: 2px;
+}
+
+.upload-retry-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.upload-retry-title,
+.upload-retry-meta,
+.upload-retry-error {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-retry-title {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.upload-retry-meta {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.upload-retry-error {
+  color: #b91c1c;
+  font-size: 12px;
+}
+
 .stop-button {
   border-color: #f59e0b;
   color: #92400e;
@@ -2252,9 +2373,19 @@ a.submitter-cell:hover {
   }
 
   .task-type-filter,
-  .task-actions-toggle.task-filter-button {
+  .task-actions-toggle.task-filter-button,
+  .upload-retry-platform-select {
     width: 100%;
     margin-left: 0;
+  }
+
+  .upload-retry-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .upload-retry-actions {
+    flex-wrap: wrap;
   }
 
   .status-line {

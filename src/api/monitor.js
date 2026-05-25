@@ -10,6 +10,19 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/ready`, { method: 'POST' })
     },
 
+    loadFailedUploadSubmissions(platform) {
+      const params = new URLSearchParams({ platform })
+      return requestJson(`${apiBase}/upload-submissions/failed?${params.toString()}`)
+    },
+
+    retryUploadSubmissions(platform, ids) {
+      return requestJson(`${apiBase}/upload-submissions/failed/${encodeURIComponent(platform)}/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+    },
+
     stopTask(taskId) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/stop`, { method: 'POST' })
     },
