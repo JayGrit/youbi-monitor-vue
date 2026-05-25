@@ -314,9 +314,9 @@ h1 {
 }
 
 .account-row {
-  min-width: 980px;
+  min-width: 1060px;
   display: grid;
-  grid-template-columns: 56px minmax(150px, 210px) minmax(210px, 1fr) 110px minmax(360px, auto);
+  grid-template-columns: 56px minmax(150px, 210px) minmax(190px, 1fr) 100px 110px minmax(330px, auto);
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -325,8 +325,8 @@ h1 {
 }
 
 .account-row.douyin-cdp-row {
-  min-width: 640px;
-  grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) minmax(160px, 1fr);
+  min-width: 760px;
+  grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) 110px minmax(160px, 1fr);
 }
 
 .account-header {
@@ -2142,8 +2142,8 @@ a.submitter-cell:hover {
   }
 
   .account-row {
-    min-width: 760px;
-    grid-template-columns: 46px minmax(130px, 170px) minmax(160px, 1fr) 88px minmax(300px, auto);
+    min-width: 860px;
+    grid-template-columns: 46px minmax(130px, 170px) minmax(150px, 1fr) 82px 100px minmax(280px, auto);
   }
 
   .account-actions {
@@ -2299,7 +2299,7 @@ a.submitter-cell:hover {
   }
 
   .account-row strong {
-    grid-row: span 4;
+    grid-row: span 5;
     display: grid;
     place-items: center;
     min-height: 42px;

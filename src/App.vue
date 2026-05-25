@@ -965,6 +965,48 @@ function accountRows(accounts) {
   }))
 }
 
+function nextSendText(account) {
+  const next = parseLocalDateTime(account?.nextUploadAllowedAt)
+  if (!next || next.getTime() <= Date.now()) {
+    return '可发送'
+  }
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  if (isSameDate(next, now)) {
+    return formatTime(next)
+  }
+  if (isSameDate(next, tomorrow)) {
+    return `明天${formatTime(next)}`
+  }
+  return `${pad2(next.getMonth() + 1)}-${pad2(next.getDate())} ${formatTime(next)}`
+}
+
+function parseLocalDateTime(value) {
+  if (!value) {
+    return null
+  }
+  const normalized = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
+    ? value
+    : String(value).replace(' ', 'T')
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function isSameDate(left, right) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate()
+}
+
+function formatTime(date) {
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+}
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
 function mergeAccountRow(account, preferredSlot) {
   const rows = [...bilibiliRows.value]
   let index = rows.findIndex(row => row.accountKey === account.accountKey)
@@ -2566,6 +2608,7 @@ onUnmounted(() => {
               <span>Key</span>
               <span>账号</span>
               <span>状态</span>
+              <span>下次可发送</span>
               <span>操作</span>
             </div>
             <div v-for="row in bilibiliRows" :key="row.slot" class="account-row">
@@ -2573,6 +2616,7 @@ onUnmounted(() => {
               <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
               <span>{{ accountDisplay(row, 'bilibili') }}</span>
               <span>{{ rowStatus(row) }}</span>
+              <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button type="button" @click="startBilibiliQrLogin(row)">
                   {{ row.accountKey ? '重新扫码' : '扫码登录' }}
@@ -2614,6 +2658,7 @@ onUnmounted(() => {
               <span>Key</span>
               <span>账号</span>
               <span>状态</span>
+              <span>下次可发送</span>
               <span>操作</span>
             </div>
             <div v-for="row in xiaohongshuRows" :key="row.slot" class="account-row">
@@ -2621,6 +2666,7 @@ onUnmounted(() => {
               <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
               <span>{{ accountDisplay(row, 'xiaohongshu') }}</span>
               <span>{{ rowStatus(row) }}</span>
+              <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button type="button" @click="startXiaohongshuQrLogin(row)">
                   {{ row.accountKey ? '重新扫码' : '扫码登录' }}
@@ -2658,12 +2704,14 @@ onUnmounted(() => {
               <span>槽位</span>
               <span>Key</span>
               <span>CDP端口</span>
+              <span>下次可发送</span>
               <span>操作</span>
             </div>
             <div v-for="row in douyinRows" :key="row.slot" class="account-row douyin-cdp-row">
               <strong>{{ row.slot }}</strong>
               <input v-model="row.draftKey" type="text" placeholder="例如 animal / knowledge" />
               <input v-model="row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="例如 9333" />
+              <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button
                   type="button"
