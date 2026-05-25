@@ -1,0 +1,36 @@
+<script setup>
+defineProps({
+  activePage: { type: String, required: true },
+  flowPageOpen: { type: Boolean, default: false },
+})
+
+const emit = defineEmits(['openPage'])
+</script>
+
+<template>
+  <header class="top-bar">
+    <nav class="page-tabs" aria-label="页面切换">
+      <button
+        type="button"
+        :class="{ active: activePage === 'submitter' && !flowPageOpen }"
+        @click="emit('openPage', 'submitter')"
+      >
+        素材
+      </button>
+      <button
+        type="button"
+        :class="{ active: activePage === 'monitor' || flowPageOpen }"
+        @click="emit('openPage', 'monitor')"
+      >
+        监控
+      </button>
+      <button
+        type="button"
+        :class="{ active: activePage === 'accounts' && !flowPageOpen }"
+        @click="emit('openPage', 'accounts')"
+      >
+        账号
+      </button>
+    </nav>
+  </header>
+</template>

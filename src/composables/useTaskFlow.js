@@ -1,0 +1,433 @@
+import { computed, ref } from 'vue'
+import {
+  SPEECH_STAGE_KEY,
+  SPEECH_STAGE_KEYS,
+  stageNameText,
+  uploadPlatformText,
+} from '../domain/constants'
+import { shortValue } from '../utils/jsonDisplay'
+import { kindForField, kindForName, youtubeThumbnailUrl } from '../utils/media'
+
+export function useTaskFlow(monitorApi, brokenImageUrls) {
+  const selectedTaskFlow = ref(null)
+  const selectedStageKey = ref('downloader')
+  const flowPageOpen = ref(false)
+  const flowLoading = ref(false)
+  const flowError = ref('')
+  const speechEditKey = ref('')
+  const speechEditDraft = ref('')
+  const speechEditSaving = ref(false)
+  const speechEditError = ref('')
+  let flowTimer = null
+
+  const selectedStage = computed(() => {
+    const stages = selectedTaskFlow.value?.stages || []
+    if (selectedStageKey.value === SPEECH_STAGE_KEY) {
+      return speechStage.value
+    }
+    return stages.find(stage => stage.key === selectedStageKey.value) || stages[0] || null
+  })
+
+  const flowTabs = computed(() => {
+    const stages = selectedTaskFlow.value?.stages || []
+    const nonSpeechStages = stages.filter(stage => !SPEECH_STAGE_KEYS.includes(stage.key))
+    const speechStages = stages.filter(stage => SPEECH_STAGE_KEYS.includes(stage.key))
+    if (!speechStages.length) {
+      return nonSpeechStages
+    }
+    const failed = speechStages.find(stage => stage.status === 'failed')
+    const running = speechStages.find(stage => stage.status === 'running')
+    const active = failed || running || speechStages[speechStages.length - 1]
+    return [
+      ...nonSpeechStages.filter(stage => stage.key === 'downloader' || stage.key === 'demucs'),
+      {
+        ...active,
+        key: SPEECH_STAGE_KEY,
+        label: stageNameText[SPEECH_STAGE_KEY],
+        children: speechStages,
+        elapsedSeconds: speechStages.reduce((sum, stage) => sum + Number(stage.elapsedSeconds || 0), 0),
+      },
+      ...nonSpeechStages.filter(stage => stage.key === 'combiner' || stage.key === 'uploader'),
+    ]
+  })
+
+  const speechStage = computed(() => {
+    const stages = selectedTaskFlow.value?.stages || []
+    const children = stages.filter(stage => SPEECH_STAGE_KEYS.includes(stage.key))
+    if (!children.length) return null
+    const active = children.find(stage => stage.status === 'failed') || children.find(stage => stage.status === 'running') || children[children.length - 1]
+    return {
+      ...active,
+      key: SPEECH_STAGE_KEY,
+      label: stageNameText[SPEECH_STAGE_KEY],
+      children,
+      elapsedSeconds: children.reduce((sum, stage) => sum + Number(stage.elapsedSeconds || 0), 0),
+    }
+  })
+
+  async function openTaskFlow(task, stageKey = 'downloader') {
+    if (!task?.taskId) return
+    flowPageOpen.value = true
+    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
+    selectedTaskFlow.value = null
+    cancelSpeechEdit()
+    await loadTaskFlow(task.taskId)
+    clearFlowPolling()
+    flowTimer = window.setInterval(() => {
+      if (!selectedTaskFlow.value?.task?.id) return
+      const status = selectedTaskFlow.value.task.status
+      if (status === 'running' || status === 'ready') {
+        loadTaskFlow(selectedTaskFlow.value.task.id, true)
+      }
+    }, 5000)
+  }
+
+  async function loadTaskFlow(taskId, quiet = false) {
+    if (!taskId) return
+    if (!quiet) {
+      flowLoading.value = true
+    }
+    try {
+      selectedTaskFlow.value = await monitorApi.loadTaskFlow(taskId)
+      flowError.value = ''
+    } catch (err) {
+      flowError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      flowLoading.value = false
+    }
+  }
+
+  function closeTaskFlow() {
+    flowPageOpen.value = false
+    selectedTaskFlow.value = null
+    flowError.value = ''
+    cancelSpeechEdit()
+    clearFlowPolling()
+  }
+
+  function clearFlowPolling() {
+    if (flowTimer) {
+      window.clearInterval(flowTimer)
+      flowTimer = null
+    }
+  }
+
+  function refreshTaskFlow() {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (taskId) {
+      loadTaskFlow(taskId)
+    }
+  }
+
+  function flowTaskTitle(flow) {
+    const task = flow?.task || {}
+    return task.title || flow?.videoInfo?.title || task.id || '任务详情'
+  }
+
+  function flowPrimaryCoverUrl(flow) {
+    return flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || ''
+  }
+
+  function flowSourceUrl(flow) {
+    return flow?.videoInfo?.source_webpage_url || flow?.videoInfo?.source_url || flow?.task?.source_url || ''
+  }
+
+  function flowCoverUrl(flow) {
+    const primary = flowPrimaryCoverUrl(flow)
+    if (primary && !brokenImageUrls.value[primary]) return primary
+    return youtubeThumbnailUrl(flowSourceUrl(flow))
+  }
+
+  function flowDurationSeconds(flow) {
+    const value = Number(flow?.videoInfo?.source_duration_seconds || flow?.task?.source_duration_seconds)
+    return Number.isFinite(value) && value > 0 ? value : null
+  }
+
+  function tableColumns(table) {
+    const columns = []
+    const seen = new Set()
+    for (const row of table?.rows || []) {
+      for (const key of Object.keys(row || {})) {
+        if (!seen.has(key) && !hiddenColumn(key)) {
+          seen.add(key)
+          columns.push(key)
+        }
+      }
+    }
+    return columns.sort((left, right) => columnRank(left) - columnRank(right))
+  }
+
+  function hiddenColumn(column) {
+    return ['created_at', 'updated_at', 'words_json'].includes(column)
+  }
+
+  function columnRank(column) {
+    if (column === 'item_index' || column === 'index') return -20
+    if (column === 'id') return -10
+    return 0
+  }
+
+  function tableCellText(column, value) {
+    if (['start_time', 'end_time', 'actual_start_time', 'actual_end_time'].includes(column)) {
+      return formatTimeline(value)
+    }
+    return shortValue(value, 90)
+  }
+
+  function tableCellSummary(column, value) {
+    if (['start_time', 'end_time', 'actual_start_time', 'actual_end_time'].includes(column)) {
+      return formatTimeline(value)
+    }
+    return shortValue(value, 70)
+  }
+
+  function speechRows() {
+    const stages = selectedTaskFlow.value?.stages || []
+    const whisper = stages.find(stage => stage.key === 'whisper')
+    const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
+    const asrSegments = tableRows(whisper, 'yd_asr_segment')
+    const fixedAsr = asrSegments.filter(row => row.segment_type === 'fixed')
+    const rawAsr = asrSegments.filter(row => row.segment_type === 'raw')
+    const asrByIndex = rowsByIndex(fixedAsr.length ? fixedAsr : rawAsr)
+    const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
+    const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
+      .map(index => Number(index))
+      .filter(index => Number.isFinite(index))
+      .sort((left, right) => left - right)
+    return indexes.map(index => {
+      const asr = asrByIndex[index] || {}
+      const segment = speakerByIndex[index] || {}
+      return {
+        segment_id: segment.id || '',
+        item_index: index,
+        start_time: segment.start_time ?? asr.start_time,
+        end_time: segment.end_time ?? asr.end_time,
+        asr_text: asr.text || '',
+        src_text: segment.src_text || '',
+        dst_text: segment.dst_text || '',
+        speaker: segment.speaker || asr.speaker || '',
+        status: segment.status || '',
+        attempt_count: segment.attempt_count ?? '',
+        speed_ratio: formatRatio(segment.speed_ratio),
+        reference_wav_url: segment.reference_wav_url || '',
+        tts_wav_url: segment.tts_wav_url || '',
+        error_message: segment.error_message || '',
+      }
+    })
+  }
+
+  function tableRows(stage, tableName) {
+    return stage?.tables?.find(table => table.name === tableName)?.rows || []
+  }
+
+  function uploadSubmissionRows(stage) {
+    return [
+      ...tableRows(stage, 'uploader_bilibili_task'),
+      ...tableRows(stage, 'uploader_douyin_task'),
+      ...tableRows(stage, 'uploader_xiaohongshu_task'),
+    ]
+  }
+
+  function uploadPlatformName(platform) {
+    return uploadPlatformText[platform] || platform || ''
+  }
+
+  function rowsByIndex(rows) {
+    const byIndex = {}
+    for (const row of rows || []) {
+      const index = Number(row.item_index ?? row.index)
+      if (Number.isFinite(index)) {
+        byIndex[index] = row
+      }
+    }
+    return byIndex
+  }
+
+  function speechColumns() {
+    return [
+      'item_index',
+      'asr_text',
+      'src_text',
+      'dst_text',
+      'reference_wav_url',
+      'tts_wav_url',
+      'more_info',
+    ]
+  }
+
+  function showSpeechColumn(row, column) {
+    if (column === 'asr_text') {
+      return !sameText(row.asr_text, row.src_text)
+    }
+    return true
+  }
+
+  function sameText(left, right) {
+    return normalizeText(left) !== '' && normalizeText(left) === normalizeText(right)
+  }
+
+  function normalizeText(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ')
+  }
+
+  function speechMoreRows(row) {
+    return [
+      ['segment_id', row.segment_id || '-'],
+      ['start_time', formatTimeline(row.start_time)],
+      ['end_time', formatTimeline(row.end_time)],
+      ['speaker', row.speaker || '-'],
+      ['status', row.status || '-'],
+      ['attempt_count', row.attempt_count === '' ? '-' : row.attempt_count],
+      ['speed_ratio', row.speed_ratio || '-'],
+      ['error_message', row.error_message || '-'],
+    ]
+  }
+
+  function speechRowKey(row) {
+    return row?.segment_id ? String(row.segment_id) : `index:${row?.item_index ?? ''}`
+  }
+
+  function canEditSpeechDstText(row) {
+    return Boolean(selectedTaskFlow.value?.task?.id && row?.segment_id)
+  }
+
+  function isEditingSpeechDstText(row) {
+    return speechEditKey.value === speechRowKey(row)
+  }
+
+  function beginSpeechEdit(row) {
+    if (!canEditSpeechDstText(row) || speechEditSaving.value) return
+    speechEditKey.value = speechRowKey(row)
+    speechEditDraft.value = row.dst_text || ''
+    speechEditError.value = ''
+  }
+
+  function cancelSpeechEdit() {
+    speechEditKey.value = ''
+    speechEditDraft.value = ''
+    speechEditError.value = ''
+  }
+
+  async function saveSpeechDstText(row) {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (!taskId || !row?.segment_id || speechEditSaving.value) return
+    speechEditSaving.value = true
+    speechEditError.value = ''
+    try {
+      await monitorApi.saveSpeakerSegmentDstText(taskId, row.segment_id, speechEditDraft.value)
+      cancelSpeechEdit()
+      await loadTaskFlow(taskId, true)
+    } catch (err) {
+      speechEditError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      speechEditSaving.value = false
+    }
+  }
+
+  function formatRatio(value) {
+    if (value === null || value === undefined || value === '') return ''
+    const number = Number(value)
+    return Number.isFinite(number) ? number.toFixed(2) : String(value)
+  }
+
+  function speechAudioAsset(row, column) {
+    const url = String(row?.[column] || '').trim()
+    if (!url) return null
+    return {
+      name: column,
+      kind: 'audio',
+      url,
+    }
+  }
+
+  function formatTimeline(value) {
+    if (value === null || value === undefined || value === '') return '-'
+    const totalMs = Math.max(0, Number(value || 0))
+    if (!Number.isFinite(totalMs)) return String(value)
+    const minutes = Math.floor(totalMs / 60000)
+    const seconds = (totalMs % 60000) / 1000
+    return `${minutes}:${seconds.toFixed(3).padStart(6, '0')}`
+  }
+
+  function stageMedia(stage) {
+    const items = []
+    const seen = new Set()
+    function add(asset, fallbackName, value) {
+      if (!asset?.url || seen.has(asset.url)) return
+      seen.add(asset.url)
+      items.push({
+        name: asset.name || fallbackName,
+        kind: asset.kind || kindForName(asset.url || value),
+        url: asset.url,
+        objectName: asset.objectName || '',
+      })
+    }
+    for (const field of [...(stage?.inputs || []), ...(stage?.outputs || [])]) {
+      add(field.asset, field.name, field.value)
+    }
+    for (const table of stage?.tables || []) {
+      for (const row of table.rows || []) {
+        for (const [key, value] of Object.entries(row || {})) {
+          const asset = assetFromValue(key, value, stage.key)
+          add(asset, key, value)
+        }
+      }
+    }
+    return items.filter(item => ['video', 'audio', 'image'].includes(item.kind)).slice(0, 30)
+  }
+
+  function assetFromValue(name, value, stageKey) {
+    const text = String(value || '').trim()
+    if (!text || text.startsWith('db://')) return null
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      return { name, stage: stageKey, kind: kindForField(name, text), url: text }
+    }
+    return null
+  }
+
+  function fieldRows(stage) {
+    return [
+      ...(stage?.inputs || []).map(field => ({ ...field, direction: 'Input' })),
+      ...(stage?.outputs || []).map(field => ({ ...field, direction: 'Output' })),
+    ]
+  }
+
+  return {
+    selectedTaskFlow,
+    selectedStageKey,
+    flowPageOpen,
+    flowLoading,
+    flowError,
+    speechEditDraft,
+    speechEditSaving,
+    speechEditError,
+    selectedStage,
+    flowTabs,
+    openTaskFlow,
+    loadTaskFlow,
+    closeTaskFlow,
+    clearFlowPolling,
+    refreshTaskFlow,
+    flowTaskTitle,
+    flowSourceUrl,
+    flowCoverUrl,
+    flowDurationSeconds,
+    tableColumns,
+    tableCellText,
+    tableCellSummary,
+    speechRows,
+    uploadSubmissionRows,
+    uploadPlatformName,
+    speechColumns,
+    showSpeechColumn,
+    speechMoreRows,
+    canEditSpeechDstText,
+    isEditingSpeechDstText,
+    beginSpeechEdit,
+    cancelSpeechEdit,
+    saveSpeechDstText,
+    speechAudioAsset,
+    stageMedia,
+    fieldRows,
+  }
+}
