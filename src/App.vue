@@ -120,9 +120,9 @@ const SUBMITTER_UPLOAD_FILTERS = [
   { value: 'all', label: '全部' },
 ]
 const PLATFORM_ICON_URLS = {
-  douyin: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/douyin-official-appstore-512.png',
-  xiaohongshu: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/xiaohongshu-official-appstore-512.png',
-  bilibili: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/bilibili-official-appstore-512.png',
+  douyin: `${import.meta.env.BASE_URL}platform-icons/douyin-official-appstore-512.png`,
+  xiaohongshu: `${import.meta.env.BASE_URL}platform-icons/xiaohongshu-official-appstore-512.png`,
+  bilibili: `${import.meta.env.BASE_URL}platform-icons/bilibili-official-appstore-512.png`,
 }
 const ACCOUNT_PLATFORMS = [
   { type: 'douyin', label: '抖音', iconUrl: PLATFORM_ICON_URLS.douyin },
@@ -296,12 +296,14 @@ const accountKeyGroups = computed(() => {
     .sort((left, right) => left.key.localeCompare(right.key))
     .map(group => ({
       ...group,
-      rows: ACCOUNT_PLATFORMS.map(platform => ({
-        ...platform,
-        row: group.platforms[platform.type] || emptyPlatformRow(group.key, platform.type),
-        configured: Boolean(group.platforms[platform.type]?.accountKey),
-        exists: Boolean(group.platforms[platform.type]),
-      })),
+      rows: ACCOUNT_PLATFORMS
+        .filter(platform => group.platforms[platform.type])
+        .map(platform => ({
+          ...platform,
+          row: group.platforms[platform.type],
+          configured: Boolean(group.platforms[platform.type]?.accountKey),
+          exists: true,
+        })),
     }))
 })
 
@@ -1134,15 +1136,6 @@ function accountDisplay(row, platform) {
   return `${row.nickname || '-'}${row.userId ? ` · ${row.userId}` : ''}`
 }
 
-function emptyPlatformRow(accountKey, platform) {
-  return {
-    slot: `${platform}_${accountKey}`,
-    accountKey,
-    draftKey: accountKey,
-    draftPort: '',
-  }
-}
-
 function platformBusyKey(platform) {
   if (platform === 'bilibili') return bilibiliBusyKey.value
   if (platform === 'xiaohongshu') return xiaohongshuBusyKey.value
@@ -1166,10 +1159,6 @@ function savePlatformKey(platform, row) {
   if (platform === 'xiaohongshu') return saveXiaohongshuKey(row)
   if (platform === 'douyin') return saveDouyinKey(row)
   return null
-}
-
-function addDouyinConfigForKey(accountKey) {
-  addDouyinCdpRow(accountKey)
 }
 
 async function warmPlatformIcons() {
@@ -2749,14 +2738,12 @@ onUnmounted(() => {
                   <span class="account-actions">
                     <template v-if="item.type === 'douyin'">
                       <button
-                        v-if="item.exists"
                         type="button"
                         :disabled="item.row.draftKey === item.row.accountKey && String(item.row.draftPort || '') === String(item.row.cdpPort || '')"
                         @click="saveDouyinCdpSession(item.row)"
                       >
                         保存
                       </button>
-                      <button v-else type="button" @click="addDouyinConfigForKey(group.key)">配置端口</button>
                     </template>
                     <template v-else>
                       <button type="button" @click="startPlatformLogin(item.type, item.row)">
