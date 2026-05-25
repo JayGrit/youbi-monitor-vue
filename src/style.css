@@ -314,19 +314,14 @@ h1 {
 }
 
 .account-row {
-  min-width: 1240px;
+  min-width: 760px;
   display: grid;
-  grid-template-columns: 56px minmax(150px, 210px) minmax(190px, 1fr) 100px 86px 86px 110px minmax(330px, auto);
+  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 120px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
   color: #344156;
   font-size: 13px;
-}
-
-.account-row.douyin-cdp-row {
-  min-width: 960px;
-  grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) 86px 86px 110px minmax(160px, 1fr);
 }
 
 .account-key-list {
@@ -356,14 +351,14 @@ h1 {
 }
 
 .account-row.account-platform-row {
-  min-width: 1080px;
-  grid-template-columns: 120px minmax(220px, 1fr) 96px 84px 84px 110px minmax(300px, auto);
+  min-width: 760px;
+  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 120px;
 }
 
 .platform-mark {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   color: #243044;
   font-weight: 720;
 }
@@ -374,12 +369,6 @@ h1 {
   flex: 0 0 28px;
   border-radius: 6px;
   object-fit: cover;
-}
-
-.account-cdp-fields {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(96px, 130px);
-  gap: 8px;
 }
 
 .account-qr-grid {
@@ -417,6 +406,7 @@ h1 {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -2201,17 +2191,13 @@ a.submitter-cell:hover {
   }
 
   .account-row {
-    min-width: 860px;
-    grid-template-columns: 46px minmax(130px, 170px) minmax(150px, 1fr) 82px 100px minmax(280px, auto);
+    min-width: 700px;
+    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 110px;
   }
 
   .account-row.account-platform-row {
-    min-width: 900px;
-    grid-template-columns: 112px minmax(200px, 1fr) 86px 80px 80px 100px minmax(260px, auto);
-  }
-
-  .account-actions {
-    justify-content: flex-start;
+    min-width: 700px;
+    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 110px;
   }
 
   .task-row {
@@ -2324,14 +2310,12 @@ a.submitter-cell:hover {
 
   .biliup-actions,
   .biliup-actions button,
-  .biliup-inputs button,
-  .account-actions button {
+  .biliup-inputs button {
     width: 100%;
   }
 
   .biliup-actions button,
   .biliup-inputs button,
-  .account-actions button,
   .account-row input {
     min-height: 42px;
   }
@@ -2357,11 +2341,6 @@ a.submitter-cell:hover {
     background: #f8fafc;
   }
 
-  .account-row.douyin-cdp-row {
-    min-width: 0;
-    grid-template-columns: 42px minmax(0, 1fr);
-  }
-
   .account-row.account-platform-row {
     min-width: 0;
     grid-template-columns: 1fr;
@@ -2384,22 +2363,6 @@ a.submitter-cell:hover {
 
   .platform-mark {
     min-height: 42px;
-  }
-
-  .account-cdp-fields {
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .account-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    gap: 8px;
-  }
-
-  .account-actions button {
-    padding: 0 8px;
   }
 
   .bilibili-login {

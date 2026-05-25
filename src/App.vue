@@ -293,7 +293,6 @@ const accountKeyGroups = computed(() => {
     }
   }
   return [...groups.values()]
-    .sort((left, right) => left.key.localeCompare(right.key))
     .map(group => ({
       ...group,
       rows: ACCOUNT_PLATFORMS
@@ -305,6 +304,7 @@ const accountKeyGroups = computed(() => {
           exists: true,
         })),
     }))
+    .sort((left, right) => right.rows.length - left.rows.length || left.key.localeCompare(right.key))
 })
 
 const flowTabs = computed(() => {
@@ -1126,14 +1126,11 @@ function rowStatus(row) {
 }
 
 function accountDisplay(row, platform) {
-  if (!row.accountKey) return '-'
+  if (!row.accountKey) return ''
   if (platform === 'bilibili') {
-    return `${row.uname || '-'}${row.mid ? ` · UID ${row.mid}` : ''}`
+    return row.uname || ''
   }
-  if (platform === 'douyin' && row.cdpPort) {
-    return `CDP ${row.cdpPort}`
-  }
-  return `${row.nickname || '-'}${row.userId ? ` · ${row.userId}` : ''}`
+  return row.nickname || ''
 }
 
 function platformBusyKey(platform) {
@@ -2689,10 +2686,6 @@ onUnmounted(() => {
           <div class="biliup-head">
             <div>
               <h2>账号</h2>
-              <p>
-                {{ accountKeyGroups.length }} 个 key，
-                抖音 {{ douyinAccounts.length }} 个，小红书 {{ xiaohongshuAccounts.length }} 个，B站 {{ bilibiliAccounts.length }} 个
-              </p>
             </div>
             <div class="biliup-actions">
               <button type="button" @click="addDouyinCdpRow()">新增抖音配置</button>
@@ -2711,11 +2704,9 @@ onUnmounted(() => {
                 <div class="account-row account-header account-platform-row">
                   <span>Type</span>
                   <span>账号</span>
-                  <span>状态</span>
                   <span>今日已发</span>
                   <span>冷却等待</span>
                   <span>下次可发送</span>
-                  <span>操作</span>
                 </div>
                 <div
                   v-for="item in group.rows"
@@ -2724,48 +2715,11 @@ onUnmounted(() => {
                 >
                   <span class="platform-mark">
                     <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
-                    <span>{{ item.label }}</span>
                   </span>
-                  <span v-if="item.type === 'douyin' && item.exists" class="account-cdp-fields">
-                    <input v-model="item.row.draftKey" type="text" placeholder="账号 key" />
-                    <input v-model="item.row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="CDP端口" />
-                  </span>
-                  <span v-else>{{ item.configured ? accountDisplay(item.row, item.type) : '未配置' }}</span>
-                  <span>{{ item.configured ? rowStatus(item.row) : item.exists ? '待保存' : '-' }}</span>
+                  <span>{{ item.configured ? accountDisplay(item.row, item.type) : '' }}</span>
                   <span>{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
                   <span>{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
                   <span>{{ item.configured ? nextSendText(item.row) : '-' }}</span>
-                  <span class="account-actions">
-                    <template v-if="item.type === 'douyin'">
-                      <button
-                        type="button"
-                        :disabled="item.row.draftKey === item.row.accountKey && String(item.row.draftPort || '') === String(item.row.cdpPort || '')"
-                        @click="saveDouyinCdpSession(item.row)"
-                      >
-                        保存
-                      </button>
-                    </template>
-                    <template v-else>
-                      <button type="button" @click="startPlatformLogin(item.type, item.row)">
-                        {{ item.configured ? '重新扫码' : '扫码登录' }}
-                      </button>
-                      <button
-                        v-if="item.type === 'bilibili'"
-                        type="button"
-                        :disabled="!item.configured || bilibiliRenewing"
-                        @click="renewBilibiliAccount(item.row)"
-                      >
-                        {{ platformBusyKey(item.type) === rowKey(item.row) ? '续期中' : '续期' }}
-                      </button>
-                      <button
-                        type="button"
-                        :disabled="!item.configured || item.row.draftKey === item.row.accountKey"
-                        @click="savePlatformKey(item.type, item.row)"
-                      >
-                        保存Key
-                      </button>
-                    </template>
-                  </span>
                 </div>
               </div>
             </section>
