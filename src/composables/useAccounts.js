@@ -1,0 +1,626 @@
+import { computed, ref } from 'vue'
+import {
+  formatTime,
+  isSameDate,
+  pad2,
+  parseLocalDateTime,
+} from '../utils/format'
+
+export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
+  const bilibiliAccount = ref(null)
+  const bilibiliAccounts = ref([])
+  const bilibiliRows = ref(accountRows([]))
+  const bilibiliError = ref('')
+  const bilibiliQrCode = ref(null)
+  const bilibiliQrMessage = ref('')
+  const bilibiliRenewing = ref(false)
+  const bilibiliBusyKey = ref('')
+  const xiaohongshuAccount = ref(null)
+  const xiaohongshuAccounts = ref([])
+  const xiaohongshuRows = ref(accountRows([]))
+  const xiaohongshuError = ref('')
+  const xiaohongshuQrCode = ref(null)
+  const xiaohongshuQrMessage = ref('')
+  const xiaohongshuBusyKey = ref('')
+  const douyinAccount = ref(null)
+  const douyinAccounts = ref([])
+  const douyinRows = ref(accountRows([]))
+  const douyinError = ref('')
+  const douyinQrCode = ref(null)
+  const douyinQrMessage = ref('')
+  const douyinBusyKey = ref('')
+  let accountTimer = null
+  let bilibiliQrTimer = null
+  let xiaohongshuQrTimer = null
+  let douyinQrTimer = null
+
+  const accountKeyGroups = computed(() => {
+    const groups = new Map()
+    for (const [type, rows] of [
+      ['douyin', douyinRows.value],
+      ['xiaohongshu', xiaohongshuRows.value],
+      ['bilibili', bilibiliRows.value],
+    ]) {
+      for (const row of rows) {
+        const key = String(row.accountKey || row.draftKey || '').trim()
+        if (!key) continue
+        if (!groups.has(key)) groups.set(key, { key, platforms: {} })
+        groups.get(key).platforms[type] = row
+      }
+    }
+    return [...groups.values()]
+      .map(group => ({
+        ...group,
+        rows: accountPlatforms
+          .filter(platform => group.platforms[platform.type])
+          .map(platform => ({
+            ...platform,
+            row: group.platforms[platform.type],
+            configured: Boolean(group.platforms[platform.type]?.accountKey),
+            exists: true,
+          })),
+      }))
+      .sort((left, right) => right.rows.length - left.rows.length || left.key.localeCompare(right.key))
+  })
+
+  async function loadBiliupStatus() {
+    try {
+      await loadBilibiliAccounts()
+      bilibiliAccount.value = bilibiliRows.value.find(row => row.accountKey) || bilibiliRows.value[0]
+      bilibiliError.value = ''
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadAccountPage() {
+    await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus(), loadDouyinStatus()])
+  }
+
+  function startAccountPolling() {
+    clearAccountPagePolling()
+    loadAccountPage()
+    accountTimer = window.setInterval(loadAccountPage, 30000)
+  }
+
+  function clearAccountPagePolling() {
+    if (accountTimer) {
+      window.clearInterval(accountTimer)
+      accountTimer = null
+    }
+  }
+
+  function clearAccountPolling() {
+    clearAccountPagePolling()
+    if (bilibiliQrTimer) {
+      window.clearInterval(bilibiliQrTimer)
+      bilibiliQrTimer = null
+    }
+    if (xiaohongshuQrTimer) {
+      window.clearInterval(xiaohongshuQrTimer)
+      xiaohongshuQrTimer = null
+    }
+    if (douyinQrTimer) {
+      window.clearInterval(douyinQrTimer)
+      douyinQrTimer = null
+    }
+  }
+
+  async function loadBilibiliAccounts() {
+    bilibiliAccounts.value = await accountsApi.bilibili.list()
+    bilibiliRows.value = accountRows(bilibiliAccounts.value)
+  }
+
+  async function loadXiaohongshuStatus() {
+    try {
+      await loadXiaohongshuAccounts()
+      xiaohongshuAccount.value = xiaohongshuRows.value.find(row => row.accountKey) || xiaohongshuRows.value[0]
+      xiaohongshuError.value = ''
+    } catch (err) {
+      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadXiaohongshuAccounts() {
+    xiaohongshuAccounts.value = await accountsApi.xiaohongshu.list()
+    xiaohongshuRows.value = accountRows(xiaohongshuAccounts.value)
+  }
+
+  async function loadDouyinStatus() {
+    try {
+      await loadDouyinAccounts()
+      douyinAccount.value = douyinRows.value.find(row => row.accountKey) || douyinRows.value[0]
+      douyinError.value = ''
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadDouyinAccounts() {
+    douyinAccounts.value = await accountsApi.douyin.list()
+    douyinRows.value = accountRows(douyinAccounts.value)
+  }
+
+  async function startBilibiliQrLogin(row) {
+    try {
+      const key = row?.accountKey || '_auto'
+      bilibiliBusyKey.value = rowKey(row)
+      bilibiliQrCode.value = await accountsApi.bilibili.startQrLogin(key)
+      bilibiliQrMessage.value = '等待扫码确认'
+      pollBilibiliQrCode()
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      bilibiliBusyKey.value = ''
+    }
+  }
+
+  async function pollBilibiliQrCode() {
+    if (!bilibiliQrCode.value?.authCode) return
+    if (bilibiliQrTimer) window.clearInterval(bilibiliQrTimer)
+    await refreshBilibiliQrCode()
+    bilibiliQrTimer = window.setInterval(refreshBilibiliQrCode, 1500)
+  }
+
+  async function refreshBilibiliQrCode() {
+    if (!bilibiliQrCode.value?.authCode) return
+    try {
+      const key = bilibiliQrCode.value.accountKey || '_auto'
+      const payload = await accountsApi.bilibili.pollQrLogin(key, bilibiliQrCode.value.authCode)
+      bilibiliQrMessage.value = payload.message || '等待扫码确认'
+      if (payload.loggedIn) {
+        bilibiliAccount.value = payload.account
+        await loadBilibiliAccounts()
+        bilibiliQrCode.value = null
+        if (bilibiliQrTimer) {
+          window.clearInterval(bilibiliQrTimer)
+          bilibiliQrTimer = null
+        }
+      }
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function renewBilibiliAccount(row) {
+    if (!row?.accountKey) return
+    bilibiliRenewing.value = true
+    bilibiliBusyKey.value = rowKey(row)
+    try {
+      bilibiliAccount.value = await accountsApi.bilibili.renew(row.accountKey)
+      await loadBilibiliAccounts()
+      bilibiliError.value = ''
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      bilibiliRenewing.value = false
+      bilibiliBusyKey.value = ''
+    }
+  }
+
+  async function refreshBilibiliRow(row) {
+    if (!row?.accountKey) return
+    try {
+      const account = await accountsApi.bilibili.refresh(row.accountKey)
+      mergeAccountRow(account)
+      bilibiliAccount.value = account
+      bilibiliError.value = ''
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function saveBilibiliKey(row) {
+    if (!row?.accountKey) return
+    const nextKey = (row.draftKey || '').trim()
+    if (!nextKey || nextKey === row.accountKey) return
+    try {
+      const payload = await accountsApi.bilibili.saveKey(row.accountKey, nextKey)
+      mergeAccountRow(payload, row.slot)
+      await loadBilibiliAccounts()
+      bilibiliError.value = ''
+    } catch (err) {
+      bilibiliError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function startXiaohongshuQrLogin(row) {
+    try {
+      const key = row?.accountKey || '_auto'
+      xiaohongshuBusyKey.value = rowKey(row)
+      const payload = await accountsApi.xiaohongshu.startQrLogin(key)
+      xiaohongshuQrCode.value = payload
+      xiaohongshuQrMessage.value = '等待扫码确认'
+      pollXiaohongshuQrCode()
+    } catch (err) {
+      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      xiaohongshuBusyKey.value = ''
+    }
+  }
+
+  async function pollXiaohongshuQrCode() {
+    if (!xiaohongshuQrCode.value?.authCode) return
+    if (xiaohongshuQrTimer) window.clearInterval(xiaohongshuQrTimer)
+    await refreshXiaohongshuQrCode()
+    xiaohongshuQrTimer = window.setInterval(refreshXiaohongshuQrCode, 1500)
+  }
+
+  async function refreshXiaohongshuQrCode() {
+    if (!xiaohongshuQrCode.value?.authCode) return
+    try {
+      const key = xiaohongshuQrCode.value.accountKey || '_auto'
+      const payload = await accountsApi.xiaohongshu.pollQrLogin(key, xiaohongshuQrCode.value.authCode)
+      xiaohongshuQrMessage.value = payload.message || '等待扫码确认'
+      if (payload.loggedIn) {
+        xiaohongshuAccount.value = payload.account
+        await loadXiaohongshuAccounts()
+        xiaohongshuQrCode.value = null
+        if (xiaohongshuQrTimer) {
+          window.clearInterval(xiaohongshuQrTimer)
+          xiaohongshuQrTimer = null
+        }
+      }
+    } catch (err) {
+      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function refreshXiaohongshuRow(row) {
+    if (!row?.accountKey) return
+    try {
+      const account = await accountsApi.xiaohongshu.refresh(row.accountKey)
+      mergeXiaohongshuRow(account)
+      xiaohongshuAccount.value = account
+      xiaohongshuError.value = ''
+    } catch (err) {
+      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function saveXiaohongshuKey(row) {
+    if (!row?.accountKey) return
+    const nextKey = (row.draftKey || '').trim()
+    if (!nextKey || nextKey === row.accountKey) return
+    try {
+      const payload = await accountsApi.xiaohongshu.saveKey(row.accountKey, nextKey)
+      mergeXiaohongshuRow(payload, row.slot)
+      await loadXiaohongshuAccounts()
+      xiaohongshuError.value = ''
+    } catch (err) {
+      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function startDouyinQrLogin(row) {
+    try {
+      const key = row?.accountKey || '_auto'
+      douyinBusyKey.value = rowKey(row)
+      const payload = await accountsApi.douyin.startQrLogin(key)
+      douyinQrCode.value = payload
+      douyinQrMessage.value = '等待扫码确认'
+      pollDouyinQrCode()
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      douyinBusyKey.value = ''
+    }
+  }
+
+  async function pollDouyinQrCode() {
+    if (!douyinQrCode.value?.authCode) return
+    if (douyinQrTimer) window.clearInterval(douyinQrTimer)
+    await refreshDouyinQrCode()
+    douyinQrTimer = window.setInterval(refreshDouyinQrCode, 1500)
+  }
+
+  async function refreshDouyinQrCode() {
+    if (!douyinQrCode.value?.authCode) return
+    try {
+      const key = douyinQrCode.value.accountKey || '_auto'
+      const payload = await accountsApi.douyin.pollQrLogin(key, douyinQrCode.value.authCode)
+      douyinQrMessage.value = payload.message || '等待扫码确认'
+      if (payload.code === 'expired') {
+        if (douyinQrTimer) {
+          window.clearInterval(douyinQrTimer)
+          douyinQrTimer = null
+        }
+      }
+      if (payload.loggedIn) {
+        douyinAccount.value = payload.account
+        await loadDouyinAccounts()
+        douyinQrCode.value = null
+        if (douyinQrTimer) {
+          window.clearInterval(douyinQrTimer)
+          douyinQrTimer = null
+        }
+      }
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function refreshDouyinRow(row) {
+    if (!row?.accountKey) return
+    try {
+      const account = await accountsApi.douyin.refresh(row.accountKey)
+      mergeDouyinRow(account)
+      douyinAccount.value = account
+      douyinError.value = ''
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function saveDouyinKey(row) {
+    if (!row?.accountKey) return
+    const nextKey = (row.draftKey || '').trim()
+    if (!nextKey || nextKey === row.accountKey) return
+    try {
+      const payload = await accountsApi.douyin.saveKey(row.accountKey, nextKey)
+      mergeDouyinRow(payload, row.slot)
+      await loadDouyinAccounts()
+      douyinError.value = ''
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  function addDouyinCdpRow(accountKey = '') {
+    const initialKey = accountKey || window.prompt('Key') || ''
+    if (!initialKey.trim()) return
+    const rows = [...douyinRows.value]
+    const slot = rows.reduce((max, row) => Math.max(max, Number(row.slot || 0)), 0) + 1
+    rows.push({
+      slot,
+      accountKey: '',
+      cdpPort: null,
+      draftKey: initialKey.trim(),
+      draftPort: '',
+    })
+    douyinRows.value = rows
+  }
+
+  async function saveDouyinCdpSession(row) {
+    const accountKey = (row?.draftKey || '').trim()
+    const cdpPort = Number(row?.draftPort)
+    if (!accountKey) {
+      douyinError.value = 'Key 不能为空'
+      return
+    }
+    if (!Number.isInteger(cdpPort) || cdpPort < 1 || cdpPort > 65535) {
+      douyinError.value = '端口号必须是 1-65535'
+      return
+    }
+    try {
+      await accountsApi.douyin.saveCdpSession({
+        originalAccountKey: row.accountKey || '',
+        accountKey,
+        cdpPort,
+      })
+      await loadDouyinAccounts()
+      douyinError.value = ''
+    } catch (err) {
+      douyinError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  function accountRows(accounts) {
+    return accounts.map((account, index) => ({
+      ...account,
+      slot: index + 1,
+      draftKey: account.accountKey || '',
+      draftPort: account.cdpPort == null ? '' : String(account.cdpPort),
+    }))
+  }
+
+  function nextSendText(account) {
+    const next = parseLocalDateTime(account?.nextUploadAllowedAt)
+    if (!next || next.getTime() <= Date.now()) {
+      return '可发送'
+    }
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(now.getDate() + 1)
+    if (isSameDate(next, now)) {
+      return formatTime(next)
+    }
+    if (isSameDate(next, tomorrow)) {
+      return `明天${formatTime(next)}`
+    }
+    return `${pad2(next.getMonth() + 1)}-${pad2(next.getDate())} ${formatTime(next)}`
+  }
+
+  function accountCountText(value) {
+    const count = Number(value || 0)
+    return Number.isFinite(count) ? String(Math.max(0, Math.trunc(count))) : '0'
+  }
+
+  function mergeAccountRow(account, preferredSlot) {
+    const rows = [...bilibiliRows.value]
+    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    if (index < 0 && preferredSlot) {
+      index = rows.findIndex(row => row.slot === preferredSlot)
+    }
+    if (index < 0) {
+      index = rows.findIndex(row => !row.accountKey)
+    }
+    if (index < 0) {
+      index = 0
+    }
+    rows[index] = {
+      ...account,
+      slot: rows[index]?.slot || index + 1,
+      draftKey: account.accountKey || '',
+    }
+    bilibiliRows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
+  function mergeXiaohongshuRow(account, preferredSlot) {
+    const rows = [...xiaohongshuRows.value]
+    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    if (index < 0 && preferredSlot) {
+      index = rows.findIndex(row => row.slot === preferredSlot)
+    }
+    if (index < 0) {
+      index = rows.findIndex(row => !row.accountKey)
+    }
+    if (index < 0) {
+      index = 0
+    }
+    rows[index] = {
+      ...account,
+      slot: rows[index]?.slot || index + 1,
+      draftKey: account.accountKey || '',
+    }
+    xiaohongshuRows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
+  function mergeDouyinRow(account, preferredSlot) {
+    const rows = [...douyinRows.value]
+    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    if (index < 0 && preferredSlot) {
+      index = rows.findIndex(row => row.slot === preferredSlot)
+    }
+    if (index < 0) {
+      index = rows.findIndex(row => !row.accountKey)
+    }
+    if (index < 0) {
+      index = 0
+    }
+    rows[index] = {
+      ...account,
+      slot: rows[index]?.slot || index + 1,
+      draftKey: account.accountKey || '',
+    }
+    douyinRows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
+  function rowKey(row) {
+    return row?.accountKey || `slot_${row?.slot || 0}`
+  }
+
+  function rowStatus(row) {
+    if (!row.accountKey) return '空'
+    if (row.valid === true) return '已登录'
+    if (row.valid === false) return '未登录'
+    return row.message || '已保存'
+  }
+
+  function accountDisplay(row, platform) {
+    if (!row.accountKey) return ''
+    if (platform === 'bilibili') {
+      return row.uname || ''
+    }
+    return row.nickname || ''
+  }
+
+  function platformBusyKey(platform) {
+    if (platform === 'bilibili') return bilibiliBusyKey.value
+    if (platform === 'xiaohongshu') return xiaohongshuBusyKey.value
+    if (platform === 'douyin') return douyinBusyKey.value
+    return ''
+  }
+
+  function platformErrorText() {
+    return [douyinError.value, xiaohongshuError.value, bilibiliError.value].filter(Boolean).join('；')
+  }
+
+  function startPlatformLogin(platform, row) {
+    if (platform === 'bilibili') return startBilibiliQrLogin(row)
+    if (platform === 'xiaohongshu') return startXiaohongshuQrLogin(row)
+    if (platform === 'douyin') return startDouyinQrLogin(row)
+    return null
+  }
+
+  function savePlatformKey(platform, row) {
+    if (platform === 'bilibili') return saveBilibiliKey(row)
+    if (platform === 'xiaohongshu') return saveXiaohongshuKey(row)
+    if (platform === 'douyin') return saveDouyinKey(row)
+    return null
+  }
+
+  async function warmPlatformIcons() {
+    const urls = Object.values(platformIconUrls)
+    for (const url of urls) {
+      const image = new Image()
+      image.decoding = 'async'
+      image.src = url
+    }
+    if (!('caches' in window)) return
+    try {
+      const cache = await caches.open('youbi-platform-icons-v1')
+      await Promise.allSettled(urls.map(async url => {
+        const cached = await cache.match(url)
+        if (!cached) await cache.add(url)
+      }))
+    } catch {
+      // Browser image cache still handles these icons when Cache API is unavailable.
+    }
+  }
+
+  function qrImageUrl(url) {
+    if (!url) return ''
+    return `https://api.qrserver.com/v1/create-qr-code/?size=184x184&data=${encodeURIComponent(url)}`
+  }
+
+  return {
+    bilibiliAccount,
+    bilibiliAccounts,
+    bilibiliRows,
+    bilibiliError,
+    bilibiliQrCode,
+    bilibiliQrMessage,
+    bilibiliRenewing,
+    bilibiliBusyKey,
+    xiaohongshuAccount,
+    xiaohongshuAccounts,
+    xiaohongshuRows,
+    xiaohongshuError,
+    xiaohongshuQrCode,
+    xiaohongshuQrMessage,
+    xiaohongshuBusyKey,
+    douyinAccount,
+    douyinAccounts,
+    douyinRows,
+    douyinError,
+    douyinQrCode,
+    douyinQrMessage,
+    douyinBusyKey,
+    accountKeyGroups,
+    loadBiliupStatus,
+    loadAccountPage,
+    startAccountPolling,
+    clearAccountPagePolling,
+    clearAccountPolling,
+    loadBilibiliAccounts,
+    loadXiaohongshuStatus,
+    loadXiaohongshuAccounts,
+    loadDouyinStatus,
+    loadDouyinAccounts,
+    startBilibiliQrLogin,
+    renewBilibiliAccount,
+    refreshBilibiliRow,
+    saveBilibiliKey,
+    startXiaohongshuQrLogin,
+    refreshXiaohongshuRow,
+    saveXiaohongshuKey,
+    startDouyinQrLogin,
+    refreshDouyinRow,
+    saveDouyinKey,
+    addDouyinCdpRow,
+    saveDouyinCdpSession,
+    accountRows,
+    nextSendText,
+    accountCountText,
+    rowKey,
+    rowStatus,
+    accountDisplay,
+    platformBusyKey,
+    platformErrorText,
+    startPlatformLogin,
+    savePlatformKey,
+    warmPlatformIcons,
+    qrImageUrl,
+  }
+}
