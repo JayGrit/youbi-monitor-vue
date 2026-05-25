@@ -1529,7 +1529,11 @@ function tableRows(stage, tableName) {
 }
 
 function uploadSubmissionRows(stage) {
-  return tableRows(stage, 'yd_upload_submission')
+  return [
+    ...tableRows(stage, 'uploader_bilibili_task'),
+    ...tableRows(stage, 'uploader_douyin_task'),
+    ...tableRows(stage, 'uploader_xiaohongshu_task'),
+  ]
 }
 
 function uploadPlatformName(platform) {
