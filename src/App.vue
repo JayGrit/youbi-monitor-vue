@@ -982,6 +982,11 @@ function nextSendText(account) {
   return `${pad2(next.getMonth() + 1)}-${pad2(next.getDate())} ${formatTime(next)}`
 }
 
+function accountCountText(value) {
+  const count = Number(value || 0)
+  return Number.isFinite(count) ? String(Math.max(0, Math.trunc(count))) : '0'
+}
+
 function parseLocalDateTime(value) {
   if (!value) {
     return null
@@ -2608,6 +2613,8 @@ onUnmounted(() => {
               <span>Key</span>
               <span>账号</span>
               <span>状态</span>
+              <span>今日已发</span>
+              <span>冷却等待</span>
               <span>下次可发送</span>
               <span>操作</span>
             </div>
@@ -2616,6 +2623,8 @@ onUnmounted(() => {
               <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
               <span>{{ accountDisplay(row, 'bilibili') }}</span>
               <span>{{ rowStatus(row) }}</span>
+              <span>{{ accountCountText(row.todayUploadCount) }}</span>
+              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
               <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button type="button" @click="startBilibiliQrLogin(row)">
@@ -2658,6 +2667,8 @@ onUnmounted(() => {
               <span>Key</span>
               <span>账号</span>
               <span>状态</span>
+              <span>今日已发</span>
+              <span>冷却等待</span>
               <span>下次可发送</span>
               <span>操作</span>
             </div>
@@ -2666,6 +2677,8 @@ onUnmounted(() => {
               <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
               <span>{{ accountDisplay(row, 'xiaohongshu') }}</span>
               <span>{{ rowStatus(row) }}</span>
+              <span>{{ accountCountText(row.todayUploadCount) }}</span>
+              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
               <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button type="button" @click="startXiaohongshuQrLogin(row)">
@@ -2704,6 +2717,8 @@ onUnmounted(() => {
               <span>槽位</span>
               <span>Key</span>
               <span>CDP端口</span>
+              <span>今日已发</span>
+              <span>冷却等待</span>
               <span>下次可发送</span>
               <span>操作</span>
             </div>
@@ -2711,6 +2726,8 @@ onUnmounted(() => {
               <strong>{{ row.slot }}</strong>
               <input v-model="row.draftKey" type="text" placeholder="例如 animal / knowledge" />
               <input v-model="row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="例如 9333" />
+              <span>{{ accountCountText(row.todayUploadCount) }}</span>
+              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
               <span>{{ nextSendText(row) }}</span>
               <span class="account-actions">
                 <button

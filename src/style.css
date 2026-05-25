@@ -314,9 +314,9 @@ h1 {
 }
 
 .account-row {
-  min-width: 1060px;
+  min-width: 1240px;
   display: grid;
-  grid-template-columns: 56px minmax(150px, 210px) minmax(190px, 1fr) 100px 110px minmax(330px, auto);
+  grid-template-columns: 56px minmax(150px, 210px) minmax(190px, 1fr) 100px 86px 86px 110px minmax(330px, auto);
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -325,8 +325,8 @@ h1 {
 }
 
 .account-row.douyin-cdp-row {
-  min-width: 760px;
-  grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) 110px minmax(160px, 1fr);
+  min-width: 960px;
+  grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) 86px 86px 110px minmax(160px, 1fr);
 }
 
 .account-header {
@@ -2299,7 +2299,7 @@ a.submitter-cell:hover {
   }
 
   .account-row strong {
-    grid-row: span 5;
+    grid-row: span 7;
     display: grid;
     place-items: center;
     min-height: 42px;
