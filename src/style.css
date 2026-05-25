@@ -329,6 +329,65 @@ h1 {
   grid-template-columns: 56px minmax(180px, 280px) minmax(120px, 180px) 86px 86px 110px minmax(160px, 1fr);
 }
 
+.account-key-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.account-key-group {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.account-key-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #172033;
+  font-size: 14px;
+}
+
+.account-key-title span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.account-row.account-platform-row {
+  min-width: 1080px;
+  grid-template-columns: 120px minmax(220px, 1fr) 96px 84px 84px 110px minmax(300px, auto);
+}
+
+.platform-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #243044;
+  font-weight: 720;
+}
+
+.platform-mark img {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.account-cdp-fields {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(96px, 130px);
+  gap: 8px;
+}
+
+.account-qr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
 .account-header {
   min-height: 28px;
   color: #65758a;
@@ -2146,6 +2205,11 @@ a.submitter-cell:hover {
     grid-template-columns: 46px minmax(130px, 170px) minmax(150px, 1fr) 82px 100px minmax(280px, auto);
   }
 
+  .account-row.account-platform-row {
+    min-width: 900px;
+    grid-template-columns: 112px minmax(200px, 1fr) 86px 80px 80px 100px minmax(260px, auto);
+  }
+
   .account-actions {
     justify-content: flex-start;
   }
@@ -2298,6 +2362,11 @@ a.submitter-cell:hover {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
+  .account-row.account-platform-row {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
   .account-row strong {
     grid-row: span 7;
     display: grid;
@@ -2311,6 +2380,15 @@ a.submitter-cell:hover {
   .account-row > span {
     white-space: normal;
     line-height: 1.4;
+  }
+
+  .platform-mark {
+    min-height: 42px;
+  }
+
+  .account-cdp-fields {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .account-actions {

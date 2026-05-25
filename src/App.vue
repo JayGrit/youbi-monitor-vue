@@ -119,6 +119,16 @@ const SUBMITTER_UPLOAD_FILTERS = [
   { value: 'uploaded', label: '已上传' },
   { value: 'all', label: '全部' },
 ]
+const PLATFORM_ICON_URLS = {
+  douyin: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/douyin-official-appstore-512.png',
+  xiaohongshu: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/xiaohongshu-official-appstore-512.png',
+  bilibili: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/bilibili-official-appstore-512.png',
+}
+const ACCOUNT_PLATFORMS = [
+  { type: 'douyin', label: '抖音', iconUrl: PLATFORM_ICON_URLS.douyin },
+  { type: 'xiaohongshu', label: '小红书', iconUrl: PLATFORM_ICON_URLS.xiaohongshu },
+  { type: 'bilibili', label: 'B站', iconUrl: PLATFORM_ICON_URLS.bilibili },
+]
 const SUBMITTER_DURATION_FILTERS = [
   { value: 'all', label: '全部时长' },
   { value: 'short', label: '短视频（0-120 秒）' },
@@ -268,6 +278,33 @@ const selectedStage = computed(() => {
   return stages.find(stage => stage.key === selectedStageKey.value) || stages[0] || null
 })
 
+const accountKeyGroups = computed(() => {
+  const groups = new Map()
+  for (const [type, rows] of [
+    ['douyin', douyinRows.value],
+    ['xiaohongshu', xiaohongshuRows.value],
+    ['bilibili', bilibiliRows.value],
+  ]) {
+    for (const row of rows) {
+      const key = String(row.accountKey || row.draftKey || '').trim()
+      if (!key) continue
+      if (!groups.has(key)) groups.set(key, { key, platforms: {} })
+      groups.get(key).platforms[type] = row
+    }
+  }
+  return [...groups.values()]
+    .sort((left, right) => left.key.localeCompare(right.key))
+    .map(group => ({
+      ...group,
+      rows: ACCOUNT_PLATFORMS.map(platform => ({
+        ...platform,
+        row: group.platforms[platform.type] || emptyPlatformRow(group.key, platform.type),
+        configured: Boolean(group.platforms[platform.type]?.accountKey),
+        exists: Boolean(group.platforms[platform.type]),
+      })),
+    }))
+})
+
 const flowTabs = computed(() => {
   const stages = selectedTaskFlow.value?.stages || []
   const tabs = []
@@ -353,6 +390,7 @@ function openPage(page) {
     loadSubmitterVideos()
   }
   if (page === 'accounts') {
+    warmPlatformIcons()
     loadAccountPage()
     accountTimer = window.setInterval(loadAccountPage, 30000)
   }
@@ -700,14 +738,16 @@ async function saveDouyinKey(row) {
   }
 }
 
-function addDouyinCdpRow() {
+function addDouyinCdpRow(accountKey = '') {
+  const initialKey = accountKey || window.prompt('Key') || ''
+  if (!initialKey.trim()) return
   const rows = [...douyinRows.value]
   const slot = rows.reduce((max, row) => Math.max(max, Number(row.slot || 0)), 0) + 1
   rows.push({
     slot,
     accountKey: '',
     cdpPort: null,
-    draftKey: '',
+    draftKey: initialKey.trim(),
     draftPort: '',
   })
   douyinRows.value = rows
@@ -1088,7 +1128,67 @@ function accountDisplay(row, platform) {
   if (platform === 'bilibili') {
     return `${row.uname || '-'}${row.mid ? ` · UID ${row.mid}` : ''}`
   }
+  if (platform === 'douyin' && row.cdpPort) {
+    return `CDP ${row.cdpPort}`
+  }
   return `${row.nickname || '-'}${row.userId ? ` · ${row.userId}` : ''}`
+}
+
+function emptyPlatformRow(accountKey, platform) {
+  return {
+    slot: `${platform}_${accountKey}`,
+    accountKey,
+    draftKey: accountKey,
+    draftPort: '',
+  }
+}
+
+function platformBusyKey(platform) {
+  if (platform === 'bilibili') return bilibiliBusyKey.value
+  if (platform === 'xiaohongshu') return xiaohongshuBusyKey.value
+  if (platform === 'douyin') return douyinBusyKey.value
+  return ''
+}
+
+function platformErrorText() {
+  return [douyinError.value, xiaohongshuError.value, bilibiliError.value].filter(Boolean).join('；')
+}
+
+function startPlatformLogin(platform, row) {
+  if (platform === 'bilibili') return startBilibiliQrLogin(row)
+  if (platform === 'xiaohongshu') return startXiaohongshuQrLogin(row)
+  if (platform === 'douyin') return startDouyinQrLogin(row)
+  return null
+}
+
+function savePlatformKey(platform, row) {
+  if (platform === 'bilibili') return saveBilibiliKey(row)
+  if (platform === 'xiaohongshu') return saveXiaohongshuKey(row)
+  if (platform === 'douyin') return saveDouyinKey(row)
+  return null
+}
+
+function addDouyinConfigForKey(accountKey) {
+  addDouyinCdpRow(accountKey)
+}
+
+async function warmPlatformIcons() {
+  const urls = Object.values(PLATFORM_ICON_URLS)
+  for (const url of urls) {
+    const image = new Image()
+    image.decoding = 'async'
+    image.src = url
+  }
+  if (!('caches' in window)) return
+  try {
+    const cache = await caches.open('youbi-platform-icons-v1')
+    await Promise.allSettled(urls.map(async url => {
+      const cached = await cache.match(url)
+      if (!cached) await cache.add(url)
+    }))
+  } catch {
+    // Browser image cache still handles these icons when Cache API is unavailable.
+  }
 }
 
 function formatDuration(seconds) {
@@ -2123,6 +2223,7 @@ function formatNumber(value) {
 }
 
 onMounted(() => {
+  warmPlatformIcons()
   loadTasks()
   timer = window.setInterval(loadTasks, 2000)
 })
@@ -2595,153 +2696,114 @@ onUnmounted(() => {
 
     <template v-else-if="activePage === 'accounts'">
       <section class="account-page" aria-label="账号管理">
-        <section class="biliup-panel" aria-label="B站账号管理">
+        <section class="biliup-panel account-overview" aria-label="账号管理总览">
           <div class="biliup-head">
             <div>
-              <h2>B站账号</h2>
-              <p v-if="bilibiliAccount">已保存 {{ bilibiliAccounts.length }} 个账号</p>
-              <p v-else>{{ bilibiliError ? `B站账号异常：${bilibiliError}` : '正在检测 B站账号' }}</p>
+              <h2>账号</h2>
+              <p>
+                {{ accountKeyGroups.length }} 个 key，
+                抖音 {{ douyinAccounts.length }} 个，小红书 {{ xiaohongshuAccounts.length }} 个，B站 {{ bilibiliAccounts.length }} 个
+              </p>
             </div>
             <div class="biliup-actions">
+              <button type="button" @click="addDouyinCdpRow()">新增抖音配置</button>
+              <button type="button" @click="startXiaohongshuQrLogin(null)">小红书扫码</button>
               <button type="button" @click="startBilibiliQrLogin(null)">扫码登录新账号</button>
             </div>
           </div>
 
-          <div class="account-table" aria-label="B站账号表">
-            <div class="account-row account-header">
-              <span>槽位</span>
-              <span>Key</span>
-              <span>账号</span>
-              <span>状态</span>
-              <span>今日已发</span>
-              <span>冷却等待</span>
-              <span>下次可发送</span>
-              <span>操作</span>
-            </div>
-            <div v-for="row in bilibiliRows" :key="row.slot" class="account-row">
-              <strong>{{ row.slot }}</strong>
-              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
-              <span>{{ accountDisplay(row, 'bilibili') }}</span>
-              <span>{{ rowStatus(row) }}</span>
-              <span>{{ accountCountText(row.todayUploadCount) }}</span>
-              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
-              <span>{{ nextSendText(row) }}</span>
-              <span class="account-actions">
-                <button type="button" @click="startBilibiliQrLogin(row)">
-                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
-                </button>
-                <button type="button" :disabled="!row.accountKey || bilibiliRenewing" @click="renewBilibiliAccount(row)">
-                  {{ bilibiliBusyKey === rowKey(row) ? '续期中' : '续期' }}
-                </button>
-                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveBilibiliKey(row)">保存Key</button>
-              </span>
-            </div>
-          </div>
-
-          <div v-if="bilibiliQrCode" class="bilibili-login">
-            <img :src="qrImageUrl(bilibiliQrCode.url)" alt="B站登录二维码" />
-            <div>
-              <strong>{{ bilibiliQrMessage }}</strong>
-              <a :href="bilibiliQrCode.url" target="_blank" rel="noreferrer">打开登录链接</a>
-            </div>
-          </div>
-
-          <p v-if="bilibiliError" class="inline-error">{{ bilibiliError }}</p>
-        </section>
-
-        <section class="biliup-panel" aria-label="小红书账号管理">
-          <div class="biliup-head">
-            <div>
-              <h2>小红书账号</h2>
-              <p v-if="xiaohongshuAccount">已保存 {{ xiaohongshuAccounts.length }} 个账号</p>
-              <p v-else>{{ xiaohongshuError ? `小红书账号异常：${xiaohongshuError}` : '正在检测小红书账号' }}</p>
-            </div>
-            <div class="biliup-actions">
-              <button type="button" @click="startXiaohongshuQrLogin(null)">扫码登录新账号</button>
-            </div>
-          </div>
-
-          <div class="account-table" aria-label="小红书账号表">
-            <div class="account-row account-header">
-              <span>槽位</span>
-              <span>Key</span>
-              <span>账号</span>
-              <span>状态</span>
-              <span>今日已发</span>
-              <span>冷却等待</span>
-              <span>下次可发送</span>
-              <span>操作</span>
-            </div>
-            <div v-for="row in xiaohongshuRows" :key="row.slot" class="account-row">
-              <strong>{{ row.slot }}</strong>
-              <input v-model="row.draftKey" type="text" :placeholder="row.accountKey ? '账号 key' : '登录后自动生成'" />
-              <span>{{ accountDisplay(row, 'xiaohongshu') }}</span>
-              <span>{{ rowStatus(row) }}</span>
-              <span>{{ accountCountText(row.todayUploadCount) }}</span>
-              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
-              <span>{{ nextSendText(row) }}</span>
-              <span class="account-actions">
-                <button type="button" @click="startXiaohongshuQrLogin(row)">
-                  {{ row.accountKey ? '重新扫码' : '扫码登录' }}
-                </button>
-                <button type="button" :disabled="!row.accountKey || row.draftKey === row.accountKey" @click="saveXiaohongshuKey(row)">保存Key</button>
-              </span>
-            </div>
-          </div>
-
-          <div v-if="xiaohongshuQrCode" class="bilibili-login">
-            <img :src="xiaohongshuQrCode.imageDataUrl" alt="小红书登录二维码" />
-            <div>
-              <strong>{{ xiaohongshuQrMessage }}</strong>
-              <span>请用小红书 App 扫码并确认登录</span>
-            </div>
-          </div>
-
-          <p v-if="xiaohongshuError" class="inline-error">{{ xiaohongshuError }}</p>
-        </section>
-
-        <section class="biliup-panel" aria-label="抖音账号管理">
-          <div class="biliup-head">
-            <div>
-              <h2>抖音账号</h2>
-              <p v-if="douyinAccount">已配置 {{ douyinAccounts.length }} 个 CDP 会话</p>
-              <p v-else>{{ douyinError ? `抖音配置异常：${douyinError}` : '正在检测抖音 CDP 配置' }}</p>
-            </div>
-            <div class="biliup-actions">
-              <button type="button" @click="addDouyinCdpRow">新增配置</button>
-            </div>
-          </div>
-
-          <div class="account-table" aria-label="抖音账号表">
-            <div class="account-row account-header douyin-cdp-row">
-              <span>槽位</span>
-              <span>Key</span>
-              <span>CDP端口</span>
-              <span>今日已发</span>
-              <span>冷却等待</span>
-              <span>下次可发送</span>
-              <span>操作</span>
-            </div>
-            <div v-for="row in douyinRows" :key="row.slot" class="account-row douyin-cdp-row">
-              <strong>{{ row.slot }}</strong>
-              <input v-model="row.draftKey" type="text" placeholder="例如 animal / knowledge" />
-              <input v-model="row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="例如 9333" />
-              <span>{{ accountCountText(row.todayUploadCount) }}</span>
-              <span>{{ accountCountText(row.cooldownWaitingCount) }}</span>
-              <span>{{ nextSendText(row) }}</span>
-              <span class="account-actions">
-                <button
-                  type="button"
-                  :disabled="row.draftKey === row.accountKey && String(row.draftPort || '') === String(row.cdpPort || '')"
-                  @click="saveDouyinCdpSession(row)"
+          <div v-if="accountKeyGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
+            <section v-for="group in accountKeyGroups" :key="group.key" class="account-key-group">
+              <div class="account-key-title">
+                <strong>{{ group.key }}</strong>
+                <span>{{ group.rows.filter(item => item.configured).length }}/3 已配置</span>
+              </div>
+              <div class="account-table">
+                <div class="account-row account-header account-platform-row">
+                  <span>Type</span>
+                  <span>账号</span>
+                  <span>状态</span>
+                  <span>今日已发</span>
+                  <span>冷却等待</span>
+                  <span>下次可发送</span>
+                  <span>操作</span>
+                </div>
+                <div
+                  v-for="item in group.rows"
+                  :key="`${group.key}-${item.type}`"
+                  class="account-row account-platform-row"
                 >
-                  保存
-                </button>
-              </span>
+                  <span class="platform-mark">
+                    <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
+                    <span>{{ item.label }}</span>
+                  </span>
+                  <span v-if="item.type === 'douyin' && item.exists" class="account-cdp-fields">
+                    <input v-model="item.row.draftKey" type="text" placeholder="账号 key" />
+                    <input v-model="item.row.draftPort" type="number" inputmode="numeric" min="1" max="65535" placeholder="CDP端口" />
+                  </span>
+                  <span v-else>{{ item.configured ? accountDisplay(item.row, item.type) : '未配置' }}</span>
+                  <span>{{ item.configured ? rowStatus(item.row) : item.exists ? '待保存' : '-' }}</span>
+                  <span>{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
+                  <span>{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+                  <span>{{ item.configured ? nextSendText(item.row) : '-' }}</span>
+                  <span class="account-actions">
+                    <template v-if="item.type === 'douyin'">
+                      <button
+                        v-if="item.exists"
+                        type="button"
+                        :disabled="item.row.draftKey === item.row.accountKey && String(item.row.draftPort || '') === String(item.row.cdpPort || '')"
+                        @click="saveDouyinCdpSession(item.row)"
+                      >
+                        保存
+                      </button>
+                      <button v-else type="button" @click="addDouyinConfigForKey(group.key)">配置端口</button>
+                    </template>
+                    <template v-else>
+                      <button type="button" @click="startPlatformLogin(item.type, item.row)">
+                        {{ item.configured ? '重新扫码' : '扫码登录' }}
+                      </button>
+                      <button
+                        v-if="item.type === 'bilibili'"
+                        type="button"
+                        :disabled="!item.configured || bilibiliRenewing"
+                        @click="renewBilibiliAccount(item.row)"
+                      >
+                        {{ platformBusyKey(item.type) === rowKey(item.row) ? '续期中' : '续期' }}
+                      </button>
+                      <button
+                        type="button"
+                        :disabled="!item.configured || item.row.draftKey === item.row.accountKey"
+                        @click="savePlatformKey(item.type, item.row)"
+                      >
+                        保存Key
+                      </button>
+                    </template>
+                  </span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div v-else class="empty-state">暂无账号配置</div>
+
+          <div class="account-qr-grid">
+            <div v-if="bilibiliQrCode" class="bilibili-login">
+              <img :src="qrImageUrl(bilibiliQrCode.url)" alt="B站登录二维码" />
+              <div>
+                <strong>{{ bilibiliQrMessage }}</strong>
+                <a :href="bilibiliQrCode.url" target="_blank" rel="noreferrer">打开登录链接</a>
+              </div>
+            </div>
+
+            <div v-if="xiaohongshuQrCode" class="bilibili-login">
+              <img :src="xiaohongshuQrCode.imageDataUrl" alt="小红书登录二维码" />
+              <div>
+                <strong>{{ xiaohongshuQrMessage }}</strong>
+                <span>请用小红书 App 扫码并确认登录</span>
+              </div>
             </div>
           </div>
 
-          <p v-if="douyinError" class="inline-error">{{ douyinError }}</p>
+          <p v-if="platformErrorText()" class="inline-error">{{ platformErrorText() }}</p>
         </section>
       </section>
     </template>
