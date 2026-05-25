@@ -1371,6 +1371,9 @@ function nodeTitle(node) {
   if (node.errorMessage) {
     parts.push(node.errorMessage)
   }
+  if (node.childErrorMessage) {
+    parts.push(node.childErrorMessage)
+  }
   return parts.join('\n')
 }
 
@@ -1378,7 +1381,11 @@ function nodeProgress(node) {
   if (!Number.isFinite(Number(node.totalCount)) || Number(node.totalCount) <= 0) {
     return ''
   }
-  return `${Number(node.completedCount || 0)}/${Number(node.totalCount)}`
+  const completed = Number(node.completedCount || 0)
+  const failed = Number(node.failedCount || 0)
+  const done = completed + failed
+  const base = `${failed > 0 ? done : completed}/${Number(node.totalCount)}`
+  return failed > 0 ? `${base} 失败${failed}` : base
 }
 
 function flowTaskTitle(flow) {
