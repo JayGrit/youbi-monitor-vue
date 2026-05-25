@@ -229,14 +229,14 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterError.value = ''
     try {
       const author = submitterAuthorName(item)
-      const type = await loadSubmitterAuthorType(author)
-      if (!type) {
+      const authorConfig = await loadSubmitterAuthorType(author)
+      if (!authorConfig.type) {
         submitterError.value = author
           ? `作者 ${author} 未配置投稿 type，请先维护 yd_submitter_author_type。`
           : '当前素材没有作者信息，无法读取投稿 type。'
         return
       }
-      const payload = await submitterApi.submitVideo(rowId, type)
+      const payload = await submitterApi.submitVideo(rowId, authorConfig.type, authorConfig.needDubbing)
       Object.assign(item, {
         ydbi_submitted: 1,
         ydbi_submission_id: payload.submission_id,
@@ -245,7 +245,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       if (submitterPage.value > submitterPageCount.value) {
         submitterPage.value = submitterPageCount.value
       }
-      submitterMessage.value = `已提交到 YouBi 下载队列，type=${type}。`
+      submitterMessage.value = `已提交到 YouBi 下载队列，type=${authorConfig.type}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
       await loadSubmitterVideos(true)
@@ -264,9 +264,12 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   }
 
   async function loadSubmitterAuthorType(author) {
-    if (!author) return ''
+    if (!author) return { type: '', needDubbing: true }
     const payload = await submitterApi.getAuthorType(author)
-    return String(payload?.type || '').trim()
+    return {
+      type: String(payload?.type || '').trim(),
+      needDubbing: payload?.needDubbing !== false,
+    }
   }
 
   async function openSubmitterAuthorTypes() {
@@ -281,12 +284,14 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         submitterApi.listAuthorTypes(),
         submitterAuthors.value.length ? Promise.resolve() : loadSubmitterAuthors(),
       ])
-      const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), String(item.type || '')]))
+      const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
       const authors = new Set([...submitterAuthors.value, ...byAuthor.keys()].filter(Boolean))
       submitterAuthorTypeRows.value = [...authors].sort((left, right) => left.localeCompare(right)).map(author => ({
         author,
-        type: byAuthor.get(author) || '',
-        draftType: byAuthor.get(author) || '',
+        type: String(byAuthor.get(author)?.type || ''),
+        draftType: String(byAuthor.get(author)?.type || ''),
+        needDubbing: byAuthor.get(author)?.needDubbing !== false,
+        draftNeedDubbing: byAuthor.get(author)?.needDubbing !== false,
       }))
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
@@ -296,13 +301,15 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   async function saveSubmitterAuthorType(row) {
     const type = String(row?.draftType || '').trim()
     if (submitterAuthorTypeSaving.value === row?.author) return
-    if (!row?.author || !type || type === row.type) return
+    if (!row?.author || !type || (type === row.type && row.draftNeedDubbing === row.needDubbing)) return
     submitterAuthorTypeSaving.value = row.author
     submitterAuthorTypeError.value = ''
     try {
-      const payload = await submitterApi.saveAuthorType(row.author, type)
+      const payload = await submitterApi.saveAuthorType(row.author, type, row.draftNeedDubbing)
       row.type = String(payload?.type || type)
       row.draftType = row.type
+      row.needDubbing = payload?.needDubbing !== false
+      row.draftNeedDubbing = row.needDubbing
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     } finally {

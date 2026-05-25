@@ -17,8 +17,8 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${submitterApiBase}/authors`)
     },
 
-    submitVideo(rowId, type) {
-      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, { type })
+    submitVideo(rowId, type, needDubbing) {
+      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, { type, need_dubbing: needDubbing })
     },
 
     createVideo(url) {
@@ -46,8 +46,8 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
-    saveAuthorType(author, type) {
-      return postJson(`${apiBase}/submitter-author-types`, { author, type })
+    saveAuthorType(author, type, needDubbing) {
+      return postJson(`${apiBase}/submitter-author-types`, { author, type, needDubbing })
     },
   }
 }
