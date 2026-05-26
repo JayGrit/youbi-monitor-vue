@@ -47,7 +47,7 @@ export function createAccountsApi(apiBase) {
     },
     xiaohongshu: platformAccountApi(apiBase, 'xiaohongshu', 'xiaohongshu/accounts'),
     douyin: {
-      ...platformAccountApi(apiBase, 'douyin', 'douyin/cdp-sessions'),
+      ...platformAccountApi(apiBase, 'douyin', 'douyin/accounts'),
       saveCdpSession(payload) {
         return postJson(`${apiBase}/douyin/cdp-sessions`, payload)
       },
