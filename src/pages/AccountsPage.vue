@@ -8,6 +8,7 @@ defineProps({
   addDouyinCdpRow: { type: Function, required: true },
   startXiaohongshuQrLogin: { type: Function, required: true },
   startBilibiliQrLogin: { type: Function, required: true },
+  togglePlatformEnabled: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountCountText: { type: Function, required: true },
   nextSendText: { type: Function, required: true },
@@ -43,6 +44,7 @@ defineProps({
               <span>今日已发</span>
               <span>冷却等待</span>
               <span>下次可发送</span>
+              <span>状态</span>
             </div>
             <div
               v-for="item in group.rows"
@@ -56,6 +58,17 @@ defineProps({
               <span>{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span>{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
               <span>{{ item.configured ? nextSendText(item.row) : '-' }}</span>
+              <span>
+                <button
+                  v-if="item.configured"
+                  type="button"
+                  :class="['account-toggle', { disabled: item.row.enabled === false }]"
+                  @click="togglePlatformEnabled(item.type, item.row)"
+                >
+                  {{ item.row.enabled === false ? '启用' : '禁用' }}
+                </button>
+                <template v-else>-</template>
+              </span>
             </div>
           </div>
         </section>

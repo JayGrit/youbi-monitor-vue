@@ -26,6 +26,10 @@ function platformAccountApi(apiBase, platform, accountsPath) {
     saveKey(accountKey, newAccountKey) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/key`, { newAccountKey })
     },
+
+    setEnabled(accountKey, enabled) {
+      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/enabled`, { enabled })
+    },
   }
 }
 

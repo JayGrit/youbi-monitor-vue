@@ -405,6 +405,38 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
+  async function togglePlatformEnabled(platform, row) {
+    if (!row?.accountKey) return
+    const nextEnabled = row.enabled === false
+    if (platform === 'bilibili') bilibiliBusyKey.value = rowKey(row)
+    if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = rowKey(row)
+    if (platform === 'douyin') douyinBusyKey.value = rowKey(row)
+    try {
+      const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
+      if (platform === 'bilibili') {
+        mergeAccountRow(account, row.slot)
+        await loadBilibiliAccounts()
+        bilibiliError.value = ''
+      } else if (platform === 'xiaohongshu') {
+        mergeXiaohongshuRow(account, row.slot)
+        await loadXiaohongshuAccounts()
+        xiaohongshuError.value = ''
+      } else if (platform === 'douyin') {
+        await loadDouyinAccounts()
+        douyinError.value = ''
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (platform === 'bilibili') bilibiliError.value = message
+      if (platform === 'xiaohongshu') xiaohongshuError.value = message
+      if (platform === 'douyin') douyinError.value = message
+    } finally {
+      if (platform === 'bilibili') bilibiliBusyKey.value = ''
+      if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = ''
+      if (platform === 'douyin') douyinBusyKey.value = ''
+    }
+  }
+
   function accountRows(accounts) {
     return accounts.map((account, index) => ({
       ...account,
@@ -415,6 +447,9 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   }
 
   function nextSendText(account) {
+    if (account?.enabled === false) {
+      return '已禁用'
+    }
     const next = parseLocalDateTime(account?.nextUploadAllowedAt)
     if (!next || next.getTime() <= Date.now()) {
       return '可发送'
@@ -610,6 +645,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     saveDouyinKey,
     addDouyinCdpRow,
     saveDouyinCdpSession,
+    togglePlatformEnabled,
     accountRows,
     nextSendText,
     accountCountText,
