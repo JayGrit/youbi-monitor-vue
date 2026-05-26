@@ -30,6 +30,10 @@ function platformAccountApi(apiBase, platform, accountsPath) {
     setEnabled(accountKey, enabled) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/enabled`, { enabled })
     },
+
+    setCooldown(accountKey, minSeconds, maxSeconds) {
+      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds })
+    },
   }
 }
 

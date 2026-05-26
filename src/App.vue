@@ -122,6 +122,7 @@ const {
   startXiaohongshuQrLogin,
   addDouyinCdpRow,
   togglePlatformEnabled,
+  savePlatformCooldown,
   accountDisplay,
   accountCountText,
   nextSendText,
@@ -435,6 +436,7 @@ onUnmounted(() => {
       :start-xiaohongshu-qr-login="startXiaohongshuQrLogin"
       :start-bilibili-qr-login="startBilibiliQrLogin"
       :toggle-platform-enabled="togglePlatformEnabled"
+      :save-platform-cooldown="savePlatformCooldown"
       :account-display="accountDisplay"
       :account-count-text="accountCountText"
       :next-send-text="nextSendText"

@@ -9,6 +9,7 @@ defineProps({
   startXiaohongshuQrLogin: { type: Function, required: true },
   startBilibiliQrLogin: { type: Function, required: true },
   togglePlatformEnabled: { type: Function, required: true },
+  savePlatformCooldown: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountCountText: { type: Function, required: true },
   nextSendText: { type: Function, required: true },
@@ -43,6 +44,7 @@ defineProps({
               <span>账号</span>
               <span>今日已发</span>
               <span>冷却等待</span>
+              <span>随机冷却</span>
               <span>下次可发送</span>
               <span>状态</span>
             </div>
@@ -57,6 +59,26 @@ defineProps({
               <span>{{ item.configured ? accountDisplay(item.row, item.type) : '' }}</span>
               <span>{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span>{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span v-if="item.configured" class="cooldown-editor">
+                <input
+                  v-model="item.row.draftCooldownMinMinutes"
+                  type="number"
+                  min="0"
+                  step="1"
+                  aria-label="最小冷却分钟"
+                  @change="savePlatformCooldown(item.type, item.row)"
+                />
+                <span>-</span>
+                <input
+                  v-model="item.row.draftCooldownMaxMinutes"
+                  type="number"
+                  min="0"
+                  step="1"
+                  aria-label="最大冷却分钟"
+                  @change="savePlatformCooldown(item.type, item.row)"
+                />
+              </span>
+              <span v-else>-</span>
               <span>{{ item.configured ? nextSendText(item.row) : '-' }}</span>
               <span>
                 <button

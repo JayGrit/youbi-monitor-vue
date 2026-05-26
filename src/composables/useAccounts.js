@@ -437,13 +437,61 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
+  async function savePlatformCooldown(platform, row) {
+    if (!row?.accountKey) return
+    const minMinutes = Number(row.draftCooldownMinMinutes)
+    const maxMinutes = Number(row.draftCooldownMaxMinutes)
+    if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 0 || maxMinutes < minMinutes) {
+      setPlatformError(platform, '冷却时间范围无效')
+      return
+    }
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setCooldown(
+        row.accountKey,
+        Math.round(minMinutes * 60),
+        Math.round(maxMinutes * 60),
+      )
+      if (platform === 'bilibili') {
+        mergeAccountRow(account, row.slot)
+        await loadBilibiliAccounts()
+        bilibiliError.value = ''
+      } else if (platform === 'xiaohongshu') {
+        mergeXiaohongshuRow(account, row.slot)
+        await loadXiaohongshuAccounts()
+        xiaohongshuError.value = ''
+      } else if (platform === 'douyin') {
+        mergeDouyinRow(account, row.slot)
+        await loadDouyinAccounts()
+        douyinError.value = ''
+      }
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
   function accountRows(accounts) {
     return accounts.map((account, index) => ({
       ...account,
       slot: index + 1,
       draftKey: account.accountKey || '',
       draftPort: account.cdpPort == null ? '' : String(account.cdpPort),
+      draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
+      draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
     }))
+  }
+
+  function cooldownMinutes(seconds, fallback) {
+    const value = Number(seconds)
+    return Number.isFinite(value) ? String(Math.round(value / 60)) : String(fallback)
+  }
+
+  function cooldownText(account) {
+    const min = cooldownMinutes(account?.uploadCooldownMinSeconds, 60)
+    const max = cooldownMinutes(account?.uploadCooldownMaxSeconds, 120)
+    return min === max ? `${min} 分钟` : `${min}-${max} 分钟`
   }
 
   function nextSendText(account) {
@@ -561,6 +609,18 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     return [douyinError.value, xiaohongshuError.value, bilibiliError.value].filter(Boolean).join('；')
   }
 
+  function setPlatformError(platform, message) {
+    if (platform === 'bilibili') bilibiliError.value = message
+    if (platform === 'xiaohongshu') xiaohongshuError.value = message
+    if (platform === 'douyin') douyinError.value = message
+  }
+
+  function setPlatformBusyKey(platform, value) {
+    if (platform === 'bilibili') bilibiliBusyKey.value = value
+    if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = value
+    if (platform === 'douyin') douyinBusyKey.value = value
+  }
+
   function startPlatformLogin(platform, row) {
     if (platform === 'bilibili') return startBilibiliQrLogin(row)
     if (platform === 'xiaohongshu') return startXiaohongshuQrLogin(row)
@@ -646,9 +706,11 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     addDouyinCdpRow,
     saveDouyinCdpSession,
     togglePlatformEnabled,
+    savePlatformCooldown,
     accountRows,
     nextSendText,
     accountCountText,
+    cooldownText,
     rowKey,
     rowStatus,
     accountDisplay,

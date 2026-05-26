@@ -314,9 +314,9 @@ h1 {
 }
 
 .account-row {
-  min-width: 760px;
+  min-width: 900px;
   display: grid;
-  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 120px 86px;
+  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 150px 120px 86px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -351,8 +351,22 @@ h1 {
 }
 
 .account-row.account-platform-row {
-  min-width: 760px;
-  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 120px 86px;
+  min-width: 900px;
+  grid-template-columns: 72px minmax(180px, 1fr) 100px 100px 150px 120px 86px;
+}
+
+.cooldown-editor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cooldown-editor input {
+  width: 58px;
+  min-height: 30px;
+  padding: 0 6px;
+  text-align: center;
 }
 
 .account-toggle {
@@ -2333,12 +2347,12 @@ a.submitter-cell:hover {
 
   .account-row {
     min-width: 700px;
-    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 110px;
+    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 140px 110px 72px;
   }
 
   .account-row.account-platform-row {
     min-width: 700px;
-    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 110px;
+    grid-template-columns: 64px minmax(160px, 1fr) 90px 90px 140px 110px 72px;
   }
 
   .task-row {
