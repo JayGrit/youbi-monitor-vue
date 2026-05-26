@@ -498,6 +498,9 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     if (account?.enabled === false) {
       return '已禁用'
     }
+    if (Number(account?.uploadRunningCount || 0) > 0) {
+      return '发送中'
+    }
     const next = parseLocalDateTime(account?.nextUploadAllowedAt)
     if (!next || next.getTime() <= Date.now()) {
       return '可发送'
