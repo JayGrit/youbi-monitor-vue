@@ -222,9 +222,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   function uploadSubmissionRows(stage) {
     return [
-      ...tableRows(stage, 'uploader_bilibili_task'),
-      ...tableRows(stage, 'uploader_douyin_task'),
-      ...tableRows(stage, 'uploader_xiaohongshu_task'),
+      ...tableRows(stage, 'uploader_task_bilibili'),
+      ...tableRows(stage, 'uploader_task_douyin'),
+      ...tableRows(stage, 'uploader_task_xiaohongshu'),
     ]
   }
 
