@@ -235,6 +235,7 @@ const emit = defineEmits([
               <td
                 v-for="field in submitterVisibleFieldList"
                 :key="field"
+                :data-label="submitterFieldLabel(field)"
                 :class="{ 'submitter-num': SUBMITTER_NUMERIC_FIELDS.has(field) }"
               >
                 <template v-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'detail'">
@@ -266,7 +267,7 @@ const emit = defineEmits([
                 <pre v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'object'" class="submitter-cell">{{ submitterJsonPreview(submitterFieldValue(item, field)) }}</pre>
                 <div v-else class="submitter-cell">{{ submitterFieldValue(item, field) }}</div>
               </td>
-              <td class="submitter-action-col">
+              <td class="submitter-action-col" data-label="操作">
                 <button
                   type="button"
                   :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"

@@ -56,10 +56,10 @@ defineProps({
               <span class="platform-mark">
                 <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
               </span>
-              <span>{{ item.configured ? accountDisplay(item.row, item.type) : '' }}</span>
-              <span>{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
-              <span>{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span v-if="item.configured" class="cooldown-editor">
+              <span data-label="账号">{{ item.configured ? accountDisplay(item.row, item.type) : '-' }}</span>
+              <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
+              <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span v-if="item.configured" class="cooldown-editor" data-label="随机冷却">
                 <input
                   v-model="item.row.draftCooldownMinMinutes"
                   type="number"
@@ -78,9 +78,9 @@ defineProps({
                   @change="savePlatformCooldown(item.type, item.row)"
                 />
               </span>
-              <span v-else>-</span>
-              <span>{{ item.configured ? nextSendText(item.row) : '-' }}</span>
-              <span>
+              <span v-else data-label="随机冷却">-</span>
+              <span data-label="下次可发送">{{ item.configured ? nextSendText(item.row) : '-' }}</span>
+              <span data-label="状态">
                 <button
                   v-if="item.configured"
                   type="button"
