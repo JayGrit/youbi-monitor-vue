@@ -232,7 +232,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const authorConfig = await loadSubmitterAuthorType(author)
       if (!authorConfig.type) {
         submitterError.value = author
-          ? `作者 ${author} 未配置投稿 type，请先维护 yd_submitter_author_type。`
+          ? `作者 ${author} 未配置投稿 type，请先维护 submitter_author。`
           : '当前素材没有作者信息，无法读取投稿 type。'
         return
       }
