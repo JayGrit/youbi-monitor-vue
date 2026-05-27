@@ -34,6 +34,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterJsonPayload = ref(null)
   const submitterThumbUrls = ref({})
   const submitterSubmittingId = ref('')
+  const submitterRejectingId = ref('')
   const submitterPage = ref(1)
   const submitterAuthorTypeOpen = ref(false)
   const submitterAuthorTypeRows = ref([])
@@ -200,10 +201,15 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   function filterSubmitterVideos(rows) {
     return rows.filter(item => {
-      if (submitterUploadFilter.value === 'unuploaded' && item.ydbi_submitted) return false
-      if (submitterUploadFilter.value === 'uploaded' && !item.ydbi_submitted) return false
+      if (submitterUploadFilter.value !== 'all' && submitterSubmissionStatus(item) !== submitterUploadFilter.value) return false
       return matchesSubmitterDurationFilter(item)
     })
+  }
+
+  function submitterSubmissionStatus(item) {
+    const status = String(item?.ydbi_submission_status || '').trim()
+    if (status) return status
+    return item?.ydbi_submitted ? 'uploaded' : 'unuploaded'
   }
 
   function matchesSubmitterDurationFilter(item) {
@@ -224,7 +230,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function submitVideoToYoubi(item) {
     const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || item.ydbi_submitted || submitterSubmittingId.value) return
+    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value) return
     submitterSubmittingId.value = String(rowId)
     submitterError.value = ''
     try {
@@ -239,8 +245,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const payload = await submitterApi.submitVideo(rowId, authorConfig.type, authorConfig.needDubbing)
       Object.assign(item, {
         ydbi_submitted: 1,
+        ydbi_submission_status: 'uploaded',
         ydbi_submission_id: payload.submission_id,
         ydbi_submitted_at: new Date().toISOString(),
+        ydbi_rejected_at: null,
       })
       if (submitterPage.value > submitterPageCount.value) {
         submitterPage.value = submitterPageCount.value
@@ -251,6 +259,30 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       await loadSubmitterVideos(true)
     } finally {
       submitterSubmittingId.value = ''
+    }
+  }
+
+  async function rejectSubmitterVideo(item) {
+    const rowId = submitterFieldValue(item, 'id')
+    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value) return
+    submitterRejectingId.value = String(rowId)
+    submitterError.value = ''
+    try {
+      await submitterApi.rejectVideo(rowId)
+      Object.assign(item, {
+        ydbi_submitted: 0,
+        ydbi_submission_status: 'rejected',
+        ydbi_rejected_at: new Date().toISOString(),
+      })
+      if (submitterPage.value > submitterPageCount.value) {
+        submitterPage.value = submitterPageCount.value
+      }
+      submitterMessage.value = '已标记为拒稿。'
+    } catch (err) {
+      submitterError.value = err instanceof Error ? err.message : String(err)
+      await loadSubmitterVideos(true)
+    } finally {
+      submitterRejectingId.value = ''
     }
   }
 
@@ -547,6 +579,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterJsonPayload,
     submitterThumbUrls,
     submitterSubmittingId,
+    submitterRejectingId,
     submitterPage,
     submitterAuthorTypeOpen,
     submitterAuthorTypeRows,
@@ -564,6 +597,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,
+    rejectSubmitterVideo,
+    submitterSubmissionStatus,
     openSubmitterAuthorTypes,
     autosaveSubmitterAuthorType,
     closeSubmitterAuthorTypes,

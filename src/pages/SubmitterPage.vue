@@ -31,6 +31,7 @@ defineProps({
   submitterPage: { type: Number, default: 1 },
   submitterPageCount: { type: Number, default: 1 },
   submitterSubmittingId: { type: String, default: '' },
+  submitterRejectingId: { type: String, default: '' },
   submitterJsonPayload: { type: Object, default: null },
   submitterJsonTitle: { type: String, default: '' },
   submitterAuthorTypeOpen: { type: Boolean, default: false },
@@ -60,6 +61,8 @@ defineProps({
   submitterJsonPreview: { type: Function, required: true },
   showSubmitterJson: { type: Function, required: true },
   submitVideoToYoubi: { type: Function, required: true },
+  rejectSubmitterVideo: { type: Function, required: true },
+  submitterSubmissionStatus: { type: Function, required: true },
   setSubmitterPage: { type: Function, required: true },
   closeSubmitterJson: { type: Function, required: true },
   closeSubmitterAuthorTypes: { type: Function, required: true },
@@ -268,16 +271,29 @@ const emit = defineEmits([
                 <div v-else class="submitter-cell">{{ submitterFieldValue(item, field) }}</div>
               </td>
               <td class="submitter-action-col" data-label="操作">
-                <button
-                  type="button"
-                  :class="['submitter-upload-button', { submitted: item.ydbi_submitted }]"
-                  :disabled="Boolean(item.ydbi_submitted) || submitterSubmittingId === String(submitterFieldValue(item, 'id'))"
-                  @click="submitVideoToYoubi(item)"
-                >
-                  <span v-if="item.ydbi_submitted">已上传</span>
-                  <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
-                  <span v-else>上传</span>
-                </button>
+                <div class="submitter-action-buttons">
+                  <button
+                    type="button"
+                    :class="['submitter-upload-button', { submitted: submitterSubmissionStatus(item) === 'uploaded' }]"
+                    :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)"
+                    @click="submitVideoToYoubi(item)"
+                  >
+                    <span v-if="submitterSubmissionStatus(item) === 'uploaded'">已上传</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>
+                    <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
+                    <span v-else>上传</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="submitter-reject-button"
+                    :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterRejectingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterSubmittingId)"
+                    @click="rejectSubmitterVideo(item)"
+                  >
+                    <span v-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>
+                    <span v-else-if="submitterRejectingId === String(submitterFieldValue(item, 'id'))">拒稿中</span>
+                    <span v-else>拒稿</span>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

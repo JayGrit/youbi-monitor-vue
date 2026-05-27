@@ -166,6 +166,7 @@ const {
   submitterJsonPayload,
   submitterThumbUrls,
   submitterSubmittingId,
+  submitterRejectingId,
   submitterPage,
   submitterAuthorTypeOpen,
   submitterAuthorTypeRows,
@@ -183,6 +184,8 @@ const {
   resetSubmitterFilters,
   clearSubmitterBatchFocus,
   submitVideoToYoubi,
+  rejectSubmitterVideo,
+  submitterSubmissionStatus,
   openSubmitterAuthorTypes,
   autosaveSubmitterAuthorType,
   closeSubmitterAuthorTypes,
@@ -347,6 +350,7 @@ function audioErrorMessage(code) {
       :submitter-page="submitterPage"
       :submitter-page-count="submitterPageCount"
       :submitter-submitting-id="submitterSubmittingId"
+      :submitter-rejecting-id="submitterRejectingId"
       :submitter-json-payload="submitterJsonPayload"
       :submitter-json-title="submitterJsonTitle"
       :submitter-author-type-open="submitterAuthorTypeOpen"
@@ -376,6 +380,8 @@ function audioErrorMessage(code) {
       :submitter-json-preview="submitterJsonPreview"
       :show-submitter-json="showSubmitterJson"
       :submit-video-to-youbi="submitVideoToYoubi"
+      :reject-submitter-video="rejectSubmitterVideo"
+      :submitter-submission-status="submitterSubmissionStatus"
       :set-submitter-page="setSubmitterPage"
       :close-submitter-json="closeSubmitterJson"
       :close-submitter-author-types="closeSubmitterAuthorTypes"

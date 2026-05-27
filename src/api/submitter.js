@@ -21,6 +21,10 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, { type, need_dubbing: needDubbing })
     },
 
+    rejectVideo(rowId) {
+      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {})
+    },
+
     createVideo(url) {
       return postJson(`${submitterApiBase}/videos`, { url })
     },

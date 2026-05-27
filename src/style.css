@@ -2040,11 +2040,18 @@ th.submitter-fixed-col {
   font-weight: 720;
 }
 
+.submitter-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .submitter-upload-button:hover:not(:disabled) {
   background: #243044;
 }
 
-.submitter-upload-button:disabled {
+.submitter-upload-button:disabled,
+.submitter-reject-button:disabled {
   cursor: not-allowed;
   opacity: 0.68;
 }
@@ -2055,12 +2062,29 @@ th.submitter-fixed-col {
   color: #607086;
 }
 
+.submitter-reject-button {
+  min-height: 32px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.submitter-reject-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
 .submitter-action-col {
   position: sticky;
   right: 0;
   z-index: 2;
-  min-width: 94px;
-  width: 94px;
+  min-width: 104px;
+  width: 104px;
   text-align: center;
   border-left: 1px solid #d9dee7;
   box-shadow: -8px 0 16px rgb(15 23 42 / 0.04);
@@ -2930,6 +2954,11 @@ a.submitter-cell:hover {
   }
 
   .submitter-upload-button {
+    width: 100%;
+    min-height: 38px;
+  }
+
+  .submitter-reject-button {
     width: 100%;
     min-height: 38px;
   }
