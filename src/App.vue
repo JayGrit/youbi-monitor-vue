@@ -1,5 +1,4 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
 import { createAccountsApi } from './api/accounts'
 import { createMonitorApi } from './api/monitor'
 import { createSubmitterApi } from './api/submitter'
@@ -10,6 +9,8 @@ import {
 } from './domain/constants'
 import PageTabs from './components/PageTabs.vue'
 import { useAccounts } from './composables/useAccounts'
+import { useAppShell } from './composables/useAppShell'
+import { useImageCache } from './composables/useImageCache'
 import { useSubmitter } from './composables/useSubmitter'
 import { useTaskFlow } from './composables/useTaskFlow'
 import { useTasks } from './composables/useTasks'
@@ -18,9 +19,6 @@ import MonitorPage from './pages/MonitorPage.vue'
 import SubmitterPage from './pages/SubmitterPage.vue'
 import TaskFlowPage from './pages/TaskFlowPage.vue'
 
-const activePage = ref('monitor')
-const brokenImageUrls = ref({})
-let timer = null
 const apiBase = `${import.meta.env.BASE_URL}api`
 const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const monitorApi = createMonitorApi(apiBase)
@@ -28,31 +26,7 @@ const accountsApi = createAccountsApi(apiBase)
 const submitterApi = createSubmitterApi(submitterApiBase, apiBase)
 const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
 const ACCOUNT_PLATFORMS = createAccountPlatforms(PLATFORM_ICON_URLS)
-
-async function cacheImageUrl(url, cacheName, targetRef) {
-  if (!url || targetRef.value[url]) return
-  if (!('caches' in window)) return
-  try {
-    const cache = await caches.open(cacheName)
-    const cached = await cache.match(url)
-    if (cached) {
-      const blob = await cached.blob()
-      if (blob.size > 0) {
-        targetRef.value = { ...targetRef.value, [url]: URL.createObjectURL(blob) }
-        return
-      }
-    }
-    const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
-    if (!response.ok) return
-    await cache.put(url, response.clone())
-    const blob = await response.blob()
-    if (blob.size > 0) {
-      targetRef.value = { ...targetRef.value, [url]: URL.createObjectURL(blob) }
-    }
-  } catch (err) {
-    // Fall back to the original URL when a thumbnail host does not allow CORS.
-  }
-}
+const { brokenImageUrls, cacheImageUrl, revokeCachedUrls } = useImageCache()
 
 const {
   tasks,
@@ -234,21 +208,21 @@ const {
   formatUnixSeconds,
 } = useSubmitter(submitterApi, cacheImageUrl)
 
-function openPage(page) {
-  if (flowPageOpen.value) {
-    closeTaskFlow()
-  }
-  activePage.value = page
-  clearAccountPagePolling()
-  if (page === 'submitter') {
-    loadSubmitterAuthors()
-    loadSubmitterVideos()
-  }
-  if (page === 'accounts') {
-    warmPlatformIcons()
-    startAccountPolling()
-  }
-}
+const { activePage, openPage } = useAppShell({
+  flowPageOpen,
+  closeTaskFlow,
+  clearAccountPagePolling,
+  loadSubmitterAuthors,
+  loadSubmitterVideos,
+  warmPlatformIcons,
+  startAccountPolling,
+  loadTasks,
+  clearAccountPolling,
+  clearFlowPolling,
+  clearSubmitterPolling,
+  submitterThumbUrls,
+  revokeCachedUrls,
+})
 
 function logAudioEvent(eventName, asset, event) {
   const audio = event?.target
@@ -282,23 +256,6 @@ function audioErrorMessage(code) {
   }
 }
 
-onMounted(() => {
-  warmPlatformIcons()
-  loadTasks()
-  timer = window.setInterval(loadTasks, 2000)
-})
-
-onUnmounted(() => {
-  if (timer) {
-    window.clearInterval(timer)
-  }
-  clearAccountPolling()
-  clearFlowPolling()
-  clearSubmitterPolling()
-  for (const url of Object.values(submitterThumbUrls.value)) {
-    if (String(url).startsWith('blob:')) URL.revokeObjectURL(url)
-  }
-})
 </script>
 
 <template>
