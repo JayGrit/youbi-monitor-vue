@@ -29,6 +29,11 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   const douyinQrCode = ref(null)
   const douyinQrMessage = ref('')
   const douyinBusyKey = ref('')
+  const shipinhaoAccount = ref(null)
+  const shipinhaoAccounts = ref([])
+  const shipinhaoRows = ref(accountRows([]))
+  const shipinhaoError = ref('')
+  const shipinhaoBusyKey = ref('')
   let accountTimer = null
   let bilibiliQrTimer = null
   let xiaohongshuQrTimer = null
@@ -40,6 +45,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       ['douyin', douyinRows.value],
       ['xiaohongshu', xiaohongshuRows.value],
       ['bilibili', bilibiliRows.value],
+      ['shipinhao', shipinhaoRows.value],
     ]) {
       for (const row of rows) {
         const key = String(row.accountKey || row.draftKey || '').trim()
@@ -51,6 +57,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     return [...groups.values()]
       .map(group => ({
         ...group,
+        totalPlatformCount: accountPlatforms.length,
         rows: accountPlatforms
           .filter(platform => group.platforms[platform.type])
           .map(platform => ({
@@ -74,7 +81,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   }
 
   async function loadAccountPage() {
-    await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus(), loadDouyinStatus()])
+    await Promise.allSettled([loadBiliupStatus(), loadXiaohongshuStatus(), loadDouyinStatus(), loadShipinhaoStatus()])
   }
 
   function startAccountPolling() {
@@ -139,6 +146,21 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   async function loadDouyinAccounts() {
     douyinAccounts.value = await accountsApi.douyin.list()
     douyinRows.value = accountRows(douyinAccounts.value)
+  }
+
+  async function loadShipinhaoStatus() {
+    try {
+      await loadShipinhaoAccounts()
+      shipinhaoAccount.value = shipinhaoRows.value.find(row => row.accountKey) || shipinhaoRows.value[0]
+      shipinhaoError.value = ''
+    } catch (err) {
+      shipinhaoError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadShipinhaoAccounts() {
+    shipinhaoAccounts.value = await accountsApi.shipinhao.list()
+    shipinhaoRows.value = accountRows(shipinhaoAccounts.value)
   }
 
   async function startBilibiliQrLogin(row) {
@@ -411,6 +433,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     if (platform === 'bilibili') bilibiliBusyKey.value = rowKey(row)
     if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = rowKey(row)
     if (platform === 'douyin') douyinBusyKey.value = rowKey(row)
+    if (platform === 'shipinhao') shipinhaoBusyKey.value = rowKey(row)
     try {
       const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
       if (platform === 'bilibili') {
@@ -424,16 +447,21 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       } else if (platform === 'douyin') {
         await loadDouyinAccounts()
         douyinError.value = ''
+      } else if (platform === 'shipinhao') {
+        await loadShipinhaoAccounts()
+        shipinhaoError.value = ''
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (platform === 'bilibili') bilibiliError.value = message
       if (platform === 'xiaohongshu') xiaohongshuError.value = message
       if (platform === 'douyin') douyinError.value = message
+      if (platform === 'shipinhao') shipinhaoError.value = message
     } finally {
       if (platform === 'bilibili') bilibiliBusyKey.value = ''
       if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = ''
       if (platform === 'douyin') douyinBusyKey.value = ''
+      if (platform === 'shipinhao') shipinhaoBusyKey.value = ''
     }
   }
 
@@ -464,6 +492,10 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
         mergeDouyinRow(account, row.slot)
         await loadDouyinAccounts()
         douyinError.value = ''
+      } else if (platform === 'shipinhao') {
+        mergeShipinhaoRow(account, row.slot)
+        await loadShipinhaoAccounts()
+        shipinhaoError.value = ''
       }
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -582,6 +614,26 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     douyinRows.value = accountRows(rows.filter(row => row.accountKey))
   }
 
+  function mergeShipinhaoRow(account, preferredSlot) {
+    const rows = [...shipinhaoRows.value]
+    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    if (index < 0 && preferredSlot) {
+      index = rows.findIndex(row => row.slot === preferredSlot)
+    }
+    if (index < 0) {
+      index = rows.findIndex(row => !row.accountKey)
+    }
+    if (index < 0) {
+      index = 0
+    }
+    rows[index] = {
+      ...account,
+      slot: rows[index]?.slot || index + 1,
+      draftKey: account.accountKey || '',
+    }
+    shipinhaoRows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
   function rowKey(row) {
     return row?.accountKey || `slot_${row?.slot || 0}`
   }
@@ -605,23 +657,26 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     if (platform === 'bilibili') return bilibiliBusyKey.value
     if (platform === 'xiaohongshu') return xiaohongshuBusyKey.value
     if (platform === 'douyin') return douyinBusyKey.value
+    if (platform === 'shipinhao') return shipinhaoBusyKey.value
     return ''
   }
 
   function platformErrorText() {
-    return [douyinError.value, xiaohongshuError.value, bilibiliError.value].filter(Boolean).join('；')
+    return [douyinError.value, xiaohongshuError.value, bilibiliError.value, shipinhaoError.value].filter(Boolean).join('；')
   }
 
   function setPlatformError(platform, message) {
     if (platform === 'bilibili') bilibiliError.value = message
     if (platform === 'xiaohongshu') xiaohongshuError.value = message
     if (platform === 'douyin') douyinError.value = message
+    if (platform === 'shipinhao') shipinhaoError.value = message
   }
 
   function setPlatformBusyKey(platform, value) {
     if (platform === 'bilibili') bilibiliBusyKey.value = value
     if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = value
     if (platform === 'douyin') douyinBusyKey.value = value
+    if (platform === 'shipinhao') shipinhaoBusyKey.value = value
   }
 
   function startPlatformLogin(platform, row) {
@@ -685,6 +740,11 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     douyinQrCode,
     douyinQrMessage,
     douyinBusyKey,
+    shipinhaoAccount,
+    shipinhaoAccounts,
+    shipinhaoRows,
+    shipinhaoError,
+    shipinhaoBusyKey,
     accountKeyGroups,
     loadBiliupStatus,
     loadAccountPage,
@@ -696,6 +756,8 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     loadXiaohongshuAccounts,
     loadDouyinStatus,
     loadDouyinAccounts,
+    loadShipinhaoStatus,
+    loadShipinhaoAccounts,
     startBilibiliQrLogin,
     renewBilibiliAccount,
     refreshBilibiliRow,

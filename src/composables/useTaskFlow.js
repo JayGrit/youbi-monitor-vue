@@ -225,6 +225,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       ...tableRows(stage, 'uploader_task_bilibili'),
       ...tableRows(stage, 'uploader_task_douyin'),
       ...tableRows(stage, 'uploader_task_xiaohongshu'),
+      ...tableRows(stage, 'uploader_task_shipinhao'),
     ]
   }
 

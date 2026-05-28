@@ -36,7 +36,7 @@ defineProps({
         <section v-for="group in accountKeyGroups" :key="group.key" class="account-key-group">
           <div class="account-key-title">
             <strong>{{ group.key }}</strong>
-            <span>{{ group.rows.filter(item => item.configured).length }}/3 已配置</span>
+            <span>{{ group.rows.filter(item => item.configured).length }}/{{ group.totalPlatformCount || group.rows.length }} 已配置</span>
           </div>
           <div class="account-table">
             <div class="account-row account-header account-platform-row">
