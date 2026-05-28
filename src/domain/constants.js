@@ -76,6 +76,7 @@ export const uploadPlatformText = {
   bilibili: 'B站',
   xiaohongshu: '小红书',
   douyin: '抖音',
+  shipinhao: '视频号',
 }
 
 export function createPlatformIconUrls(baseUrl) {
@@ -83,6 +84,7 @@ export function createPlatformIconUrls(baseUrl) {
     douyin: `${baseUrl}platform-icons/douyin-official-appstore-512.png`,
     xiaohongshu: `${baseUrl}platform-icons/xiaohongshu-official-appstore-512.png`,
     bilibili: `${baseUrl}platform-icons/bilibili-official-appstore-512.png`,
+    shipinhao: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/wechat_channels-official-appstore-512.png',
   }
 }
 
@@ -91,5 +93,6 @@ export function createAccountPlatforms(platformIconUrls) {
     { type: 'douyin', label: '抖音', iconUrl: platformIconUrls.douyin },
     { type: 'xiaohongshu', label: '小红书', iconUrl: platformIconUrls.xiaohongshu },
     { type: 'bilibili', label: 'B站', iconUrl: platformIconUrls.bilibili },
+    { type: 'shipinhao', label: '视频号', iconUrl: platformIconUrls.shipinhao },
   ]
 }
