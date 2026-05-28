@@ -84,7 +84,7 @@ export function createPlatformIconUrls(baseUrl) {
     douyin: `${baseUrl}platform-icons/douyin-official-appstore-512.png`,
     xiaohongshu: `${baseUrl}platform-icons/xiaohongshu-official-appstore-512.png`,
     bilibili: `${baseUrl}platform-icons/bilibili-official-appstore-512.png`,
-    shipinhao: 'http://120.53.92.66:9000/ydbi/assets/platform-icons/wechat_channels-official-appstore-512.png',
+    shipinhao: `${baseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
   }
 }
 
