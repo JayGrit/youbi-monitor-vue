@@ -338,7 +338,7 @@ h1 {
 .account-key-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   color: #172033;
   font-size: 14px;
@@ -389,6 +389,11 @@ h1 {
   background: #eef3f8;
 }
 
+.account-toggle:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .platform-mark {
   display: inline-flex;
   align-items: center;
@@ -403,6 +408,58 @@ h1 {
   flex: 0 0 28px;
   border-radius: 6px;
   object-fit: cover;
+}
+
+.account-profile {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.account-profile img,
+.account-avatar-fallback {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+}
+
+.account-profile img {
+  object-fit: cover;
+  background: #e5eaf0;
+}
+
+.account-avatar-fallback {
+  display: inline-grid;
+  place-items: center;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.account-profile-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.account-profile-text strong,
+.account-profile-text small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-profile-text small {
+  color: #64748b;
+  font-size: 11px;
 }
 
 .account-qr-grid {
@@ -616,6 +673,17 @@ h1 {
   padding: 0 30px 0 10px;
 }
 
+.task-stage-filter {
+  width: 38px;
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344156;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
 .task-filter-button strong {
   min-width: 24px;
   border-radius: 999px;
@@ -642,6 +710,41 @@ h1 {
   border: 1px solid #dde5ee;
   background: #f8fafc;
   border-radius: 8px;
+}
+
+.task-pagination {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.task-pagination div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-pagination button {
+  min-height: 30px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #243044;
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+.task-pagination button:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .empty-state {
@@ -2482,6 +2585,7 @@ a.submitter-cell:hover {
   }
 
   .task-type-filter,
+  .task-stage-filter,
   .task-actions-toggle.task-filter-button,
   .upload-retry-platform-select {
     width: 100%;
@@ -2621,6 +2725,14 @@ a.submitter-cell:hover {
     text-align: left;
   }
 
+  .account-profile {
+    justify-content: flex-start;
+  }
+
+  .account-profile-text {
+    max-width: 100%;
+  }
+
   .account-platform-row > span:not(.platform-mark)::before {
     content: attr(data-label);
     color: #64748b;
@@ -2645,6 +2757,15 @@ a.submitter-cell:hover {
     width: min(184px, 100%);
     height: auto;
     aspect-ratio: 1;
+  }
+
+  .task-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-pagination div {
+    justify-content: space-between;
   }
 
   .task-list {

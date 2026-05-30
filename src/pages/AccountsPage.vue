@@ -5,14 +5,14 @@ defineProps({
   bilibiliQrMessage: { type: String, default: '' },
   xiaohongshuQrCode: { type: Object, default: null },
   xiaohongshuQrMessage: { type: String, default: '' },
-  addDouyinCdpRow: { type: Function, required: true },
-  startXiaohongshuQrLogin: { type: Function, required: true },
-  startBilibiliQrLogin: { type: Function, required: true },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
+  accountAvatarUrl: { type: Function, required: true },
+  accountAvatarInitial: { type: Function, required: true },
   accountCountText: { type: Function, required: true },
   nextSendText: { type: Function, required: true },
+  platformBusyKey: { type: Function, required: true },
   qrImageUrl: { type: Function, required: true },
   platformErrorText: { type: Function, required: true },
 })
@@ -21,22 +21,10 @@ defineProps({
 <template>
   <section class="account-page" aria-label="账号管理">
     <section class="biliup-panel account-overview" aria-label="账号管理总览">
-      <div class="biliup-head">
-        <div>
-          <h2>账号</h2>
-        </div>
-        <div class="biliup-actions">
-          <button type="button" @click="addDouyinCdpRow()">新增抖音配置</button>
-          <button type="button" @click="startXiaohongshuQrLogin(null)">小红书扫码</button>
-          <button type="button" @click="startBilibiliQrLogin(null)">扫码登录新账号</button>
-        </div>
-      </div>
-
       <div v-if="accountKeyGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
         <section v-for="group in accountKeyGroups" :key="group.key" class="account-key-group">
           <div class="account-key-title">
             <strong>{{ group.key }}</strong>
-            <span>{{ group.rows.filter(item => item.configured).length }}/{{ group.totalPlatformCount || group.rows.length }} 已配置</span>
           </div>
           <div class="account-table">
             <div class="account-row account-header account-platform-row">
@@ -56,7 +44,23 @@ defineProps({
               <span class="platform-mark">
                 <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
               </span>
-              <span data-label="账号">{{ item.configured ? accountDisplay(item.row, item.type) : '-' }}</span>
+              <span data-label="账号">
+                <span v-if="item.configured" class="account-profile">
+                  <img
+                    v-if="accountAvatarUrl(item.row)"
+                    :src="accountAvatarUrl(item.row)"
+                    :alt="accountDisplay(item.row, item.type)"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span v-else class="account-avatar-fallback">{{ accountAvatarInitial(item.row, item.type) }}</span>
+                  <span class="account-profile-text">
+                    <strong>{{ accountDisplay(item.row, item.type) }}</strong>
+                    <small>{{ item.row.accountKey }}</small>
+                  </span>
+                </span>
+                <template v-else>-</template>
+              </span>
               <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
               <span v-if="item.configured" class="cooldown-editor" data-label="随机冷却">
@@ -85,9 +89,10 @@ defineProps({
                   v-if="item.configured"
                   type="button"
                   :class="['account-toggle', { disabled: item.row.enabled === false }]"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
                   @click="togglePlatformEnabled(item.type, item.row)"
                 >
-                  {{ item.row.enabled === false ? '启用' : '禁用' }}
+                  {{ platformBusyKey(item.type) === item.row.accountKey ? '处理中' : (item.row.enabled === false ? '启用' : '禁用') }}
                 </button>
                 <template v-else>-</template>
               </span>

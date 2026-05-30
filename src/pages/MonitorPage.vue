@@ -11,8 +11,13 @@ defineProps({
   taskFilterCounts: { type: Object, default: () => ({}) },
   taskTypeFilter: { type: String, default: 'all' },
   taskTypeFilters: { type: Array, default: () => [] },
+  taskStageFilter: { type: String, default: 'all' },
+  taskStageFilters: { type: Array, default: () => [] },
+  taskPage: { type: Number, default: 1 },
+  taskPageCount: { type: Number, default: 1 },
   taskActionsExpanded: { type: Boolean, default: false },
   filteredTasks: { type: Array, default: () => [] },
+  pagedTasks: { type: Array, default: () => [] },
   openFailureKey: { type: String, default: '' },
   uploadRetryPlatform: { type: String, default: '' },
   uploadRetryPlatformOptions: { type: Array, default: () => [] },
@@ -59,6 +64,8 @@ defineProps({
 const emit = defineEmits([
   'update:taskStatusFilter',
   'update:taskTypeFilter',
+  'update:taskStageFilter',
+  'setTaskPage',
   'clearFailure',
 ])
 </script>
@@ -98,12 +105,22 @@ const emit = defineEmits([
         <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
       </button>
       <select
+        class="task-stage-filter"
+        :value="taskStageFilter"
+        aria-label="按执行中 stage 筛选"
+        title="按执行中 stage 筛选"
+        @change="emit('update:taskStageFilter', $event.target.value)"
+      >
+        <option value="all">⌄</option>
+        <option v-for="stage in taskStageFilters" :key="stage.key" :value="stage.key">{{ stage.label }}</option>
+      </select>
+      <select
         class="task-type-filter"
         :value="taskTypeFilter"
         aria-label="按任务 type 筛选"
         @change="emit('update:taskTypeFilter', $event.target.value)"
       >
-        <option value="all">全部 type</option>
+        <option value="all">Type</option>
         <option v-for="type in taskTypeFilters" :key="type" :value="type">{{ type }}</option>
       </select>
       <button
@@ -180,7 +197,7 @@ const emit = defineEmits([
       当前筛选下暂无任务
     </div>
 
-    <article v-for="task in filteredTasks" :key="task.taskId" :class="['task-row', `status-${task.status}`]">
+    <article v-for="task in pagedTasks" :key="task.taskId" :class="['task-row', `status-${task.status}`]">
       <a
         v-if="taskThumbnailUrl(task)"
         class="task-cover"
@@ -302,5 +319,14 @@ const emit = defineEmits([
         <pre>{{ failureDetails(node) }}</pre>
       </div>
     </article>
+
+    <nav v-if="!loading && filteredTasks.length > 0" class="task-pagination" aria-label="任务分页">
+      <span>共 {{ filteredTasks.length }} 个，一页 50 个</span>
+      <div>
+        <button type="button" :disabled="taskPage <= 1" @click="emit('setTaskPage', taskPage - 1)">上一页</button>
+        <strong>{{ taskPage }} / {{ taskPageCount }}</strong>
+        <button type="button" :disabled="taskPage >= taskPageCount" @click="emit('setTaskPage', taskPage + 1)">下一页</button>
+      </div>
+    </nav>
   </section>
 </template>

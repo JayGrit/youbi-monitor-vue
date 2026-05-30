@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import {
+  MONITOR_PAGE_SIZE,
   stageNameText,
   statusText,
   uploadPlatformText,
@@ -25,6 +26,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const deleteTaskId = ref('')
   const taskStatusFilter = ref('all')
   const taskTypeFilter = ref('all')
+  const taskStageFilter = ref('all')
+  const taskPage = ref(1)
   const taskActionsExpanded = ref(false)
   const openFailureKey = ref('')
   const taskThumbUrls = ref({})
@@ -54,12 +57,33 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       .sort((left, right) => left.localeCompare(right))
   })
 
+  const taskStageFilters = computed(() => {
+    const keys = new Set()
+    for (const task of tasks.value) {
+      if (task.status !== 'running') continue
+      const key = String(task.currentStage || '').trim()
+      if (key) keys.add(key)
+    }
+    return [...keys]
+      .map(key => ({ key, label: stageName(key) }))
+      .sort((left, right) => left.label.localeCompare(right.label))
+  })
+
   const filteredTasks = computed(() => {
     return tasks.value.filter(task => {
       if (taskStatusFilter.value !== 'all' && task.status !== taskStatusFilter.value) return false
       if (taskTypeFilter.value !== 'all' && taskTypeText(task) !== taskTypeFilter.value) return false
+      if (taskStageFilter.value !== 'all' && String(task.currentStage || '') !== taskStageFilter.value) return false
       return true
     })
+  })
+
+  const taskPageCount = computed(() => Math.max(1, Math.ceil(filteredTasks.value.length / MONITOR_PAGE_SIZE)))
+
+  const pagedTasks = computed(() => {
+    const page = Math.min(Math.max(1, taskPage.value), taskPageCount.value)
+    const offset = (page - 1) * MONITOR_PAGE_SIZE
+    return filteredTasks.value.slice(offset, offset + MONITOR_PAGE_SIZE)
   })
 
   const onlineSummary = computed(() => {
@@ -93,6 +117,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     try {
       const payload = await monitorApi.loadMonitorTasks()
       tasks.value = payload.tasks || []
+      if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
       serviceHeartbeats.value = payload.serviceHeartbeats || []
       serverTime.value = payload.serverTime || ''
       warmTaskThumbnails()
@@ -322,6 +347,25 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   function setTaskTypeFilter(value) {
     taskTypeFilter.value = value
+    taskPage.value = 1
+  }
+
+  function setTaskStatusFilter(value) {
+    taskStatusFilter.value = value
+    if (value !== 'running') taskStageFilter.value = 'all'
+    taskPage.value = 1
+  }
+
+  function setTaskStageFilter(value) {
+    taskStageFilter.value = value
+    if (value !== 'all') taskStatusFilter.value = 'running'
+    taskPage.value = 1
+  }
+
+  function setTaskPage(value) {
+    const page = Number(value)
+    if (!Number.isFinite(page)) return
+    taskPage.value = Math.min(Math.max(1, Math.trunc(page)), taskPageCount.value)
   }
 
   async function copyText(value) {
@@ -422,6 +466,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     deleteTaskId,
     taskStatusFilter,
     taskTypeFilter,
+    taskStageFilter,
+    taskPage,
     taskActionsExpanded,
     openFailureKey,
     taskThumbUrls,
@@ -432,7 +478,10 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadRetrySelectedIds,
     taskFilterCounts,
     taskTypeFilters,
+    taskStageFilters,
     filteredTasks,
+    pagedTasks,
+    taskPageCount,
     onlineSummary,
     uploadRetryPlatformOptions,
     uploadRetrySelectedSet,
@@ -467,6 +516,9 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadAccountText,
     taskTypeText,
     setTaskTypeFilter,
+    setTaskStatusFilter,
+    setTaskStageFilter,
+    setTaskPage,
     copyText,
     copyTaskId,
     onlineDeviceText,

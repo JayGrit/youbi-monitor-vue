@@ -35,6 +35,8 @@ const {
   error,
   taskStatusFilter,
   taskTypeFilter,
+  taskStageFilter,
+  taskPage,
   taskActionsExpanded,
   openFailureKey,
   uploadRetryPlatform,
@@ -44,7 +46,10 @@ const {
   uploadRetrySelectedIds,
   taskFilterCounts,
   taskTypeFilters,
+  taskStageFilters,
   filteredTasks,
+  pagedTasks,
+  taskPageCount,
   uploadRetryPlatformOptions,
   uploadRetrySelectedSet,
   uploadRetryAllSelected,
@@ -73,6 +78,9 @@ const {
   sourceDurationSeconds,
   taskTypeText,
   setTaskTypeFilter,
+  setTaskStatusFilter,
+  setTaskStageFilter,
+  setTaskPage,
   copyTaskId,
   onlineDeviceText,
   serviceOnline,
@@ -92,14 +100,14 @@ const {
   startAccountPolling,
   clearAccountPagePolling,
   clearAccountPolling,
-  startBilibiliQrLogin,
-  startXiaohongshuQrLogin,
-  addDouyinCdpRow,
   togglePlatformEnabled,
   savePlatformCooldown,
   accountDisplay,
+  accountAvatarUrl,
+  accountAvatarInitial,
   accountCountText,
   nextSendText,
+  platformBusyKey,
   platformErrorText,
   warmPlatformIcons,
   qrImageUrl,
@@ -264,8 +272,13 @@ function audioErrorMessage(code) {
       :task-filter-counts="taskFilterCounts"
       :task-type-filter="taskTypeFilter"
       :task-type-filters="taskTypeFilters"
+      :task-stage-filter="taskStageFilter"
+      :task-stage-filters="taskStageFilters"
+      :task-page="taskPage"
+      :task-page-count="taskPageCount"
       :task-actions-expanded="taskActionsExpanded"
       :filtered-tasks="filteredTasks"
+      :paged-tasks="pagedTasks"
       :open-failure-key="openFailureKey"
       :upload-retry-platform="uploadRetryPlatform"
       :upload-retry-platform-options="uploadRetryPlatformOptions"
@@ -307,8 +320,10 @@ function audioErrorMessage(code) {
       :delete-task="deleteTask"
       :failure-key="failureKey"
       :failure-details="failureDetails"
-      @update:task-status-filter="taskStatusFilter = $event"
+      @update:task-status-filter="setTaskStatusFilter"
       @update:task-type-filter="setTaskTypeFilter"
+      @update:task-stage-filter="setTaskStageFilter"
+      @set-task-page="setTaskPage"
       @clear-failure="openFailureKey = ''"
     />
 
@@ -369,14 +384,14 @@ function audioErrorMessage(code) {
       :bilibili-qr-message="bilibiliQrMessage"
       :xiaohongshu-qr-code="xiaohongshuQrCode"
       :xiaohongshu-qr-message="xiaohongshuQrMessage"
-      :add-douyin-cdp-row="addDouyinCdpRow"
-      :start-xiaohongshu-qr-login="startXiaohongshuQrLogin"
-      :start-bilibili-qr-login="startBilibiliQrLogin"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
       :account-display="accountDisplay"
+      :account-avatar-url="accountAvatarUrl"
+      :account-avatar-initial="accountAvatarInitial"
       :account-count-text="accountCountText"
       :next-send-text="nextSendText"
+      :platform-busy-key="platformBusyKey"
       :qr-image-url="qrImageUrl"
       :platform-error-text="platformErrorText"
     />

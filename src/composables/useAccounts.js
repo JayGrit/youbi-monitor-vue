@@ -430,6 +430,8 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   async function togglePlatformEnabled(platform, row) {
     if (!row?.accountKey) return
     const nextEnabled = row.enabled === false
+    const previousEnabled = row.enabled
+    row.enabled = nextEnabled
     if (platform === 'bilibili') bilibiliBusyKey.value = rowKey(row)
     if (platform === 'xiaohongshu') xiaohongshuBusyKey.value = rowKey(row)
     if (platform === 'douyin') douyinBusyKey.value = rowKey(row)
@@ -438,20 +440,19 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
       if (platform === 'bilibili') {
         mergeAccountRow(account, row.slot)
-        await loadBilibiliAccounts()
         bilibiliError.value = ''
       } else if (platform === 'xiaohongshu') {
         mergeXiaohongshuRow(account, row.slot)
-        await loadXiaohongshuAccounts()
         xiaohongshuError.value = ''
       } else if (platform === 'douyin') {
-        await loadDouyinAccounts()
+        mergeDouyinRow(account, row.slot)
         douyinError.value = ''
       } else if (platform === 'shipinhao') {
-        await loadShipinhaoAccounts()
+        mergeShipinhaoRow(account, row.slot)
         shipinhaoError.value = ''
       }
     } catch (err) {
+      row.enabled = previousEnabled
       const message = err instanceof Error ? err.message : String(err)
       if (platform === 'bilibili') bilibiliError.value = message
       if (platform === 'xiaohongshu') xiaohongshuError.value = message
@@ -648,9 +649,18 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   function accountDisplay(row, platform) {
     if (!row.accountKey) return ''
     if (platform === 'bilibili') {
-      return row.uname || ''
+      return row.uname || row.accountKey
     }
-    return row.nickname || ''
+    return row.nickname || row.accountKey
+  }
+
+  function accountAvatarUrl(row) {
+    return String(row?.face || row?.avatar || row?.avatarUrl || row?.avatar_url || row?.headUrl || row?.head_url || '').trim()
+  }
+
+  function accountAvatarInitial(row, platform) {
+    const name = accountDisplay(row, platform) || row?.accountKey || '?'
+    return String(name).trim().slice(0, 1).toUpperCase() || '?'
   }
 
   function platformBusyKey(platform) {
@@ -779,6 +789,8 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     rowKey,
     rowStatus,
     accountDisplay,
+    accountAvatarUrl,
+    accountAvatarInitial,
     platformBusyKey,
     platformErrorText,
     startPlatformLogin,

@@ -3,7 +3,7 @@ import { requestJson } from './http'
 export function createMonitorApi(apiBase) {
   return {
     loadMonitorTasks() {
-      return requestJson(`${apiBase}/video-tasks/monitor?limit=100`)
+      return requestJson(`${apiBase}/video-tasks/monitor?limit=0`)
     },
 
     markTaskReady(taskId) {
