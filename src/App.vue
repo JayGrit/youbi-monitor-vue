@@ -158,9 +158,6 @@ const {
   submitterUploadFilter,
   submitterSort,
   submitterAuthors,
-  submitterFields,
-  submitterVisibleFields,
-  submitterFieldsOpen,
   submitterFocusedBatch,
   submitterJsonTitle,
   submitterJsonPayload,
@@ -171,16 +168,15 @@ const {
   submitterAuthorTypeOpen,
   submitterAuthorTypeRows,
   submitterAuthorTypeSaving,
+  submitterAuthorDeleting,
   submitterAuthorTypeError,
   submitterFilteredVideos,
   submitterFilteredTotal,
   submitterPageCount,
-  submitterVisibleFieldList,
   submitterStatusCounts,
   loadSubmitterVideos,
   applySubmitterFilters,
   loadSubmitterAuthors,
-  toggleSubmitterFieldsPanel,
   resetSubmitterFilters,
   clearSubmitterBatchFocus,
   submitVideoToYoubi,
@@ -188,27 +184,18 @@ const {
   submitterSubmissionStatus,
   openSubmitterAuthorTypes,
   autosaveSubmitterAuthorType,
+  deleteSubmitterAuthor,
   closeSubmitterAuthorTypes,
   setSubmitterPage,
   createSubmitterVideo,
   importSubmitterAuthor,
   clearSubmitterPolling,
   submitterFieldValue,
-  submitterFieldLabel,
-  selectAllSubmitterFields,
-  selectCommonSubmitterFields,
-  selectNoSubmitterFields,
-  toggleSubmitterField,
   submitterVideoHref,
   submitterVideoTitle,
   submitterVideoThumb,
   submitterCachedThumb,
-  submitterValueKind,
-  submitterJsonPreview,
-  submitterArrayPreview,
-  showSubmitterJson,
   closeSubmitterJson,
-  formatUnixSeconds,
 } = useSubmitter(submitterApi, cacheImageUrl)
 
 const { activePage, openPage } = useAppShell({
@@ -341,10 +328,6 @@ function audioErrorMessage(code) {
       :submitter-busy="submitterBusy"
       :submitter-author-busy="submitterAuthorBusy"
       :submitter-authors="submitterAuthors"
-      :submitter-fields-open="submitterFieldsOpen"
-      :submitter-visible-fields="submitterVisibleFields"
-      :submitter-fields="submitterFields"
-      :submitter-visible-field-list="submitterVisibleFieldList"
       :submitter-filtered-videos="submitterFilteredVideos"
       :submitter-filtered-total="submitterFilteredTotal"
       :submitter-page="submitterPage"
@@ -357,28 +340,18 @@ function audioErrorMessage(code) {
       :submitter-author-type-error="submitterAuthorTypeError"
       :submitter-author-type-rows="submitterAuthorTypeRows"
       :submitter-author-type-saving="submitterAuthorTypeSaving"
+      :submitter-author-deleting="submitterAuthorDeleting"
       :create-submitter-video="createSubmitterVideo"
       :import-submitter-author="importSubmitterAuthor"
       :apply-submitter-filters="applySubmitterFilters"
       :open-submitter-author-types="openSubmitterAuthorTypes"
       :reset-submitter-filters="resetSubmitterFilters"
       :clear-submitter-batch-focus="clearSubmitterBatchFocus"
-      :toggle-submitter-fields-panel="toggleSubmitterFieldsPanel"
-      :select-all-submitter-fields="selectAllSubmitterFields"
-      :select-common-submitter-fields="selectCommonSubmitterFields"
-      :select-no-submitter-fields="selectNoSubmitterFields"
-      :toggle-submitter-field="toggleSubmitterField"
-      :submitter-field-label="submitterFieldLabel"
       :submitter-video-thumb="submitterVideoThumb"
       :submitter-cached-thumb="submitterCachedThumb"
       :submitter-video-href="submitterVideoHref"
       :submitter-video-title="submitterVideoTitle"
       :submitter-field-value="submitterFieldValue"
-      :submitter-value-kind="submitterValueKind"
-      :format-unix-seconds="formatUnixSeconds"
-      :submitter-array-preview="submitterArrayPreview"
-      :submitter-json-preview="submitterJsonPreview"
-      :show-submitter-json="showSubmitterJson"
       :submit-video-to-youbi="submitVideoToYoubi"
       :reject-submitter-video="rejectSubmitterVideo"
       :submitter-submission-status="submitterSubmissionStatus"
@@ -386,6 +359,7 @@ function audioErrorMessage(code) {
       :close-submitter-json="closeSubmitterJson"
       :close-submitter-author-types="closeSubmitterAuthorTypes"
       :autosave-submitter-author-type="autosaveSubmitterAuthorType"
+      :delete-submitter-author="deleteSubmitterAuthor"
     />
 
     <AccountsPage

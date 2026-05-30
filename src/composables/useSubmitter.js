@@ -1,11 +1,5 @@
 import { computed, ref } from 'vue'
-import {
-  SUBMITTER_COMMON_FIELDS,
-  SUBMITTER_FIXED_FIELDS,
-  SUBMITTER_NUMERIC_FIELDS,
-  SUBMITTER_PAGE_SIZE,
-  SUBMITTER_PREFERRED_FIELDS,
-} from '../domain/constants'
+import { SUBMITTER_PAGE_SIZE } from '../domain/constants'
 import { formatNumber } from '../utils/format'
 
 export function useSubmitter(submitterApi, cacheImageUrl) {
@@ -22,10 +16,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterUploadFilter = ref('unuploaded')
   const submitterSort = ref('updated_desc')
   const submitterAuthors = ref([])
-  const submitterFields = ref([])
-  const submitterVisibleFields = ref(new Set())
-  const submitterFieldsInitialized = ref(false)
-  const submitterFieldsOpen = ref(false)
   const submitterListDetail = ref(false)
   const submitterActiveBatch = ref('')
   const submitterFocusedBatch = ref('')
@@ -39,6 +29,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorTypeOpen = ref(false)
   const submitterAuthorTypeRows = ref([])
   const submitterAuthorTypeSaving = ref('')
+  const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
   let submitterTimer = null
 
@@ -54,10 +45,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   const submitterPageCount = computed(() => {
     return Math.max(1, Math.ceil(submitterFilteredTotal.value / SUBMITTER_PAGE_SIZE))
-  })
-
-  const submitterVisibleFieldList = computed(() => {
-    return submitterFields.value.filter(field => submitterVisibleFields.value.has(field))
   })
 
   const submitterActiveRows = computed(() => {
@@ -83,7 +70,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         const rightIndex = order.indexOf(right)
         return (leftIndex === -1 ? order.length : leftIndex) - (rightIndex === -1 ? order.length : rightIndex)
       })
-      .map(([status, count]) => `${labels[status] || status} ${formatNumber(count)}`)
+      .map(([status, count]) => `${labels[status] || (status === 'unknown' ? '未导入' : status)} ${formatNumber(count)}`)
       .join(' · ')
   })
 
@@ -96,55 +83,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     return submitterSource(item)[key]
   }
 
-  function submitterFieldLabel(key) {
-    return key === '__detail' ? '详情' : key
-  }
-
-  function buildSubmitterFields() {
-    const keys = new Set(['__detail'])
-    for (const item of submitterVideos.value) {
-      for (const key of Object.keys(item || {})) {
-        if (!SUBMITTER_FIXED_FIELDS.has(key)) keys.add(key)
-      }
-      for (const key of Object.keys(submitterSource(item))) {
-        if (!SUBMITTER_FIXED_FIELDS.has(key)) keys.add(key)
-      }
-    }
-    submitterFields.value = [...keys].sort((left, right) => {
-      const leftIndex = SUBMITTER_PREFERRED_FIELDS.indexOf(left)
-      const rightIndex = SUBMITTER_PREFERRED_FIELDS.indexOf(right)
-      if (leftIndex !== -1 || rightIndex !== -1) {
-        return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex)
-      }
-      return left.localeCompare(right)
-    })
-    if (!submitterFieldsInitialized.value) {
-      submitterVisibleFields.value = new Set(submitterFields.value.filter(key => SUBMITTER_COMMON_FIELDS.has(key)))
-      submitterFieldsInitialized.value = true
-    } else {
-      submitterVisibleFields.value = new Set([...submitterVisibleFields.value].filter(key => keys.has(key)))
-    }
-  }
-
-  function selectAllSubmitterFields() {
-    submitterVisibleFields.value = new Set(submitterFields.value)
-  }
-
-  function selectCommonSubmitterFields() {
-    submitterVisibleFields.value = new Set(submitterFields.value.filter(key => SUBMITTER_COMMON_FIELDS.has(key)))
-  }
-
-  function selectNoSubmitterFields() {
-    submitterVisibleFields.value = new Set()
-  }
-
-  function toggleSubmitterField(key, checked) {
-    const next = new Set(submitterVisibleFields.value)
-    if (checked) next.add(key)
-    else next.delete(key)
-    submitterVisibleFields.value = next
-  }
-
   async function loadSubmitterVideos(quiet = false) {
     if (!quiet) submitterLoading.value = true
     try {
@@ -155,11 +93,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         sort: submitterSort.value,
       })
       submitterVideos.value = payload?.items || []
-      buildSubmitterFields()
       warmSubmitterThumbnails()
       submitterError.value = ''
       updateSubmitterPolling()
-      if (!submitterMessage.value) submitterMessage.value = '素材库已加载。'
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     } finally {
@@ -178,14 +114,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterAuthors.value = payload?.items || []
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function toggleSubmitterFieldsPanel() {
-    submitterFieldsOpen.value = !submitterFieldsOpen.value
-    if (submitterFieldsOpen.value && !submitterListDetail.value) {
-      submitterListDetail.value = true
-      await loadSubmitterVideos()
     }
   }
 
@@ -324,6 +252,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         draftType: String(byAuthor.get(author)?.type || ''),
         needDubbing: byAuthor.get(author)?.needDubbing !== false,
         draftNeedDubbing: byAuthor.get(author)?.needDubbing !== false,
+        sourceLanguage: String(byAuthor.get(author)?.sourceLanguage || byAuthor.get(author)?.source_language || '英文'),
+        draftSourceLanguage: String(byAuthor.get(author)?.sourceLanguage || byAuthor.get(author)?.source_language || '英文'),
+        targetLanguage: String(byAuthor.get(author)?.targetLanguage || byAuthor.get(author)?.target_language || '中文'),
+        draftTargetLanguage: String(byAuthor.get(author)?.targetLanguage || byAuthor.get(author)?.target_language || '中文'),
       }))
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
@@ -332,16 +264,28 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function saveSubmitterAuthorType(row) {
     const type = String(row?.draftType || '').trim()
+    const sourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
+    const targetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
     if (submitterAuthorTypeSaving.value === row?.author) return
-    if (!row?.author || !type || (type === row.type && row.draftNeedDubbing === row.needDubbing)) return
+    if (!row?.author || !type) return
+    if (
+      type === row.type
+      && row.draftNeedDubbing === row.needDubbing
+      && sourceLanguage === row.sourceLanguage
+      && targetLanguage === row.targetLanguage
+    ) return
     submitterAuthorTypeSaving.value = row.author
     submitterAuthorTypeError.value = ''
     try {
-      const payload = await submitterApi.saveAuthorType(row.author, type, row.draftNeedDubbing)
+      const payload = await submitterApi.saveAuthorType(row.author, type, row.draftNeedDubbing, sourceLanguage, targetLanguage)
       row.type = String(payload?.type || type)
       row.draftType = row.type
       row.needDubbing = payload?.needDubbing !== false
       row.draftNeedDubbing = row.needDubbing
+      row.sourceLanguage = String(payload?.sourceLanguage || payload?.source_language || sourceLanguage)
+      row.draftSourceLanguage = row.sourceLanguage
+      row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)
+      row.draftTargetLanguage = row.targetLanguage
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     } finally {
@@ -351,7 +295,30 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function autosaveSubmitterAuthorType(row) {
     row.draftType = String(row?.draftType || '').trim()
+    row.draftSourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
+    row.draftTargetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
     await saveSubmitterAuthorType(row)
+  }
+
+  async function deleteSubmitterAuthor(row) {
+    const author = String(row?.author || '').trim()
+    if (!author || submitterAuthorDeleting.value || submitterAuthorTypeSaving.value) return
+    if (!window.confirm(`确定删除作者 ${author} 并清理其所有视频？`)) return
+    submitterAuthorDeleting.value = author
+    submitterAuthorTypeError.value = ''
+    try {
+      await submitterApi.deleteAuthorType(author)
+      submitterAuthorTypeRows.value = submitterAuthorTypeRows.value.filter(item => item.author !== author)
+      submitterAuthors.value = submitterAuthors.value.filter(item => item !== author)
+      if (submitterUploader.value === author) {
+        submitterUploader.value = ''
+      }
+      await loadSubmitterVideos(true)
+    } catch (err) {
+      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      submitterAuthorDeleting.value = ''
+    }
   }
 
   function closeSubmitterAuthorTypes() {
@@ -497,64 +464,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
-  function submitterValueKind(key, value) {
-    if (key === '__detail') return 'detail'
-    if (value === null || value === undefined || value === '') return 'empty'
-    if (key === 'duration') return 'duration'
-    if (key === 'timestamp' || key === 'release_timestamp') return 'unix'
-    if (key === 'webpage_url' || key.endsWith('_url') || key === 'url' || key === 'original_url') return 'link'
-    if (Array.isArray(value)) return 'array'
-    if (typeof value === 'object') return 'object'
-    if (SUBMITTER_NUMERIC_FIELDS.has(key)) return 'number'
-    return 'text'
-  }
-
-  function summarizeSubmitterObject(value) {
-    const output = {}
-    for (const key of Object.keys(value || {}).slice(0, 12)) {
-      const entry = value[key]
-      if (Array.isArray(entry)) output[key] = `[${entry.length} items]`
-      else if (entry && typeof entry === 'object') output[key] = '{...}'
-      else output[key] = entry
-    }
-    const rest = Object.keys(value || {}).length - Object.keys(output).length
-    if (rest > 0) output.__more = `${rest} more keys`
-    return output
-  }
-
-  function submitterJsonPreview(value) {
-    return JSON.stringify(summarizeSubmitterObject(value), null, 2)
-  }
-
-  function submitterArrayPreview(value) {
-    if (!Array.isArray(value)) return []
-    return value.slice(0, 20)
-  }
-
-  async function showSubmitterJson(item) {
-    try {
-      let detail = item
-      if (item?.id) {
-        const payload = await submitterApi.getVideo(item.id)
-        detail = payload?.item || item
-      }
-      const data = submitterSource(detail)
-      submitterJsonTitle.value = data.title || data.id || '完整 yt-dlp JSON'
-      submitterJsonPayload.value = data
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
   function closeSubmitterJson() {
     submitterJsonTitle.value = ''
     submitterJsonPayload.value = null
-  }
-
-  function formatUnixSeconds(value) {
-    const number = Number(value)
-    if (!Number.isFinite(number) || number <= 0) return '-'
-    return new Date(number * 1000).toLocaleString()
   }
 
   return {
@@ -571,9 +483,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterUploadFilter,
     submitterSort,
     submitterAuthors,
-    submitterFields,
-    submitterVisibleFields,
-    submitterFieldsOpen,
     submitterFocusedBatch,
     submitterJsonTitle,
     submitterJsonPayload,
@@ -584,16 +493,15 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorTypeOpen,
     submitterAuthorTypeRows,
     submitterAuthorTypeSaving,
+    submitterAuthorDeleting,
     submitterAuthorTypeError,
     submitterFilteredVideos,
     submitterFilteredTotal,
     submitterPageCount,
-    submitterVisibleFieldList,
     submitterStatusCounts,
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
-    toggleSubmitterFieldsPanel,
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,
@@ -601,26 +509,17 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterSubmissionStatus,
     openSubmitterAuthorTypes,
     autosaveSubmitterAuthorType,
+    deleteSubmitterAuthor,
     closeSubmitterAuthorTypes,
     setSubmitterPage,
     createSubmitterVideo,
     importSubmitterAuthor,
     clearSubmitterPolling,
     submitterFieldValue,
-    submitterFieldLabel,
-    selectAllSubmitterFields,
-    selectCommonSubmitterFields,
-    selectNoSubmitterFields,
-    toggleSubmitterField,
     submitterVideoHref,
     submitterVideoTitle,
     submitterVideoThumb,
     submitterCachedThumb,
-    submitterValueKind,
-    submitterJsonPreview,
-    submitterArrayPreview,
-    showSubmitterJson,
     closeSubmitterJson,
-    formatUnixSeconds,
   }
 }

@@ -50,8 +50,19 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
-    saveAuthorType(author, type, needDubbing) {
-      return postJson(`${apiBase}/submitter-author-types`, { author, type, needDubbing })
+    saveAuthorType(author, type, needDubbing, sourceLanguage, targetLanguage) {
+      return postJson(`${apiBase}/submitter-author-types`, {
+        author,
+        type,
+        needDubbing,
+        sourceLanguage,
+        targetLanguage,
+      })
+    },
+
+    deleteAuthorType(author) {
+      const params = new URLSearchParams({ author })
+      return requestJson(`${apiBase}/submitter-author-types?${params}`, { method: 'DELETE' })
     },
   }
 }

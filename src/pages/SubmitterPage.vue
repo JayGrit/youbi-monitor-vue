@@ -1,7 +1,6 @@
 <script setup>
 import {
   SUBMITTER_DURATION_FILTERS,
-  SUBMITTER_NUMERIC_FIELDS,
   SUBMITTER_SORT_OPTIONS,
   SUBMITTER_UPLOAD_FILTERS,
 } from '../domain/constants'
@@ -22,10 +21,6 @@ defineProps({
   submitterDurationFilter: { type: String, default: 'all' },
   submitterSort: { type: String, default: 'updated_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
-  submitterFieldsOpen: { type: Boolean, default: false },
-  submitterVisibleFields: { type: Object, required: true },
-  submitterFields: { type: Array, default: () => [] },
-  submitterVisibleFieldList: { type: Array, default: () => [] },
   submitterFilteredVideos: { type: Array, default: () => [] },
   submitterFilteredTotal: { type: Number, default: 0 },
   submitterPage: { type: Number, default: 1 },
@@ -38,28 +33,18 @@ defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
   submitterAuthorTypeRows: { type: Array, default: () => [] },
   submitterAuthorTypeSaving: { type: String, default: '' },
+  submitterAuthorDeleting: { type: String, default: '' },
   createSubmitterVideo: { type: Function, required: true },
   importSubmitterAuthor: { type: Function, required: true },
   applySubmitterFilters: { type: Function, required: true },
   openSubmitterAuthorTypes: { type: Function, required: true },
   resetSubmitterFilters: { type: Function, required: true },
   clearSubmitterBatchFocus: { type: Function, required: true },
-  toggleSubmitterFieldsPanel: { type: Function, required: true },
-  selectAllSubmitterFields: { type: Function, required: true },
-  selectCommonSubmitterFields: { type: Function, required: true },
-  selectNoSubmitterFields: { type: Function, required: true },
-  toggleSubmitterField: { type: Function, required: true },
-  submitterFieldLabel: { type: Function, required: true },
   submitterVideoThumb: { type: Function, required: true },
   submitterCachedThumb: { type: Function, required: true },
   submitterVideoHref: { type: Function, required: true },
   submitterVideoTitle: { type: Function, required: true },
   submitterFieldValue: { type: Function, required: true },
-  submitterValueKind: { type: Function, required: true },
-  formatUnixSeconds: { type: Function, required: true },
-  submitterArrayPreview: { type: Function, required: true },
-  submitterJsonPreview: { type: Function, required: true },
-  showSubmitterJson: { type: Function, required: true },
   submitVideoToYoubi: { type: Function, required: true },
   rejectSubmitterVideo: { type: Function, required: true },
   submitterSubmissionStatus: { type: Function, required: true },
@@ -67,6 +52,7 @@ defineProps({
   closeSubmitterJson: { type: Function, required: true },
   closeSubmitterAuthorTypes: { type: Function, required: true },
   autosaveSubmitterAuthorType: { type: Function, required: true },
+  deleteSubmitterAuthor: { type: Function, required: true },
 })
 
 const emit = defineEmits([
@@ -81,9 +67,9 @@ const emit = defineEmits([
 
 <template>
   <section class="submitter-page" aria-label="素材采集">
-    <section v-if="submitterError || (!submitterLoading && (submitterFocusedBatch || submitterMessage))" class="submitter-status">
+    <section v-if="submitterError || (!submitterLoading && submitterFocusedBatch)" class="submitter-status">
       <span v-if="submitterError">Submitter API 异常：{{ submitterError }}</span>
-      <span v-else>{{ submitterFocusedBatch ? `当前批次：${submitterFocusedBatch.slice(0, 8)}。` : '' }}{{ submitterMessage || '素材库已就绪。' }}</span>
+      <span v-else>当前批次：{{ submitterFocusedBatch.slice(0, 8) }}。{{ submitterMessage }}</span>
       <span v-if="submitterStatusCounts" class="submitter-status-counts">{{ submitterStatusCounts }}</span>
     </section>
 
@@ -162,38 +148,11 @@ const emit = defineEmits([
           </select>
         </label>
         <div class="submitter-filter-actions">
-          <button type="button" @click="openSubmitterAuthorTypes">作者 Type</button>
+          <button type="button" @click="openSubmitterAuthorTypes">作者管理</button>
           <button type="button" @click="resetSubmitterFilters">重置</button>
           <button v-if="submitterFocusedBatch" type="button" @click="clearSubmitterBatchFocus">查看全部</button>
         </div>
       </div>
-
-      <section class="submitter-fields-section">
-        <button type="button" class="submitter-fields-toggle" @click="toggleSubmitterFieldsPanel">
-          <span>字段选择</span>
-          <strong>{{ submitterVisibleFields.size }}/{{ submitterFields.length }}</strong>
-        </button>
-        <div v-if="submitterFieldsOpen" class="submitter-fields-body">
-          <div class="submitter-columns-head">
-            <strong>附加字段</strong>
-            <div>
-              <button type="button" @click="selectAllSubmitterFields">全选</button>
-              <button type="button" @click="selectCommonSubmitterFields">常用字段</button>
-              <button type="button" @click="selectNoSubmitterFields">只看固定列</button>
-            </div>
-          </div>
-          <div class="submitter-field-panel">
-            <label v-for="field in submitterFields" :key="field" class="submitter-column-toggle">
-              <input
-                type="checkbox"
-                :checked="submitterVisibleFields.has(field)"
-                @change="event => toggleSubmitterField(field, event.target.checked)"
-              />
-              <span>{{ submitterFieldLabel(field) }}</span>
-            </label>
-          </div>
-        </div>
-      </section>
     </section>
 
     <section class="submitter-table-panel">
@@ -202,20 +161,39 @@ const emit = defineEmits([
           <thead>
             <tr>
               <th class="submitter-fixed-col">视频</th>
-              <th v-for="field in submitterVisibleFieldList" :key="field">{{ submitterFieldLabel(field) }}</th>
               <th class="submitter-action-col">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!submitterLoading && submitterFilteredVideos.length === 0">
-              <td :colspan="submitterVisibleFieldList.length + 2" class="submitter-empty">
+              <td colspan="2" class="submitter-empty">
                 {{ submitterFocusedBatch ? '当前批次暂无记录，频道扫描完成后会自动刷新。' : '暂无匹配记录' }}
               </td>
             </tr>
             <tr v-for="item in submitterFilteredVideos" :key="item.id || item.video_id || item.webpage_url">
               <td class="submitter-fixed-col">
                 <div class="submitter-video-card">
-                  <img v-if="submitterVideoThumb(item)" :src="submitterCachedThumb(item)" alt="" loading="lazy" decoding="async" />
+                  <a
+                    v-if="submitterVideoHref(item) && submitterVideoThumb(item)"
+                    :href="submitterVideoHref(item)"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="submitter-thumb-link"
+                    aria-label="打开 YouTube 视频"
+                  >
+                    <img :src="submitterCachedThumb(item)" alt="" loading="lazy" decoding="async" />
+                  </a>
+                  <img v-else-if="submitterVideoThumb(item)" :src="submitterCachedThumb(item)" alt="" loading="lazy" decoding="async" />
+                  <a
+                    v-else-if="submitterVideoHref(item)"
+                    :href="submitterVideoHref(item)"
+                    target="_blank"
+                    rel="noreferrer"
+                    class="submitter-thumb-link"
+                    aria-label="打开 YouTube 视频"
+                  >
+                    <div class="submitter-thumb-empty"></div>
+                  </a>
                   <div v-else class="submitter-thumb-empty"></div>
                   <div>
                     <a
@@ -230,45 +208,10 @@ const emit = defineEmits([
                     <strong v-else class="submitter-video-title">{{ submitterVideoTitle(item) }}</strong>
                     <div class="submitter-video-meta">
                       <span>{{ formatDuration(submitterFieldValue(item, 'duration')) }}</span>
-                      <span>{{ formatNumber(submitterFieldValue(item, 'view_count')) }} 播放</span>
+                      <span>{{ formatNumber(submitterFieldValue(item, 'view_count')) }}</span>
                     </div>
                   </div>
                 </div>
-              </td>
-              <td
-                v-for="field in submitterVisibleFieldList"
-                :key="field"
-                :data-label="submitterFieldLabel(field)"
-                :class="{ 'submitter-num': SUBMITTER_NUMERIC_FIELDS.has(field) }"
-              >
-                <template v-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'detail'">
-                  <button type="button" class="submitter-json-button" @click="showSubmitterJson(item)">查看</button>
-                </template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'empty'">-</template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'duration'">
-                  {{ formatDuration(submitterFieldValue(item, field)) }}
-                  <span class="submitter-muted">({{ formatNumber(submitterFieldValue(item, field)) }}s)</span>
-                </template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'unix'">
-                  {{ formatUnixSeconds(submitterFieldValue(item, field)) }}
-                </template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'number'">
-                  {{ formatNumber(submitterFieldValue(item, field)) }}
-                </template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'link'">
-                  <a class="submitter-cell" :href="String(submitterFieldValue(item, field))" target="_blank" rel="noreferrer">
-                    {{ submitterFieldValue(item, field) }}
-                  </a>
-                </template>
-                <template v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'array'">
-                  <div class="submitter-chips">
-                    <span v-for="entry in submitterArrayPreview(submitterFieldValue(item, field))" :key="String(entry)" class="submitter-chip">
-                      {{ typeof entry === 'object' ? JSON.stringify(entry).slice(0, 80) : entry }}
-                    </span>
-                  </div>
-                </template>
-                <pre v-else-if="submitterValueKind(field, submitterFieldValue(item, field)) === 'object'" class="submitter-cell">{{ submitterJsonPreview(submitterFieldValue(item, field)) }}</pre>
-                <div v-else class="submitter-cell">{{ submitterFieldValue(item, field) }}</div>
               </td>
               <td class="submitter-action-col" data-label="操作">
                 <div class="submitter-action-buttons">
@@ -321,7 +264,7 @@ const emit = defineEmits([
     <div v-if="submitterAuthorTypeOpen" class="submitter-modal-backdrop" @click.self="closeSubmitterAuthorTypes">
       <section class="submitter-modal submitter-author-type-modal" role="dialog" aria-modal="true">
         <header>
-          <strong>作者 Type</strong>
+          <strong>作者管理</strong>
           <button type="button" @click="closeSubmitterAuthorTypes">关闭</button>
         </header>
         <div class="submitter-author-type-body">
@@ -332,12 +275,14 @@ const emit = defineEmits([
                 <th>作者</th>
                 <th>Type</th>
                 <th>配音</th>
-                <th>状态</th>
+                <th>原语言</th>
+                <th>目标语言</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="submitterAuthorTypeRows.length === 0">
-                <td colspan="4" class="submitter-empty">暂无作者</td>
+                <td colspan="6" class="submitter-empty">暂无作者</td>
               </tr>
               <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
                 <td>{{ row.author }}</td>
@@ -363,10 +308,34 @@ const emit = defineEmits([
                   </label>
                 </td>
                 <td>
-                  <span v-if="submitterAuthorTypeSaving === row.author">保存中</span>
-                  <span v-else-if="row.draftType.trim() && (row.draftType !== row.type || row.draftNeedDubbing !== row.needDubbing)">未保存</span>
-                  <span v-else-if="row.type">已保存</span>
-                  <span v-else>-</span>
+                  <input
+                    v-model="row.draftSourceLanguage"
+                    type="text"
+                    placeholder="英文"
+                    :disabled="submitterAuthorTypeSaving === row.author || submitterAuthorDeleting === row.author"
+                    @change="autosaveSubmitterAuthorType(row)"
+                    @blur="autosaveSubmitterAuthorType(row)"
+                  />
+                </td>
+                <td>
+                  <input
+                    v-model="row.draftTargetLanguage"
+                    type="text"
+                    placeholder="中文"
+                    :disabled="submitterAuthorTypeSaving === row.author || submitterAuthorDeleting === row.author"
+                    @change="autosaveSubmitterAuthorType(row)"
+                    @blur="autosaveSubmitterAuthorType(row)"
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="submitter-author-delete"
+                    :disabled="submitterAuthorDeleting === row.author || Boolean(submitterAuthorTypeSaving)"
+                    @click="deleteSubmitterAuthor(row)"
+                  >
+                    {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
+                  </button>
                 </td>
               </tr>
             </tbody>
