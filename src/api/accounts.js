@@ -52,6 +52,13 @@ function platformAccountApi(apiBase, platform, accountsPath) {
 
 export function createAccountsApi(apiBase) {
   return {
+    uploadBackfillCandidates(platform, accountKey, type) {
+      const params = new URLSearchParams({ platform, accountKey, type })
+      return requestJson(`${apiBase}/upload-backfill/candidates?${params.toString()}`)
+    },
+    registerUploadBackfill(platform, accountKey, type, taskIds) {
+      return postJson(`${apiBase}/upload-backfill/register`, { platform, accountKey, type, taskIds })
+    },
     bilibili: {
       ...platformAccountApi(apiBase, 'bilibili', 'bilibili/accounts'),
       renew(accountKey) {

@@ -97,6 +97,15 @@ const {
   xiaohongshuQrCode,
   xiaohongshuQrMessage,
   accountKeyGroups,
+  uploadBackfillOpen,
+  uploadBackfillContext,
+  uploadBackfillRows,
+  uploadBackfillLoading,
+  uploadBackfillBusy,
+  uploadBackfillSelectedIds,
+  uploadBackfillSelectedSet,
+  uploadBackfillAllSelected,
+  uploadBackfillError,
   startAccountPolling,
   clearAccountPagePolling,
   clearAccountPolling,
@@ -105,6 +114,12 @@ const {
   savePlatformKey,
   savePlatformAccountProfile,
   uploadPlatformAccountAvatar,
+  openUploadBackfill,
+  closeUploadBackfill,
+  loadUploadBackfillCandidates,
+  toggleUploadBackfillRow,
+  toggleUploadBackfillAll,
+  registerSelectedUploadBackfill,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -389,11 +404,26 @@ function audioErrorMessage(code) {
       :bilibili-qr-message="bilibiliQrMessage"
       :xiaohongshu-qr-code="xiaohongshuQrCode"
       :xiaohongshu-qr-message="xiaohongshuQrMessage"
+      :upload-backfill-open="uploadBackfillOpen"
+      :upload-backfill-context="uploadBackfillContext"
+      :upload-backfill-rows="uploadBackfillRows"
+      :upload-backfill-loading="uploadBackfillLoading"
+      :upload-backfill-busy="uploadBackfillBusy"
+      :upload-backfill-selected-ids="uploadBackfillSelectedIds"
+      :upload-backfill-selected-set="uploadBackfillSelectedSet"
+      :upload-backfill-all-selected="uploadBackfillAllSelected"
+      :upload-backfill-error="uploadBackfillError"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
       :save-platform-key="savePlatformKey"
       :save-platform-account-profile="savePlatformAccountProfile"
       :upload-platform-account-avatar="uploadPlatformAccountAvatar"
+      :open-upload-backfill="openUploadBackfill"
+      :close-upload-backfill="closeUploadBackfill"
+      :load-upload-backfill-candidates="loadUploadBackfillCandidates"
+      :toggle-upload-backfill-row="toggleUploadBackfillRow"
+      :toggle-upload-backfill-all="toggleUploadBackfillAll"
+      :register-selected-upload-backfill="registerSelectedUploadBackfill"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"
