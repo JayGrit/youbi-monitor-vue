@@ -102,6 +102,7 @@ const {
   clearAccountPolling,
   togglePlatformEnabled,
   savePlatformCooldown,
+  savePlatformKey,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -386,6 +387,7 @@ function audioErrorMessage(code) {
       :xiaohongshu-qr-message="xiaohongshuQrMessage"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
+      :save-platform-key="savePlatformKey"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"

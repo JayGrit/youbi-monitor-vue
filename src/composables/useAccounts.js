@@ -513,6 +513,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       draftPort: account.cdpPort == null ? '' : String(account.cdpPort),
       draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
       draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
+      draftEnabled: account.enabled !== false,
     }))
   }
 
@@ -648,6 +649,10 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
 
   function accountDisplay(row, platform) {
     if (!row.accountKey) return ''
+    const commonName = row.displayName || row.display_name || row.accountName || row.account_name || row.name
+    if (commonName) {
+      return commonName
+    }
     if (platform === 'bilibili') {
       return row.uname || row.accountKey
     }
@@ -655,7 +660,15 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   }
 
   function accountAvatarUrl(row) {
-    return String(row?.face || row?.avatar || row?.avatarUrl || row?.avatar_url || row?.headUrl || row?.head_url || '').trim()
+    return String(
+      row?.avatarUrl
+      || row?.avatar_url
+      || row?.avatar
+      || row?.face
+      || row?.headUrl
+      || row?.head_url
+      || '',
+    ).trim()
   }
 
   function accountAvatarInitial(row, platform) {
