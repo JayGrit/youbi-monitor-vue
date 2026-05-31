@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
@@ -35,7 +36,7 @@ function accountName(type, row) {
 }
 
 function accountAvatar(type, row) {
-  const url = row?.draftAvatarUrl || props.accountAvatarUrl(row)
+  const url = normalizeAccountAvatarUrl(row?.draftAvatarUrl || props.accountAvatarUrl(row))
   cacheAccountAvatar(url)
   return accountAvatarCache.value[url] || url
 }
@@ -114,10 +115,11 @@ async function handleAvatarUpload(event, item) {
     const profile = await props.uploadPlatformAccountAvatar(item.type, item.row, file)
     item.row.avatarUrl = profile?.avatarUrl || item.row.avatarUrl
     item.row.avatar_url = profile?.avatarUrl || item.row.avatar_url
-    item.row.draftAvatarUrl = profile?.avatarUrl || item.row.draftAvatarUrl
+    item.row.draftAvatarUrl = normalizeAccountAvatarUrl(profile?.avatarUrl || item.row.draftAvatarUrl)
     if (profile?.avatarUrl) {
-      delete accountAvatarCache.value[profile.avatarUrl]
-      cacheAccountAvatar(profile.avatarUrl)
+      const avatarUrl = normalizeAccountAvatarUrl(profile.avatarUrl)
+      delete accountAvatarCache.value[avatarUrl]
+      cacheAccountAvatar(avatarUrl)
     }
   } finally {
     event.target.value = ''
@@ -125,6 +127,7 @@ async function handleAvatarUpload(event, item) {
 }
 
 async function cacheAccountAvatar(url) {
+  url = normalizeAccountAvatarUrl(url)
   if (!url || accountAvatarCache.value[url] || !('caches' in window)) return
   try {
     const cache = await caches.open('youbi-account-avatars-v1')

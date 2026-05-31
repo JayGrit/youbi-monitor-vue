@@ -6,6 +6,8 @@ import {
   parseLocalDateTime,
 } from '../utils/format'
 
+import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
+
 export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   const bilibiliAccount = ref(null)
   const bilibiliAccounts = ref([])
@@ -699,7 +701,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   }
 
   function accountAvatarUrl(row) {
-    return String(
+    return normalizeAccountAvatarUrl(
       row?.avatarUrl
       || row?.avatar_url
       || row?.avatar
@@ -707,7 +709,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       || row?.headUrl
       || row?.head_url
       || '',
-    ).trim()
+    )
   }
 
   function accountAvatarInitial(row, platform) {
