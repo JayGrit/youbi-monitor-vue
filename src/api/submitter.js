@@ -29,8 +29,8 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return postJson(`${submitterApiBase}/videos`, { url })
     },
 
-    importAuthor(author) {
-      return postJson(`${submitterApiBase}/authors/import`, { author })
+    importAuthor(author, platform) {
+      return postJson(`${submitterApiBase}/authors/import`, { author, platform })
     },
 
     getImportStatus(batch) {

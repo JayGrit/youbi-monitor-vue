@@ -162,6 +162,7 @@ const {
   submitterMessage,
   submitterUrl,
   submitterAuthor,
+  submitterPlatform,
   submitterBusy,
   submitterAuthorBusy,
   submitterUploader,
@@ -334,6 +335,7 @@ function audioErrorMessage(code) {
       v-else-if="activePage === 'submitter'"
       v-model:submitter-url="submitterUrl"
       v-model:submitter-author="submitterAuthor"
+      v-model:submitter-platform="submitterPlatform"
       v-model:submitter-uploader="submitterUploader"
       v-model:submitter-duration-filter="submitterDurationFilter"
       v-model:submitter-sort="submitterSort"

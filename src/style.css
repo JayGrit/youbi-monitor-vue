@@ -1962,6 +1962,10 @@ h1 {
   align-items: end;
 }
 
+.submitter-author-row {
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+}
+
 .submitter-submit-row label {
   display: grid;
   gap: 6px;
@@ -1975,6 +1979,7 @@ h1 {
 }
 
 .submitter-submit-row input,
+.submitter-submit-row select,
 .submitter-filter-grid input,
 .submitter-filter-grid select {
   width: 100%;
@@ -1988,6 +1993,7 @@ h1 {
 }
 
 .submitter-submit-row input:focus,
+.submitter-submit-row select:focus,
 .submitter-filter-grid input:focus,
 .submitter-filter-grid select:focus {
   border-color: #2563eb;

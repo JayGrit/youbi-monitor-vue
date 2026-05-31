@@ -9,6 +9,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterMessage = ref('')
   const submitterUrl = ref('')
   const submitterAuthor = ref('')
+  const submitterPlatform = ref('youtube')
   const submitterBusy = ref(false)
   const submitterAuthorBusy = ref(false)
   const submitterUploader = ref('')
@@ -357,7 +358,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterMessage.value = '正在创建作者后台导入任务...'
     submitterError.value = ''
     try {
-      const payload = await submitterApi.importAuthor(author)
+      const payload = await submitterApi.importAuthor(author, submitterPlatform.value)
       submitterAuthor.value = ''
       submitterActiveBatch.value = payload.batch || ''
       submitterFocusedBatch.value = payload.batch || ''
@@ -476,6 +477,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterMessage,
     submitterUrl,
     submitterAuthor,
+    submitterPlatform,
     submitterBusy,
     submitterAuthorBusy,
     submitterUploader,

@@ -15,6 +15,7 @@ defineProps({
   submitterUrl: { type: String, default: '' },
   submitterBusy: { type: Boolean, default: false },
   submitterAuthor: { type: String, default: '' },
+  submitterPlatform: { type: String, default: 'youtube' },
   submitterAuthorBusy: { type: Boolean, default: false },
   submitterUploader: { type: String, default: '' },
   submitterAuthors: { type: Array, default: () => [] },
@@ -58,6 +59,7 @@ defineProps({
 const emit = defineEmits([
   'update:submitterUrl',
   'update:submitterAuthor',
+  'update:submitterPlatform',
   'update:submitterUploader',
   'update:submitterDurationFilter',
   'update:submitterSort',
@@ -80,20 +82,30 @@ const emit = defineEmits([
           <input
             :value="submitterUrl"
             type="url"
-            placeholder="https://www.youtube.com/watch?v=..."
+            placeholder="YouTube 或 TikTok 视频链接"
             required
             @input="emit('update:submitterUrl', $event.target.value)"
           />
         </label>
         <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '抓取中' : '抓取并保存' }}</button>
       </form>
-      <form class="submitter-submit-row" @submit.prevent="importSubmitterAuthor">
+      <form class="submitter-submit-row submitter-author-row" @submit.prevent="importSubmitterAuthor">
+        <label class="submitter-platform-select">
+          <span>来源</span>
+          <select
+            :value="submitterPlatform"
+            @change="emit('update:submitterPlatform', $event.target.value)"
+          >
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+          </select>
+        </label>
         <label>
-          <span>频道链接</span>
+          <span>作者链接</span>
           <input
             :value="submitterAuthor"
             type="text"
-            placeholder="@handle 或 https://www.youtube.com/@channel"
+            :placeholder="submitterPlatform === 'tiktok' ? '@handle 或 https://www.tiktok.com/@handle' : '@handle 或 https://www.youtube.com/@channel'"
             required
             @input="emit('update:submitterAuthor', $event.target.value)"
           />
