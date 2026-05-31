@@ -390,45 +390,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
-  function addDouyinCdpRow(accountKey = '') {
-    const initialKey = accountKey || window.prompt('Key') || ''
-    if (!initialKey.trim()) return
-    const rows = [...douyinRows.value]
-    const slot = rows.reduce((max, row) => Math.max(max, Number(row.slot || 0)), 0) + 1
-    rows.push({
-      slot,
-      accountKey: '',
-      cdpPort: null,
-      draftKey: initialKey.trim(),
-      draftPort: '',
-    })
-    douyinRows.value = rows
-  }
-
-  async function saveDouyinCdpSession(row) {
-    const accountKey = (row?.draftKey || '').trim()
-    const cdpPort = Number(row?.draftPort)
-    if (!accountKey) {
-      douyinError.value = 'Key 不能为空'
-      return
-    }
-    if (!Number.isInteger(cdpPort) || cdpPort < 1 || cdpPort > 65535) {
-      douyinError.value = '端口号必须是 1-65535'
-      return
-    }
-    try {
-      await accountsApi.douyin.saveCdpSession({
-        originalAccountKey: row.accountKey || '',
-        accountKey,
-        cdpPort,
-      })
-      await loadDouyinAccounts()
-      douyinError.value = ''
-    } catch (err) {
-      douyinError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
   async function togglePlatformEnabled(platform, row) {
     if (!row?.accountKey) return
     const nextEnabled = row.enabled === false
@@ -549,7 +510,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       ...account,
       slot: index + 1,
       draftKey: account.accountKey || '',
-      draftPort: account.cdpPort == null ? '' : String(account.cdpPort),
       draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
       draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
       draftEnabled: account.enabled !== false,
@@ -840,8 +800,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     startDouyinQrLogin,
     refreshDouyinRow,
     saveDouyinKey,
-    addDouyinCdpRow,
-    saveDouyinCdpSession,
     togglePlatformEnabled,
     savePlatformCooldown,
     savePlatformAccountProfile,

@@ -60,11 +60,6 @@ export function createAccountsApi(apiBase) {
     },
     xiaohongshu: platformAccountApi(apiBase, 'xiaohongshu', 'xiaohongshu/accounts'),
     shipinhao: platformAccountApi(apiBase, 'shipinhao', 'shipinhao/accounts'),
-    douyin: {
-      ...platformAccountApi(apiBase, 'douyin', 'douyin/accounts'),
-      saveCdpSession(payload) {
-        return postJson(`${apiBase}/douyin/cdp-sessions`, payload)
-      },
-    },
+    douyin: platformAccountApi(apiBase, 'douyin', 'douyin/accounts'),
   }
 }
