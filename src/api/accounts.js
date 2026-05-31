@@ -34,6 +34,19 @@ function platformAccountApi(apiBase, platform, accountsPath) {
     setCooldown(accountKey, minSeconds, maxSeconds) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds })
     },
+
+    updateProfile(accountKey, displayName) {
+      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/profile`, { displayName })
+    },
+
+    uploadAvatar(accountKey, file) {
+      const form = new FormData()
+      form.append('file', file)
+      return requestJson(`${base}/account/${encodeURIComponent(accountKey)}/avatar`, {
+        method: 'POST',
+        body: form,
+      })
+    },
   }
 }
 

@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { formatDateTime, parseLocalDateTime } from '../utils/format'
+import { formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
   accountKeyGroups: { type: Array, default: () => [] },
@@ -11,6 +11,8 @@ const props = defineProps({
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
+  savePlatformAccountProfile: { type: Function, required: true },
+  uploadPlatformAccountAvatar: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
@@ -21,50 +23,27 @@ const props = defineProps({
   platformErrorText: { type: Function, required: true },
 })
 
-const ACCOUNT_PROFILE_OVERRIDES_KEY = 'youbi-account-profile-overrides-v1'
 const STALE_READY_MINUTES = 10
 
 const accountEditMode = ref(false)
 const accountEditBusy = ref(false)
-const profileOverrides = ref(loadProfileOverrides())
-
-function loadProfileOverrides() {
-  if (typeof window === 'undefined') return {}
-  try {
-    return JSON.parse(window.localStorage.getItem(ACCOUNT_PROFILE_OVERRIDES_KEY) || '{}') || {}
-  } catch {
-    return {}
-  }
-}
-
-function saveProfileOverrides() {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(ACCOUNT_PROFILE_OVERRIDES_KEY, JSON.stringify(profileOverrides.value))
-}
-
-function profileOverrideKey(type, row) {
-  return `${type}:${row?.accountKey || row?.draftKey || ''}`
-}
-
-function profileOverride(type, row) {
-  return profileOverrides.value[profileOverrideKey(type, row)] || {}
-}
+const accountAvatarCache = ref({})
+const editingNameKeys = ref({})
 
 function accountName(type, row) {
-  return row?.draftDisplayName || profileOverride(type, row).displayName || props.accountDisplay(row, type)
+  return row?.draftDisplayName || props.accountDisplay(row, type)
 }
 
 function accountAvatar(type, row) {
-  return row?.draftAvatarDataUrl
-    || profileOverride(type, row).avatarDataUrl
-    || props.accountAvatarUrl(row)
+  const url = row?.draftAvatarUrl || props.accountAvatarUrl(row)
+  cacheAccountAvatar(url)
+  return accountAvatarCache.value[url] || url
 }
 
 function enterAccountEditMode() {
   forEachConfiguredAccount((item) => {
-    const override = profileOverride(item.type, item.row)
-    item.row.draftDisplayName = override.displayName || props.accountDisplay(item.row, item.type)
-    item.row.draftAvatarDataUrl = override.avatarDataUrl || ''
+    item.row.draftDisplayName = props.accountDisplay(item.row, item.type)
+    item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
     item.row.draftEnabled = item.row.enabled !== false
     item.row.draftKey = item.row.accountKey || ''
   })
@@ -73,12 +52,12 @@ function enterAccountEditMode() {
 
 function cancelAccountEditMode() {
   forEachConfiguredAccount((item) => {
-    const override = profileOverride(item.type, item.row)
-    item.row.draftDisplayName = override.displayName || props.accountDisplay(item.row, item.type)
-    item.row.draftAvatarDataUrl = override.avatarDataUrl || ''
+    item.row.draftDisplayName = props.accountDisplay(item.row, item.type)
+    item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
     item.row.draftEnabled = item.row.enabled !== false
     item.row.draftKey = item.row.accountKey || ''
   })
+  editingNameKeys.value = {}
   accountEditMode.value = false
 }
 
@@ -87,26 +66,10 @@ async function saveAccountEdits() {
   try {
     for (const item of configuredAccounts()) {
       const row = item.row
-      const overrideKey = profileOverrideKey(item.type, row)
       const nextDisplayName = String(row.draftDisplayName || '').trim()
-      const nextAvatarDataUrl = row.draftAvatarDataUrl || ''
-      const nextOverride = { ...profileOverrides.value[overrideKey] }
-      if (nextDisplayName && nextDisplayName !== props.accountDisplay(row, item.type)) {
-        nextOverride.displayName = nextDisplayName
-      } else {
-        delete nextOverride.displayName
+      if (nextDisplayName !== props.accountDisplay(row, item.type)) {
+        await props.savePlatformAccountProfile(item.type, row)
       }
-      if (nextAvatarDataUrl) {
-        nextOverride.avatarDataUrl = nextAvatarDataUrl
-      } else {
-        delete nextOverride.avatarDataUrl
-      }
-      if (Object.keys(nextOverride).length) {
-        profileOverrides.value[overrideKey] = nextOverride
-      } else {
-        delete profileOverrides.value[overrideKey]
-      }
-
       const nextKey = String(row.draftKey || '').trim()
       if (nextKey && nextKey !== row.accountKey) {
         await props.savePlatformKey(item.type, row)
@@ -116,7 +79,7 @@ async function saveAccountEdits() {
         await props.togglePlatformEnabled(item.type, row)
       }
     }
-    saveProfileOverrides()
+    editingNameKeys.value = {}
     accountEditMode.value = false
   } finally {
     accountEditBusy.value = false
@@ -131,14 +94,58 @@ function forEachConfiguredAccount(callback) {
   configuredAccounts().forEach(callback)
 }
 
-function handleAvatarUpload(event, row) {
+function visibleRows(group) {
+  return group.rows.filter(item => accountEditMode.value || item.row.enabled !== false)
+}
+
+function isNameEditing(type, row) {
+  return Boolean(editingNameKeys.value[`${type}:${row?.accountKey || ''}`])
+}
+
+function startNameEdit(type, row) {
+  if (!accountEditMode.value) return
+  editingNameKeys.value = { ...editingNameKeys.value, [`${type}:${row?.accountKey || ''}`]: true }
+}
+
+async function handleAvatarUpload(event, item) {
   const file = event.target.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = () => {
-    row.draftAvatarDataUrl = typeof reader.result === 'string' ? reader.result : ''
+  try {
+    const profile = await props.uploadPlatformAccountAvatar(item.type, item.row, file)
+    item.row.avatarUrl = profile?.avatarUrl || item.row.avatarUrl
+    item.row.avatar_url = profile?.avatarUrl || item.row.avatar_url
+    item.row.draftAvatarUrl = profile?.avatarUrl || item.row.draftAvatarUrl
+    if (profile?.avatarUrl) {
+      delete accountAvatarCache.value[profile.avatarUrl]
+      cacheAccountAvatar(profile.avatarUrl)
+    }
+  } finally {
+    event.target.value = ''
   }
-  reader.readAsDataURL(file)
+}
+
+async function cacheAccountAvatar(url) {
+  if (!url || accountAvatarCache.value[url] || !('caches' in window)) return
+  try {
+    const cache = await caches.open('youbi-account-avatars-v1')
+    const cached = await cache.match(url)
+    if (cached) {
+      const blob = await cached.blob()
+      if (blob.size > 0) {
+        accountAvatarCache.value = { ...accountAvatarCache.value, [url]: URL.createObjectURL(blob) }
+        return
+      }
+    }
+    const response = await fetch(url, { mode: 'cors', cache: 'force-cache' })
+    if (!response.ok) return
+    await cache.put(url, response.clone())
+    const blob = await response.blob()
+    if (blob.size > 0) {
+      accountAvatarCache.value = { ...accountAvatarCache.value, [url]: URL.createObjectURL(blob) }
+    }
+  } catch {
+    // Fall back to the original MinIO URL if the cache API cannot read it.
+  }
 }
 
 function accountAvailable(row) {
@@ -153,15 +160,19 @@ function accountAvailable(row) {
   return null
 }
 
-function accountAvailableText(row) {
-  const available = accountAvailable(row)
-  if (available === false) return '不可用'
-  if (available === true) return '可用'
-  for (const key of ['availableStatus', 'availabilityStatus', 'usableStatus']) {
-    const value = String(row?.[key] || '').trim()
-    if (value) return value
+function lastUploadText(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return '-'
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (isSameDate(date, now)) {
+    return formatTime(date)
   }
-  return '-'
+  if (isSameDate(date, yesterday)) {
+    return `昨天${formatTime(date)}`
+  }
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
 }
 
 function nextSendDisplay(row) {
@@ -203,28 +214,31 @@ function nextSendStale(row) {
           <div class="account-key-title">
             <strong>{{ group.key }}</strong>
           </div>
-          <div class="account-table">
+          <div v-if="visibleRows(group).length" class="account-table" :class="{ editing: accountEditMode }">
             <div class="account-row account-header account-platform-row">
               <span>Type</span>
+              <span>头像</span>
               <span>账号</span>
               <span>今日已发</span>
               <span>冷却等待</span>
               <span>上次上传</span>
-              <span>随机冷却</span>
               <span>下次可发送</span>
-              <span>可用</span>
-              <span>启用</span>
+              <span v-if="accountEditMode">随机冷却</span>
+              <span v-if="accountEditMode">启用</span>
             </div>
             <div
-              v-for="item in group.rows"
+              v-for="item in visibleRows(group)"
               :key="`${group.key}-${item.type}`"
-              class="account-row account-platform-row"
+              :class="['account-row account-platform-row', { unavailable: item.configured && accountAvailable(item.row) === false }]"
             >
               <span class="platform-mark">
                 <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
               </span>
-              <span data-label="账号">
-                <span v-if="item.configured" class="account-profile">
+              <span data-label="头像">
+                <label
+                  v-if="item.configured"
+                  :class="['account-avatar-cell', { editable: accountEditMode }]"
+                >
                   <img
                     v-if="accountAvatar(item.type, item.row)"
                     :src="accountAvatar(item.type, item.row)"
@@ -233,33 +247,44 @@ function nextSendStale(row) {
                     decoding="async"
                   />
                   <span v-else class="account-avatar-fallback">{{ accountAvatarInitial(item.row, item.type) }}</span>
-                  <span class="account-profile-text">
-                    <template v-if="accountEditMode">
+                  <input
+                    v-if="accountEditMode"
+                    type="file"
+                    accept="image/*"
+                    aria-label="上传头像"
+                    @change="handleAvatarUpload($event, item)"
+                  />
+                </label>
+                <template v-else>-</template>
+              </span>
+              <span data-label="账号">
+                <span v-if="item.configured" class="account-profile-text">
+                  <template v-if="accountEditMode && isNameEditing(item.type, item.row)">
                       <input
                         v-model="item.row.draftDisplayName"
                         type="text"
                         aria-label="账号名"
                         placeholder="账号名"
                       />
-                      <label class="avatar-upload">
-                        上传头像
-                        <input
-                          type="file"
-                          accept="image/*"
-                          aria-label="上传头像"
-                          @change="handleAvatarUpload($event, item.row)"
-                        />
-                      </label>
-                    </template>
-                    <strong v-else>{{ accountName(item.type, item.row) }}</strong>
-                    <small>{{ item.row.accountKey }}</small>
-                  </span>
+                  </template>
+                  <button
+                    v-else-if="accountEditMode"
+                    type="button"
+                    class="account-name-button"
+                    @click="startNameEdit(item.type, item.row)"
+                  >
+                    {{ accountName(item.type, item.row) }}
+                  </button>
+                  <strong v-else>{{ accountName(item.type, item.row) }}</strong>
                 </span>
                 <template v-else>-</template>
               </span>
               <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span data-label="上次上传">{{ item.configured ? formatDateTime(item.row.lastUploadAt) : '-' }}</span>
+              <span class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
+              <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
+                {{ item.configured ? nextSendDisplay(item.row) : '-' }}
+              </span>
               <span v-if="item.configured && accountEditMode" class="cooldown-editor" data-label="随机冷却">
                 <input
                   v-model="item.row.draftCooldownMinMinutes"
@@ -277,18 +302,8 @@ function nextSendStale(row) {
                   aria-label="最大冷却分钟"
                 />
               </span>
-              <span v-else data-label="随机冷却">{{ item.configured ? `${item.row.draftCooldownMinMinutes}-${item.row.draftCooldownMaxMinutes} 分钟` : '-' }}</span>
-              <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
-                {{ item.configured ? nextSendDisplay(item.row) : '-' }}
-              </span>
-              <span
-                :class="{ 'account-unavailable': item.configured && accountAvailable(item.row) === false }"
-                data-label="可用"
-              >
-                {{ item.configured ? accountAvailableText(item.row) : '-' }}
-              </span>
-              <span data-label="启用">
-                <label v-if="item.configured && accountEditMode" class="account-enabled-edit">
+              <span v-if="item.configured && accountEditMode" data-label="启用">
+                <label class="account-enabled-edit">
                   <input
                     v-model="item.row.draftEnabled"
                     type="checkbox"
@@ -296,13 +311,6 @@ function nextSendStale(row) {
                   />
                   {{ item.row.draftEnabled ? '启用' : '禁用' }}
                 </label>
-                <span
-                  v-else-if="item.configured"
-                  :class="['account-enabled-state', { disabled: item.row.enabled === false }]"
-                >
-                  {{ item.row.enabled === false ? '禁用' : '启用' }}
-                </span>
-                <template v-else>-</template>
               </span>
             </div>
           </div>

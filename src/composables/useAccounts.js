@@ -505,6 +505,43 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
+  async function savePlatformProfile(platform, row) {
+    if (!row?.accountKey) return null
+    const displayName = String(row.draftDisplayName || '').trim()
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const profile = await accountsApi[platform].updateProfile(row.accountKey, displayName)
+      row.displayName = profile?.displayName || ''
+      row.display_name = profile?.displayName || ''
+      row.draftDisplayName = row.displayName || accountDisplay(row, platform)
+      setPlatformError(platform, '')
+      return profile
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+      throw err
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  async function uploadPlatformAvatar(platform, row, file) {
+    if (!row?.accountKey || !file) return null
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const profile = await accountsApi[platform].uploadAvatar(row.accountKey, file)
+      row.avatarUrl = profile?.avatarUrl || ''
+      row.avatar_url = profile?.avatarUrl || ''
+      row.draftAvatarUrl = row.avatarUrl
+      setPlatformError(platform, '')
+      return profile
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+      throw err
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
   function accountRows(accounts) {
     return accounts.map((account, index) => ({
       ...account,
@@ -514,6 +551,8 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
       draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
       draftEnabled: account.enabled !== false,
+      draftDisplayName: '',
+      draftAvatarUrl: account.avatarUrl || account.avatar_url || '',
     }))
   }
 
@@ -716,6 +755,14 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     return null
   }
 
+  function savePlatformAccountProfile(platform, row) {
+    return savePlatformProfile(platform, row)
+  }
+
+  function uploadPlatformAccountAvatar(platform, row, file) {
+    return uploadPlatformAvatar(platform, row, file)
+  }
+
   async function warmPlatformIcons() {
     const urls = Object.values(platformIconUrls)
     for (const url of urls) {
@@ -795,6 +842,8 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     saveDouyinCdpSession,
     togglePlatformEnabled,
     savePlatformCooldown,
+    savePlatformAccountProfile,
+    uploadPlatformAccountAvatar,
     accountRows,
     nextSendText,
     accountCountText,

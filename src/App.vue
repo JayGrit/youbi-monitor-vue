@@ -103,6 +103,8 @@ const {
   togglePlatformEnabled,
   savePlatformCooldown,
   savePlatformKey,
+  savePlatformAccountProfile,
+  uploadPlatformAccountAvatar,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -388,6 +390,8 @@ function audioErrorMessage(code) {
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
       :save-platform-key="savePlatformKey"
+      :save-platform-account-profile="savePlatformAccountProfile"
+      :upload-platform-account-avatar="uploadPlatformAccountAvatar"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"

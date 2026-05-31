@@ -348,9 +348,9 @@ h1 {
 }
 
 .account-row {
-  min-width: 1100px;
+  min-width: 780px;
   display: grid;
-  grid-template-columns: 72px minmax(210px, 1fr) 86px 86px 140px 150px 120px 74px 74px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -385,8 +385,19 @@ h1 {
 }
 
 .account-row.account-platform-row {
-  min-width: 1100px;
-  grid-template-columns: 72px minmax(210px, 1fr) 86px 86px 140px 150px 120px 74px 74px;
+  min-width: 780px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
+}
+
+.account-table.editing .account-row,
+.account-table.editing .account-row.account-platform-row {
+  min-width: 980px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px 150px 74px;
+}
+
+.account-row.unavailable {
+  border-radius: 8px;
+  background: #fff1f2;
 }
 
 .cooldown-editor {
@@ -446,11 +457,14 @@ h1 {
   font-weight: 720;
 }
 
-.account-enabled-state.disabled,
-.account-unavailable,
 .next-send-stale {
   color: #dc2626;
   font-weight: 760;
+}
+
+.last-upload-time {
+  color: #16a34a;
+  font-weight: 720;
 }
 
 .platform-mark {
@@ -469,6 +483,35 @@ h1 {
   object-fit: cover;
 }
 
+.account-avatar-cell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  border-radius: 50%;
+}
+
+.account-avatar-cell.editable {
+  cursor: pointer;
+}
+
+.account-avatar-cell.editable::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 1px dashed #94a3b8;
+  border-radius: 50%;
+}
+
+.account-avatar-cell input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .account-profile {
   min-width: 0;
   display: inline-flex;
@@ -477,15 +520,15 @@ h1 {
   gap: 9px;
 }
 
-.account-profile img,
+.account-avatar-cell img,
 .account-avatar-fallback {
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   border-radius: 50%;
 }
 
-.account-profile img {
+.account-avatar-cell img {
   object-fit: cover;
   background: #e5eaf0;
 }
@@ -525,22 +568,19 @@ h1 {
   min-height: 30px;
 }
 
-.avatar-upload {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 720;
+.account-name-button {
+  max-width: 100%;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: #172033;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
-}
-
-.avatar-upload input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
+  font-weight: 760;
 }
 
 .account-qr-grid {
@@ -2598,13 +2638,19 @@ a.submitter-cell:hover {
   }
 
   .account-row {
-    min-width: 980px;
-    grid-template-columns: 64px minmax(190px, 1fr) 76px 76px 130px 140px 110px 64px 64px;
+    min-width: 720px;
+    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px;
   }
 
   .account-row.account-platform-row {
-    min-width: 980px;
-    grid-template-columns: 64px minmax(190px, 1fr) 76px 76px 130px 140px 110px 64px 64px;
+    min-width: 720px;
+    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px;
+  }
+
+  .account-table.editing .account-row,
+  .account-table.editing .account-row.account-platform-row {
+    min-width: 920px;
+    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px 140px 64px;
   }
 
   .task-row {
@@ -2802,12 +2848,20 @@ a.submitter-cell:hover {
   }
 
   .platform-mark {
-    grid-row: 1 / span 8;
+    grid-row: 1 / span 7;
     align-self: stretch;
     min-height: 42px;
     border: 1px solid #dbe4ee;
     border-radius: 8px;
     background: #ffffff;
+  }
+
+  .account-table.editing .platform-mark {
+    grid-row: 1 / span 9;
+  }
+
+  .account-avatar-cell {
+    margin: 0;
   }
 
   .account-platform-row > span:not(.platform-mark) {
