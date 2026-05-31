@@ -74,6 +74,7 @@ function cancelAccountEditMode() {
     item.row.draftKey = item.row.accountKey || ''
   })
   editingNameKeys.value = {}
+  props.closeUploadBackfill()
   accountEditMode.value = false
 }
 
@@ -86,16 +87,17 @@ async function saveAccountEdits() {
       if (nextDisplayName !== props.accountDisplay(row, item.type)) {
         await props.savePlatformAccountProfile(item.type, row)
       }
-      const nextKey = String(row.draftKey || '').trim()
-      if (nextKey && nextKey !== row.accountKey) {
-        await props.savePlatformKey(item.type, row)
-      }
       await props.savePlatformCooldown(item.type, row)
       if ((row.enabled !== false) !== (row.draftEnabled !== false)) {
         await props.togglePlatformEnabled(item.type, row)
       }
+      const nextKey = String(row.draftKey || '').trim()
+      if (nextKey && nextKey !== row.accountKey) {
+        await props.savePlatformKey(item.type, row)
+      }
     }
     editingNameKeys.value = {}
+    props.closeUploadBackfill()
     accountEditMode.value = false
   } finally {
     accountEditBusy.value = false
@@ -234,14 +236,15 @@ function nextSendStale(row) {
           </div>
           <div v-if="visibleRows(group).length" class="account-table" :class="{ editing: accountEditMode }">
             <div class="account-row account-header account-platform-row">
-              <span>Type</span>
+              <span>Platform</span>
               <span>头像</span>
               <span>账号</span>
               <span>今日已发</span>
               <span>冷却等待</span>
               <span>上次上传</span>
               <span>下次可发送</span>
-              <span>操作</span>
+              <span v-if="accountEditMode">Key</span>
+              <span v-if="accountEditMode">操作</span>
               <span v-if="accountEditMode">随机冷却</span>
               <span v-if="accountEditMode">启用</span>
             </div>
@@ -304,12 +307,20 @@ function nextSendStale(row) {
               <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
                 {{ item.configured ? nextSendDisplay(item.row) : '-' }}
               </span>
-              <span data-label="操作">
+              <span v-if="item.configured && accountEditMode" data-label="Key">
+                <input
+                  v-model="item.row.draftKey"
+                  type="text"
+                  class="account-key-input"
+                  aria-label="账号 key"
+                  placeholder="账号 key"
+                />
+              </span>
+              <span v-if="accountEditMode" data-label="操作">
                 <button
                   v-if="item.configured"
                   type="button"
                   class="account-backfill-button"
-                  :disabled="accountEditMode"
                   @click="openUploadBackfill(item.type, item.label, item.row.accountKey, group.key)"
                 >
                   补发历史
@@ -349,7 +360,7 @@ function nextSendStale(row) {
       </div>
       <div v-else class="empty-state">暂无账号配置</div>
 
-      <div v-if="uploadBackfillOpen && uploadBackfillContext" class="upload-backfill-panel">
+      <div v-if="accountEditMode && uploadBackfillOpen && uploadBackfillContext" class="upload-backfill-panel">
         <div class="upload-retry-head">
           <strong>
             {{ uploadBackfillLoading ? '正在加载历史视频' : `补发候选 ${uploadBackfillRows.length} 个` }}

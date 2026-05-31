@@ -527,6 +527,20 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
+  async function saveShipinhaoKey(row) {
+    if (!row?.accountKey) return
+    const nextKey = (row.draftKey || '').trim()
+    if (!nextKey || nextKey === row.accountKey) return
+    try {
+      const payload = await accountsApi.shipinhao.saveKey(row.accountKey, nextKey)
+      mergeShipinhaoRow(payload, row.slot)
+      await loadShipinhaoAccounts()
+      shipinhaoError.value = ''
+    } catch (err) {
+      shipinhaoError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
   async function togglePlatformEnabled(platform, row) {
     if (!row?.accountKey) return
     const nextEnabled = row.enabled === false
@@ -890,6 +904,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     if (platform === 'bilibili') return saveBilibiliKey(row)
     if (platform === 'xiaohongshu') return saveXiaohongshuKey(row)
     if (platform === 'douyin') return saveDouyinKey(row)
+    if (platform === 'shipinhao') return saveShipinhaoKey(row)
     if (platform === 'kuaishou') return saveKuaishouKey(row)
     return null
   }
@@ -993,6 +1008,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     startDouyinQrLogin,
     refreshDouyinRow,
     saveDouyinKey,
+    saveShipinhaoKey,
     saveKuaishouKey,
     togglePlatformEnabled,
     savePlatformCooldown,

@@ -350,7 +350,7 @@ h1 {
 .account-row {
   min-width: 780px;
   display: grid;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px 92px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -385,14 +385,14 @@ h1 {
 }
 
 .account-row.account-platform-row {
-  min-width: 880px;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px 92px;
+  min-width: 780px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
 }
 
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
-  min-width: 1080px;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px 92px 150px 74px;
+  min-width: 1200px;
+  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px minmax(150px, 1fr) 92px 150px 74px;
 }
 
 .account-backfill-button {
@@ -430,6 +430,12 @@ h1 {
   min-height: 30px;
   padding: 0 6px;
   text-align: center;
+}
+
+.account-key-input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
 }
 
 .account-toggle {
@@ -2707,8 +2713,8 @@ a.submitter-cell:hover {
 
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
-    min-width: 920px;
-    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px 140px 64px;
+    min-width: 1080px;
+    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px minmax(140px, 1fr) 88px 140px 64px;
   }
 
   .task-row {
@@ -2915,7 +2921,7 @@ a.submitter-cell:hover {
   }
 
   .account-table.editing .platform-mark {
-    grid-row: 1 / span 9;
+    grid-row: 1 / span 11;
   }
 
   .account-avatar-cell {
