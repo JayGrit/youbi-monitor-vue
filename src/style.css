@@ -1735,6 +1735,12 @@ h1 {
   font-size: 13px;
 }
 
+.media-title span {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
 .media-title strong {
   min-width: 0;
   overflow: hidden;
@@ -1765,6 +1771,45 @@ h1 {
   color: #65758a;
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.diagnostic-item {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.diagnostic-image-link {
+  display: block;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.diagnostic-image-link img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.diagnostic-item p {
+  margin-top: 8px;
+  color: #65758a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-error {
+  margin: 0;
 }
 
 .field-table {

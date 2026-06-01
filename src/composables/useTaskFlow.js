@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   SPEECH_STAGE_KEY,
   SPEECH_STAGE_KEYS,
@@ -18,6 +18,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const speechEditDraft = ref('')
   const speechEditSaving = ref(false)
   const speechEditError = ref('')
+  const uploaderDiagnosticsByTask = ref({})
+  const uploaderDiagnosticsLoading = ref(false)
+  const uploaderDiagnosticsLoadingTask = ref('')
+  const uploaderDiagnosticsError = ref('')
   let flowTimer = null
 
   const selectedStage = computed(() => {
@@ -64,6 +68,20 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       elapsedSeconds: children.reduce((sum, stage) => sum + Number(stage.elapsedSeconds || 0), 0),
     }
   })
+
+  const uploaderDiagnostics = computed(() => {
+    const taskId = selectedTaskFlow.value?.task?.id
+    return taskId ? uploaderDiagnosticsByTask.value[taskId] || [] : []
+  })
+
+  watch(
+    () => [selectedStageKey.value, selectedTaskFlow.value?.task?.id],
+    ([stageKey, taskId]) => {
+      if (stageKey === 'uploader' && taskId) {
+        loadUploaderDiagnostics(taskId)
+      }
+    }
+  )
 
   async function openTaskFlow(task, stageKey = 'downloader') {
     if (!task?.taskId) return
@@ -116,6 +134,27 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const taskId = selectedTaskFlow.value?.task?.id
     if (taskId) {
       loadTaskFlow(taskId)
+    }
+  }
+
+  async function loadUploaderDiagnostics(taskId) {
+    if (!taskId || uploaderDiagnosticsByTask.value[taskId] || uploaderDiagnosticsLoadingTask.value === taskId) return
+    uploaderDiagnosticsLoading.value = true
+    uploaderDiagnosticsLoadingTask.value = taskId
+    uploaderDiagnosticsError.value = ''
+    try {
+      const rows = await monitorApi.loadUploaderDiagnostics(taskId)
+      uploaderDiagnosticsByTask.value = {
+        ...uploaderDiagnosticsByTask.value,
+        [taskId]: Array.isArray(rows) ? rows : [],
+      }
+    } catch (err) {
+      uploaderDiagnosticsError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      if (uploaderDiagnosticsLoadingTask.value === taskId) {
+        uploaderDiagnosticsLoading.value = false
+        uploaderDiagnosticsLoadingTask.value = ''
+      }
     }
   }
 
@@ -404,6 +443,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     speechEditDraft,
     speechEditSaving,
     speechEditError,
+    uploaderDiagnostics,
+    uploaderDiagnosticsLoading,
+    uploaderDiagnosticsError,
     selectedStage,
     flowTabs,
     openTaskFlow,

@@ -140,6 +140,9 @@ const {
   speechEditDraft,
   speechEditSaving,
   speechEditError,
+  uploaderDiagnostics,
+  uploaderDiagnosticsLoading,
+  uploaderDiagnosticsError,
   selectedStage,
   flowTabs,
   openTaskFlow,
@@ -446,6 +449,9 @@ function audioErrorMessage(code) {
       :selected-stage="selectedStage"
       :speech-edit-saving="speechEditSaving"
       :speech-edit-error="speechEditError"
+      :uploader-diagnostics="uploaderDiagnostics"
+      :uploader-diagnostics-loading="uploaderDiagnosticsLoading"
+      :uploader-diagnostics-error="uploaderDiagnosticsError"
       :flow-task-title="flowTaskTitle"
       :flow-duration-seconds="flowDurationSeconds"
       :refresh-task-flow="refreshTaskFlow"

@@ -6,6 +6,7 @@ import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
+import UploaderDiagnostics from '../components/task-flow/UploaderDiagnostics.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
 import { formatDuration } from '../utils/format'
 
@@ -19,6 +20,9 @@ defineProps({
   speechEditDraft: { type: String, default: '' },
   speechEditSaving: { type: Boolean, default: false },
   speechEditError: { type: String, default: '' },
+  uploaderDiagnostics: { type: Array, default: () => [] },
+  uploaderDiagnosticsLoading: { type: Boolean, default: false },
+  uploaderDiagnosticsError: { type: String, default: '' },
   flowTaskTitle: { type: Function, required: true },
   flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
@@ -97,6 +101,14 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
         <UploadSubmissionGrid
           v-if="selectedStage.key === 'uploader' && uploadSubmissionRows(selectedStage).length"
           :rows="uploadSubmissionRows(selectedStage)"
+          :upload-platform-name="uploadPlatformName"
+        />
+
+        <UploaderDiagnostics
+          v-if="selectedStage.key === 'uploader'"
+          :rows="uploaderDiagnostics"
+          :loading="uploaderDiagnosticsLoading"
+          :error="uploaderDiagnosticsError"
           :upload-platform-name="uploadPlatformName"
         />
 

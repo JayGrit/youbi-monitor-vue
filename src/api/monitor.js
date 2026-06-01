@@ -39,6 +39,10 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/flow`)
     },
 
+    loadUploaderDiagnostics(taskId) {
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/uploader-diagnostics`)
+    },
+
     saveSpeakerSegmentDstText(taskId, segmentId, dstText) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/speaker-segments/${encodeURIComponent(segmentId)}/dst-text`, {
         method: 'PATCH',
