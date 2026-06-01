@@ -1851,9 +1851,10 @@ h1 {
 
 .demucs-waveform {
   width: 100%;
-  height: 280px;
+  height: 240px;
   display: block;
   border: 0;
+  outline: 0;
   border-radius: 0;
   background: transparent;
 }
@@ -1875,15 +1876,14 @@ h1 {
 }
 
 .demucs-audio-player {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 0.74);
-  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .demucs-audio-player-title {
@@ -3356,11 +3356,10 @@ a.submitter-cell:hover {
   }
 
   .demucs-waveform {
-    height: 220px;
+    height: 190px;
   }
 
   .demucs-audio-player {
-    grid-template-columns: 1fr;
     gap: 8px;
   }
 

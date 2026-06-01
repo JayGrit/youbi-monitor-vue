@@ -7,7 +7,9 @@ const props = defineProps({
 })
 
 const waveformByUrl = ref({})
+const playbackByKey = ref({})
 const waveformCanvas = ref(null)
+const audioElements = new Map()
 const resizeObserver = typeof ResizeObserver === 'undefined'
   ? null
   : new ResizeObserver(entries => {
@@ -16,6 +18,7 @@ const resizeObserver = typeof ResizeObserver === 'undefined'
     }
   })
 let audioContext = null
+let animationFrame = 0
 
 const audioItems = computed(() => [
   { key: 'vocals', title: '人声音频', shortTitle: '人声', asset: findAsset('vocals') },
@@ -41,6 +44,9 @@ onBeforeUnmount(() => {
   if (audioContext) {
     audioContext.close()
   }
+  if (animationFrame) {
+    window.cancelAnimationFrame(animationFrame)
+  }
 })
 
 function findAsset(key) {
@@ -55,6 +61,14 @@ function setCanvasRef(element) {
   if (!element) return
   resizeObserver?.observe(element)
   drawCanvas(element)
+}
+
+function setAudioRef(key, element) {
+  if (element) {
+    audioElements.set(key, element)
+  } else {
+    audioElements.delete(key)
+  }
 }
 
 async function loadWaveform(asset) {
@@ -96,7 +110,7 @@ async function loadWaveform(asset) {
 
 function calculateRmsVolumes(audioBuffer) {
   const channelData = audioBuffer.getChannelData(0)
-  const sampleCount = Math.min(1200, Math.max(240, Math.floor(channelData.length / 512)))
+  const sampleCount = Math.min(420, Math.max(140, Math.floor(channelData.length / 1800)))
   const blockSize = Math.max(1, Math.floor(channelData.length / sampleCount))
   const volumes = []
   let max = 0
@@ -111,7 +125,23 @@ function calculateRmsVolumes(audioBuffer) {
     volumes.push(rms)
     max = Math.max(max, rms)
   }
-  return max > 0 ? volumes.map(value => value / max) : volumes
+  const normalized = max > 0 ? volumes.map(value => value / max) : volumes
+  return smoothVolumes(normalized)
+}
+
+function smoothVolumes(volumes) {
+  return volumes.map((_, index) => {
+    let sum = 0
+    let count = 0
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const value = volumes[index + offset]
+      if (value !== undefined) {
+        sum += value
+        count += 1
+      }
+    }
+    return count ? sum / count : 0
+  })
 }
 
 function drawCanvas(canvas) {
@@ -129,48 +159,93 @@ function drawCanvas(canvas) {
   if (!ctx) return
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
   ctx.clearRect(0, 0, width, height)
-  drawSmoothWave(ctx, waveformByUrl.value[findAsset('bgm')?.url]?.volumes || [], width, height, '#16a34a', 0.26, 0.48)
-  drawSmoothWave(ctx, waveformByUrl.value[findAsset('vocals')?.url]?.volumes || [], width, height, '#111827', 0.2, 0.36)
+  drawTopWave(ctx, waveformByUrl.value[findAsset('bgm')?.url]?.volumes || [], width, height, '#16a34a', 0.22, 0.9)
+  drawTopWave(ctx, waveformByUrl.value[findAsset('vocals')?.url]?.volumes || [], width, height, '#111827', 0.18, 0.72)
+  drawPlayhead(ctx, playbackByKey.value.bgm, width, height, '#16a34a')
+  drawPlayhead(ctx, playbackByKey.value.vocals, width, height, '#111827')
 }
 
-function drawSmoothWave(ctx, volumes, width, height, color, fillAlpha, scale) {
+function drawTopWave(ctx, volumes, width, height, color, fillAlpha, scale) {
   if (!volumes.length) return
-  const centerY = height / 2
+  const baseline = height - 2
+  const topPadding = 6
   const points = volumes.map((volume, index) => ({
     x: volumes.length === 1 ? width / 2 : (index / (volumes.length - 1)) * width,
-    top: centerY - volume * height * scale,
-    bottom: centerY + volume * height * scale,
+    y: baseline - volume * (height - topPadding - 2) * scale,
   }))
 
   ctx.beginPath()
-  ctx.moveTo(points[0].x, points[0].top)
+  ctx.moveTo(points[0].x, baseline)
+  ctx.lineTo(points[0].x, points[0].y)
   for (let i = 0; i < points.length - 1; i += 1) {
     const current = points[i]
     const next = points[i + 1]
     const controlX = (current.x + next.x) / 2
-    ctx.bezierCurveTo(controlX, current.top, controlX, next.top, next.x, next.top)
+    ctx.bezierCurveTo(controlX, current.y, controlX, next.y, next.x, next.y)
   }
-  for (let i = points.length - 1; i > 0; i -= 1) {
-    const current = points[i]
-    const previous = points[i - 1]
-    const controlX = (current.x + previous.x) / 2
-    ctx.bezierCurveTo(controlX, current.bottom, controlX, previous.bottom, previous.x, previous.bottom)
-  }
+  ctx.lineTo(points[points.length - 1].x, baseline)
   ctx.closePath()
   ctx.fillStyle = hexToRgba(color, fillAlpha)
   ctx.fill()
 
   ctx.beginPath()
-  ctx.moveTo(points[0].x, points[0].top)
+  ctx.moveTo(points[0].x, points[0].y)
   for (let i = 0; i < points.length - 1; i += 1) {
     const current = points[i]
     const next = points[i + 1]
     const controlX = (current.x + next.x) / 2
-    ctx.bezierCurveTo(controlX, current.top, controlX, next.top, next.x, next.top)
+    ctx.bezierCurveTo(controlX, current.y, controlX, next.y, next.x, next.y)
   }
   ctx.strokeStyle = color
-  ctx.lineWidth = 2
+  ctx.lineWidth = 2.2
   ctx.stroke()
+}
+
+function drawPlayhead(ctx, state, width, height, color) {
+  const duration = Number(state?.duration || 0)
+  const currentTime = Number(state?.currentTime || 0)
+  if (!duration || !currentTime || currentTime < 0) return
+  const x = Math.max(0, Math.min(width, (currentTime / duration) * width))
+  ctx.save()
+  ctx.beginPath()
+  ctx.setLineDash([6, 7])
+  ctx.moveTo(x, 0)
+  ctx.lineTo(x, height)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  ctx.restore()
+}
+
+function updatePlayback(key, event) {
+  const audio = event?.target
+  if (!audio) return
+  playbackByKey.value = {
+    ...playbackByKey.value,
+    [key]: {
+      currentTime: audio.currentTime || 0,
+      duration: Number.isFinite(audio.duration) ? audio.duration : 0,
+    },
+  }
+  drawCanvas(waveformCanvas.value)
+}
+
+function startPlaybackTicker() {
+  if (animationFrame) return
+  const tick = () => {
+    for (const [key, audio] of audioElements.entries()) {
+      updatePlayback(key, { target: audio })
+    }
+    animationFrame = window.requestAnimationFrame(tick)
+  }
+  animationFrame = window.requestAnimationFrame(tick)
+}
+
+function stopPlaybackTicker() {
+  const stillPlaying = [...audioElements.values()].some(audio => !audio.paused && !audio.ended)
+  if (stillPlaying || !animationFrame) return
+  window.cancelAnimationFrame(animationFrame)
+  animationFrame = 0
 }
 
 function hexToRgba(hex, alpha) {
@@ -218,12 +293,18 @@ function hexToRgba(hex, alpha) {
         </div>
         <audio
           v-if="item.asset"
+          :ref="element => setAudioRef(item.key, element)"
           :src="item.asset.url"
           controls
           preload="metadata"
-          @loadstart="event => logAudioEvent('loadstart', item.asset, event)"
-          @play="event => logAudioEvent('play', item.asset, event)"
-          @playing="event => logAudioEvent('playing', item.asset, event)"
+          @loadedmetadata="event => updatePlayback(item.key, event)"
+          @timeupdate="event => updatePlayback(item.key, event)"
+          @seeked="event => updatePlayback(item.key, event)"
+          @loadstart="event => { updatePlayback(item.key, event); logAudioEvent('loadstart', item.asset, event) }"
+          @play="event => { updatePlayback(item.key, event); startPlaybackTicker(); logAudioEvent('play', item.asset, event) }"
+          @playing="event => { updatePlayback(item.key, event); startPlaybackTicker(); logAudioEvent('playing', item.asset, event) }"
+          @pause="event => { updatePlayback(item.key, event); stopPlaybackTicker() }"
+          @ended="event => { updatePlayback(item.key, event); stopPlaybackTicker() }"
           @waiting="event => logAudioEvent('waiting', item.asset, event)"
           @error="event => logAudioEvent('error', item.asset, event)"
         ></audio>
