@@ -69,5 +69,6 @@ export function createAccountsApi(apiBase) {
     shipinhao: platformAccountApi(apiBase, 'shipinhao', 'shipinhao/accounts'),
     douyin: platformAccountApi(apiBase, 'douyin', 'douyin/accounts'),
     kuaishou: platformAccountApi(apiBase, 'kuaishou', 'kuaishou/accounts'),
+    jinritoutiao: platformAccountApi(apiBase, 'jinritoutiao', 'jinritoutiao/accounts'),
   }
 }

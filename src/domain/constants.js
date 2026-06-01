@@ -79,6 +79,7 @@ export const uploadPlatformText = {
   douyin: '抖音',
   shipinhao: '视频号',
   kuaishou: '快手',
+  jinritoutiao: '今日头条',
 }
 
 export function createPlatformIconUrls(baseUrl) {
