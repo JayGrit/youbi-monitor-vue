@@ -56,23 +56,51 @@ function accountAvatar(type, row) {
   return accountAvatarCache.value[url] || url
 }
 
+function accountDraft(row, type) {
+  return {
+    displayName: props.accountDisplay(row, type),
+    enabled: row.enabled !== false,
+    key: row.accountKey || '',
+    cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
+    cooldownMaxMinutes: cooldownDraftMinutes(row.uploadCooldownMaxSeconds, 120),
+  }
+}
+
+function cooldownDraftMinutes(seconds, fallback) {
+  const value = Number(seconds)
+  return Number.isFinite(value) ? String(Math.round(value / 60)) : String(fallback)
+}
+
+function resetAccountDraft(item) {
+  const draft = accountDraft(item.row, item.type)
+  item.row.draftDisplayName = draft.displayName
+  item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
+  item.row.draftEnabled = draft.enabled
+  item.row.draftKey = draft.key
+  item.row.draftCooldownMinMinutes = draft.cooldownMinMinutes
+  item.row.draftCooldownMaxMinutes = draft.cooldownMaxMinutes
+}
+
+function accountChanges(item) {
+  const row = item.row
+  const draft = accountDraft(row, item.type)
+  return {
+    displayName: String(row.draftDisplayName || '').trim() !== draft.displayName,
+    cooldown:
+      String(row.draftCooldownMinMinutes ?? '').trim() !== draft.cooldownMinMinutes
+      || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
+    enabled: (row.draftEnabled !== false) !== draft.enabled,
+    key: Boolean(String(row.draftKey || '').trim()) && String(row.draftKey || '').trim() !== draft.key,
+  }
+}
+
 function enterAccountEditMode() {
-  forEachConfiguredAccount((item) => {
-    item.row.draftDisplayName = props.accountDisplay(item.row, item.type)
-    item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
-    item.row.draftEnabled = item.row.enabled !== false
-    item.row.draftKey = item.row.accountKey || ''
-  })
+  forEachConfiguredAccount(resetAccountDraft)
   accountEditMode.value = true
 }
 
 function cancelAccountEditMode() {
-  forEachConfiguredAccount((item) => {
-    item.row.draftDisplayName = props.accountDisplay(item.row, item.type)
-    item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
-    item.row.draftEnabled = item.row.enabled !== false
-    item.row.draftKey = item.row.accountKey || ''
-  })
+  forEachConfiguredAccount(resetAccountDraft)
   editingNameKeys.value = {}
   props.closeUploadBackfill()
   accountEditMode.value = false
@@ -83,16 +111,17 @@ async function saveAccountEdits() {
   try {
     for (const item of configuredAccounts()) {
       const row = item.row
-      const nextDisplayName = String(row.draftDisplayName || '').trim()
-      if (nextDisplayName !== props.accountDisplay(row, item.type)) {
+      const changes = accountChanges(item)
+      if (changes.displayName) {
         await props.savePlatformAccountProfile(item.type, row)
       }
-      await props.savePlatformCooldown(item.type, row)
-      if ((row.enabled !== false) !== (row.draftEnabled !== false)) {
+      if (changes.cooldown) {
+        await props.savePlatformCooldown(item.type, row)
+      }
+      if (changes.enabled) {
         await props.togglePlatformEnabled(item.type, row)
       }
-      const nextKey = String(row.draftKey || '').trim()
-      if (nextKey && nextKey !== row.accountKey) {
+      if (changes.key) {
         await props.savePlatformKey(item.type, row)
       }
     }
