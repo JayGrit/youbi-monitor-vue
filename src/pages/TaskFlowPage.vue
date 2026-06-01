@@ -35,6 +35,7 @@ defineProps({
   uploadPlatformName: { type: Function, required: true },
   speechColumns: { type: Function, required: true },
   speechRows: { type: Function, required: true },
+  speechTables: { type: Function, required: true },
   showSpeechColumn: { type: Function, required: true },
   speechAudioAsset: { type: Function, required: true },
   logAudioEvent: { type: Function, required: true },
@@ -112,6 +113,12 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
           :upload-platform-name="uploadPlatformName"
         />
 
+        <StageMediaGrid
+          v-if="stageMedia(selectedStage).length"
+          :media="stageMedia(selectedStage)"
+          :log-audio-event="logAudioEvent"
+        />
+
         <SpeechJoinedTable
           v-if="selectedStageKey === SPEECH_STAGE_KEY"
           :speech-edit-draft="speechEditDraft"
@@ -133,12 +140,15 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
 
+        <RawDatabaseTables
+          v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          :tables="speechTables()"
+          :table-columns="tableColumns"
+          :table-cell-text="tableCellText"
+          :table-cell-summary="tableCellSummary"
+        />
+
         <template v-else>
-          <StageMediaGrid
-            v-if="stageMedia(selectedStage).length"
-            :media="stageMedia(selectedStage)"
-            :log-audio-event="logAudioEvent"
-          />
           <StageFieldTable :rows="fieldRows(selectedStage)" />
           <RawDatabaseTables
             :tables="selectedStage.tables || []"

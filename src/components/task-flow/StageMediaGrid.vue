@@ -27,6 +27,7 @@ defineProps({
           @error="event => logAudioEvent('error', asset, event)"
         ></audio>
         <img v-else-if="asset.kind === 'image'" :src="asset.url" alt="" />
+        <div v-else class="media-file-preview">{{ asset.kind || 'file' }}</div>
         <p v-if="asset.objectName">{{ asset.objectName }}</p>
       </article>
     </div>

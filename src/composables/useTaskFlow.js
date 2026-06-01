@@ -6,7 +6,7 @@ import {
   uploadPlatformText,
 } from '../domain/constants'
 import { shortValue } from '../utils/jsonDisplay'
-import { kindForField, kindForName, youtubeThumbnailUrl } from '../utils/media'
+import { kindForField, kindForName, normalizeResourceUrl, youtubeThumbnailUrl } from '../utils/media'
 
 export function useTaskFlow(monitorApi, brokenImageUrls) {
   const selectedTaskFlow = ref(null)
@@ -164,7 +164,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function flowPrimaryCoverUrl(flow) {
-    return flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || ''
+    return normalizeResourceUrl(flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || '')
   }
 
   function flowSourceUrl(flow) {
@@ -248,6 +248,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         status: segment.status || '',
         attempt_count: segment.attempt_count ?? '',
         speed_ratio: formatRatio(segment.speed_ratio),
+        actual_start_time: segment.actual_start_time ?? '',
+        actual_end_time: segment.actual_end_time ?? '',
+        src_lang: segment.src_lang || '',
+        dst_lang: segment.dst_lang || '',
         reference_wav_url: segment.reference_wav_url || '',
         tts_wav_url: segment.tts_wav_url || '',
         error_message: segment.error_message || '',
@@ -317,6 +321,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       ['segment_id', row.segment_id || '-'],
       ['start_time', formatTimeline(row.start_time)],
       ['end_time', formatTimeline(row.end_time)],
+      ['actual_start_time', formatTimeline(row.actual_start_time)],
+      ['actual_end_time', formatTimeline(row.actual_end_time)],
+      ['src_lang', row.src_lang || '-'],
+      ['dst_lang', row.dst_lang || '-'],
       ['speaker', row.speaker || '-'],
       ['status', row.status || '-'],
       ['attempt_count', row.attempt_count === '' ? '-' : row.attempt_count],
@@ -373,13 +381,20 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function speechAudioAsset(row, column) {
-    const url = String(row?.[column] || '').trim()
+    const url = normalizeResourceUrl(row?.[column])
     if (!url) return null
     return {
       name: column,
       kind: 'audio',
       url,
     }
+  }
+
+  function speechTables() {
+    const stages = selectedTaskFlow.value?.stages || []
+    return stages
+      .filter(stage => SPEECH_STAGE_KEYS.includes(stage.key))
+      .flatMap(stage => stage.tables || [])
   }
 
   function formatTimeline(value) {
@@ -395,12 +410,14 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const items = []
     const seen = new Set()
     function add(asset, fallbackName, value) {
-      if (!asset?.url || seen.has(asset.url)) return
-      seen.add(asset.url)
+      if (!asset?.url) return
+      const url = normalizeResourceUrl(asset.url)
+      if (!url || seen.has(url)) return
+      seen.add(url)
       items.push({
         name: asset.name || fallbackName,
         kind: asset.kind || kindForName(asset.url || value),
-        url: asset.url,
+        url,
         objectName: asset.objectName || '',
       })
     }
@@ -415,22 +432,37 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         }
       }
     }
-    return items.filter(item => ['video', 'audio', 'image'].includes(item.kind)).slice(0, 30)
+    const stageKeys = stage?.key === SPEECH_STAGE_KEY
+      ? SPEECH_STAGE_KEYS
+      : [stage?.key]
+    for (const asset of selectedTaskFlow.value?.minioObjects || []) {
+      if (stageKeys.includes(asset.stage)) {
+        add(asset, asset.name, asset.url || asset.objectName)
+      }
+    }
+    return items.filter(item => item.kind !== 'error').slice(0, 60)
   }
 
   function assetFromValue(name, value, stageKey) {
     const text = String(value || '').trim()
     if (!text || text.startsWith('db://')) return null
-    if (text.startsWith('http://') || text.startsWith('https://')) {
-      return { name, stage: stageKey, kind: kindForField(name, text), url: text }
+    if (text.startsWith('http://') || text.startsWith('https://') || text.startsWith('s3://')) {
+      const url = normalizeResourceUrl(text)
+      return { name, stage: stageKey, kind: kindForField(name, url), url }
     }
     return null
   }
 
   function fieldRows(stage) {
+    function normalizeField(field) {
+      const asset = field.asset?.url
+        ? { ...field.asset, url: normalizeResourceUrl(field.asset.url) }
+        : field.asset
+      return { ...field, asset }
+    }
     return [
-      ...(stage?.inputs || []).map(field => ({ ...field, direction: 'Input' })),
-      ...(stage?.outputs || []).map(field => ({ ...field, direction: 'Output' })),
+      ...(stage?.inputs || []).map(field => normalizeField({ ...field, direction: 'Input' })),
+      ...(stage?.outputs || []).map(field => normalizeField({ ...field, direction: 'Output' })),
     ]
   }
 
@@ -472,6 +504,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     cancelSpeechEdit,
     saveSpeechDstText,
     speechAudioAsset,
+    speechTables,
     stageMedia,
     fieldRows,
   }

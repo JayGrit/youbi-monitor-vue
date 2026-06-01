@@ -162,6 +162,7 @@ const {
   uploadPlatformName,
   speechColumns,
   showSpeechColumn,
+  speechTables,
   speechMoreRows,
   canEditSpeechDstText,
   isEditingSpeechDstText,
@@ -464,6 +465,7 @@ function audioErrorMessage(code) {
       :upload-platform-name="uploadPlatformName"
       :speech-columns="speechColumns"
       :speech-rows="speechRows"
+      :speech-tables="speechTables"
       :show-speech-column="showSpeechColumn"
       :speech-audio-asset="speechAudioAsset"
       :log-audio-event="logAudioEvent"

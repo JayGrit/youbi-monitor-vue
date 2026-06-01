@@ -1766,6 +1766,19 @@ h1 {
   object-fit: contain;
 }
 
+.media-file-preview {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .media-item p {
   margin-top: 8px;
   color: #65758a;
