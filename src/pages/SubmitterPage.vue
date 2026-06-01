@@ -286,6 +286,7 @@ const emit = defineEmits([
               <tr>
                 <th>作者</th>
                 <th>Type</th>
+                <th>字幕</th>
                 <th>配音</th>
                 <th>原语言</th>
                 <th>目标语言</th>
@@ -294,7 +295,7 @@ const emit = defineEmits([
             </thead>
             <tbody>
               <tr v-if="submitterAuthorTypeRows.length === 0">
-                <td colspan="6" class="submitter-empty">暂无作者</td>
+                <td colspan="7" class="submitter-empty">暂无作者</td>
               </tr>
               <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
                 <td>{{ row.author }}</td>
@@ -311,9 +312,20 @@ const emit = defineEmits([
                 <td>
                   <label class="submitter-author-type-check">
                     <input
-                      v-model="row.draftNeedDubbing"
+                      v-model="row.draftNeedSubtitle"
                       type="checkbox"
                       :disabled="submitterAuthorTypeSaving === row.author"
+                      @change="row.draftNeedDubbing = row.draftNeedSubtitle && row.draftNeedDubbing; autosaveSubmitterAuthorType(row)"
+                    />
+                    <span>{{ row.draftNeedSubtitle ? '需要' : '跳过' }}</span>
+                  </label>
+                </td>
+                <td>
+                  <label class="submitter-author-type-check">
+                    <input
+                      v-model="row.draftNeedDubbing"
+                      type="checkbox"
+                      :disabled="submitterAuthorTypeSaving === row.author || !row.draftNeedSubtitle"
                       @change="autosaveSubmitterAuthorType(row)"
                     />
                     <span>{{ row.draftNeedDubbing ? '需要' : '原声' }}</span>
