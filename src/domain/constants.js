@@ -89,6 +89,7 @@ export function createPlatformIconUrls(baseUrl) {
     bilibili: `${baseUrl}platform-icons/bilibili-official-appstore-512.png`,
     shipinhao: `${baseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
     kuaishou: `${baseUrl}platform-icons/kuaishou-official-appstore-512.png`,
+    jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
   }
 }
 
@@ -99,5 +100,6 @@ export function createAccountPlatforms(platformIconUrls) {
     { type: 'bilibili', label: 'B站', iconUrl: platformIconUrls.bilibili },
     { type: 'shipinhao', label: '视频号', iconUrl: platformIconUrls.shipinhao },
     { type: 'kuaishou', label: '快手', iconUrl: platformIconUrls.kuaishou },
+    { type: 'jinritoutiao', label: '今日头条', iconUrl: platformIconUrls.jinritoutiao },
   ]
 }
