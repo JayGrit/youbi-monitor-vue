@@ -7,7 +7,7 @@ const props = defineProps({
 })
 
 const waveformByUrl = ref({})
-const canvasRefs = new Map()
+const waveformCanvas = ref(null)
 const resizeObserver = typeof ResizeObserver === 'undefined'
   ? null
   : new ResizeObserver(entries => {
@@ -17,16 +17,10 @@ const resizeObserver = typeof ResizeObserver === 'undefined'
   })
 let audioContext = null
 
-const audioItems = computed(() => {
-  const labels = [
-    { key: 'vocals', title: '人声音频' },
-    { key: 'bgm', title: '背景声音频' },
-  ]
-  return labels.map(label => ({
-    ...label,
-    asset: findAsset(label.key),
-  }))
-})
+const audioItems = computed(() => [
+  { key: 'vocals', title: '人声音频', shortTitle: '人声', asset: findAsset('vocals') },
+  { key: 'bgm', title: '背景声音频', shortTitle: '背景声', asset: findAsset('bgm') },
+])
 
 watch(
   () => props.media.map(asset => asset.url).join('|'),
@@ -53,16 +47,12 @@ function findAsset(key) {
   return props.media.find(asset => asset.key === key) || null
 }
 
-function setCanvasRef(url, element) {
-  const existing = canvasRefs.get(url)
-  if (existing && existing !== element) {
-    resizeObserver?.unobserve(existing)
+function setCanvasRef(element) {
+  if (waveformCanvas.value && waveformCanvas.value !== element) {
+    resizeObserver?.unobserve(waveformCanvas.value)
   }
-  if (!element) {
-    canvasRefs.delete(url)
-    return
-  }
-  canvasRefs.set(url, element)
+  waveformCanvas.value = element
+  if (!element) return
   resizeObserver?.observe(element)
   drawCanvas(element)
 }
@@ -91,7 +81,7 @@ async function loadWaveform(asset) {
       [asset.url]: { status: 'ready', volumes },
     }
     await nextTick()
-    drawCanvas(canvasRefs.get(asset.url))
+    drawCanvas(waveformCanvas.value)
   } catch (err) {
     waveformByUrl.value = {
       ...waveformByUrl.value,
@@ -126,9 +116,6 @@ function calculateRmsVolumes(audioBuffer) {
 
 function drawCanvas(canvas) {
   if (!canvas) return
-  const url = canvas.dataset.url
-  const waveform = waveformByUrl.value[url]
-  const volumes = waveform?.volumes || []
   const width = Math.max(1, Math.floor(canvas.clientWidth))
   const height = Math.max(1, Math.floor(canvas.clientHeight))
   const pixelRatio = window.devicePixelRatio || 1
@@ -142,46 +129,95 @@ function drawCanvas(canvas) {
   if (!ctx) return
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
   ctx.clearRect(0, 0, width, height)
-  ctx.fillStyle = '#eef3f8'
-  ctx.fillRect(0, 0, width, height)
-  ctx.strokeStyle = '#cbd5e1'
-  ctx.beginPath()
-  ctx.moveTo(0, height / 2)
-  ctx.lineTo(width, height / 2)
-  ctx.stroke()
+  drawSmoothWave(ctx, waveformByUrl.value[findAsset('bgm')?.url]?.volumes || [], width, height, '#16a34a', 0.26, 0.48)
+  drawSmoothWave(ctx, waveformByUrl.value[findAsset('vocals')?.url]?.volumes || [], width, height, '#111827', 0.2, 0.36)
+}
+
+function drawSmoothWave(ctx, volumes, width, height, color, fillAlpha, scale) {
   if (!volumes.length) return
-  const barWidth = Math.max(1, width / volumes.length)
-  ctx.fillStyle = '#2563eb'
-  volumes.forEach((volume, index) => {
-    const barHeight = Math.max(1, volume * height * 0.86)
-    const x = index * barWidth
-    const y = (height - barHeight) / 2
-    ctx.fillRect(x, y, Math.max(1, barWidth * 0.72), barHeight)
-  })
+  const centerY = height / 2
+  const points = volumes.map((volume, index) => ({
+    x: volumes.length === 1 ? width / 2 : (index / (volumes.length - 1)) * width,
+    top: centerY - volume * height * scale,
+    bottom: centerY + volume * height * scale,
+  }))
+
+  ctx.beginPath()
+  ctx.moveTo(points[0].x, points[0].top)
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const current = points[i]
+    const next = points[i + 1]
+    const controlX = (current.x + next.x) / 2
+    ctx.bezierCurveTo(controlX, current.top, controlX, next.top, next.x, next.top)
+  }
+  for (let i = points.length - 1; i > 0; i -= 1) {
+    const current = points[i]
+    const previous = points[i - 1]
+    const controlX = (current.x + previous.x) / 2
+    ctx.bezierCurveTo(controlX, current.bottom, controlX, previous.bottom, previous.x, previous.bottom)
+  }
+  ctx.closePath()
+  ctx.fillStyle = hexToRgba(color, fillAlpha)
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.moveTo(points[0].x, points[0].top)
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const current = points[i]
+    const next = points[i + 1]
+    const controlX = (current.x + next.x) / 2
+    ctx.bezierCurveTo(controlX, current.top, controlX, next.top, next.x, next.top)
+  }
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2
+  ctx.stroke()
+}
+
+function hexToRgba(hex, alpha) {
+  const value = hex.replace('#', '')
+  const number = Number.parseInt(value, 16)
+  const red = (number >> 16) & 255
+  const green = (number >> 8) & 255
+  const blue = number & 255
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
 }
 </script>
 
 <template>
   <div class="demucs-audio-panel">
-    <article v-for="item in audioItems" :key="item.key" class="demucs-audio-item">
-      <div class="demucs-audio-head">
-        <strong>{{ item.title }}</strong>
-        <a v-if="item.asset" :href="item.asset.url" target="_blank" rel="noreferrer">打开</a>
+    <div class="demucs-audio-head">
+      <div class="demucs-waveform-legend">
+        <span class="demucs-legend-item vocals">人声</span>
+        <span class="demucs-legend-item bgm">背景声</span>
       </div>
+      <div class="demucs-audio-links">
+        <a v-if="findAsset('vocals')" :href="findAsset('vocals').url" target="_blank" rel="noreferrer">打开人声</a>
+        <a v-if="findAsset('bgm')" :href="findAsset('bgm').url" target="_blank" rel="noreferrer">打开背景声</a>
+      </div>
+    </div>
 
-      <template v-if="item.asset">
-        <canvas
-          class="demucs-waveform"
-          :data-url="item.asset.url"
-          :ref="element => setCanvasRef(item.asset.url, element)"
-        ></canvas>
-        <div class="demucs-waveform-status">
-          <span v-if="waveformByUrl[item.asset.url]?.status === 'loading'">波形加载中</span>
-          <span v-else-if="waveformByUrl[item.asset.url]?.status === 'error'">
-            波形解析失败：{{ waveformByUrl[item.asset.url]?.message }}
-          </span>
+    <canvas class="demucs-waveform" :ref="setCanvasRef"></canvas>
+
+    <div class="demucs-waveform-status">
+      <template v-for="item in audioItems" :key="item.key">
+        <span v-if="item.asset && waveformByUrl[item.asset.url]?.status === 'loading'">
+          {{ item.shortTitle }}波形加载中
+        </span>
+        <span v-else-if="item.asset && waveformByUrl[item.asset.url]?.status === 'error'">
+          {{ item.shortTitle }}波形解析失败：{{ waveformByUrl[item.asset.url]?.message }}
+        </span>
+      </template>
+      <span v-if="!audioItems.some(item => item.asset)">暂无音频</span>
+    </div>
+
+    <div class="demucs-audio-players">
+      <div v-for="item in audioItems" :key="item.key" :class="['demucs-audio-player', item.key]">
+        <div class="demucs-audio-player-title">
+          <span></span>
+          <strong>{{ item.title }}</strong>
         </div>
         <audio
+          v-if="item.asset"
           :src="item.asset.url"
           controls
           preload="metadata"
@@ -191,10 +227,8 @@ function drawCanvas(canvas) {
           @waiting="event => logAudioEvent('waiting', item.asset, event)"
           @error="event => logAudioEvent('error', item.asset, event)"
         ></audio>
-        <p v-if="item.asset.objectName">{{ item.asset.objectName }}</p>
-      </template>
-
-      <div v-else class="demucs-audio-empty">暂无音频</div>
-    </article>
+        <div v-else class="demucs-audio-empty">暂无音频</div>
+      </div>
+    </div>
   </div>
 </template>
