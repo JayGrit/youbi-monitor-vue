@@ -443,6 +443,21 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return items.filter(item => item.kind !== 'error').slice(0, 60)
   }
 
+  function demucsAudioMedia(stage) {
+    const candidates = stageMedia(stage).filter(item => item.kind === 'audio')
+    const slots = [
+      { key: 'vocals', patterns: [/vocal/i, /voice/i, /人声/] },
+      { key: 'bgm', patterns: [/bgm/i, /background/i, /no[_-]?vocals/i, /accompaniment/i, /背景/] },
+    ]
+    return slots.map(slot => {
+      const asset = candidates.find(item => {
+        const haystack = `${item.name || ''} ${item.objectName || ''} ${item.url || ''}`
+        return slot.patterns.some(pattern => pattern.test(haystack))
+      })
+      return asset ? { ...asset, key: slot.key } : null
+    }).filter(Boolean)
+  }
+
   function assetFromValue(name, value, stageKey) {
     const text = String(value || '').trim()
     if (!text || text.startsWith('db://')) return null
@@ -506,6 +521,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     speechAudioAsset,
     speechTables,
     stageMedia,
+    demucsAudioMedia,
     fieldRows,
   }
 }

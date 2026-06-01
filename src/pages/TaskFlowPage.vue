@@ -1,4 +1,5 @@
 <script setup>
+import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
 import RawDatabaseTables from '../components/task-flow/RawDatabaseTables.vue'
 import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
 import StageFieldTable from '../components/task-flow/StageFieldTable.vue'
@@ -39,6 +40,7 @@ defineProps({
   showSpeechColumn: { type: Function, required: true },
   speechAudioAsset: { type: Function, required: true },
   logAudioEvent: { type: Function, required: true },
+  demucsAudioMedia: { type: Function, required: true },
   speechMoreRows: { type: Function, required: true },
   isEditingSpeechDstText: { type: Function, required: true },
   saveSpeechDstText: { type: Function, required: true },
@@ -113,8 +115,14 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
           :upload-platform-name="uploadPlatformName"
         />
 
+        <DemucsAudioPanel
+          v-if="selectedStage.key === 'demucs'"
+          :media="demucsAudioMedia(selectedStage)"
+          :log-audio-event="logAudioEvent"
+        />
+
         <StageMediaGrid
-          v-if="stageMedia(selectedStage).length"
+          v-else-if="stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />
@@ -148,7 +156,7 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
           :table-cell-summary="tableCellSummary"
         />
 
-        <template v-else>
+        <template v-else-if="selectedStage.key !== 'demucs'">
           <StageFieldTable :rows="fieldRows(selectedStage)" />
           <RawDatabaseTables
             :tables="selectedStage.tables || []"

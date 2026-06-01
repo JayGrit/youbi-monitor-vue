@@ -171,6 +171,7 @@ const {
   saveSpeechDstText,
   speechAudioAsset,
   stageMedia,
+  demucsAudioMedia,
   fieldRows,
 } = useTaskFlow(monitorApi, brokenImageUrls)
 
@@ -469,6 +470,7 @@ function audioErrorMessage(code) {
       :show-speech-column="showSpeechColumn"
       :speech-audio-asset="speechAudioAsset"
       :log-audio-event="logAudioEvent"
+      :demucs-audio-media="demucsAudioMedia"
       :speech-more-rows="speechMoreRows"
       :is-editing-speech-dst-text="isEditingSpeechDstText"
       :save-speech-dst-text="saveSpeechDstText"
