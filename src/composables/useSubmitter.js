@@ -27,6 +27,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterSubmittingId = ref('')
   const submitterRejectingId = ref('')
   const submitterPage = ref(1)
+  const submitterTotal = ref(0)
   const submitterAuthorTypeOpen = ref(false)
   const submitterAuthorTypeRows = ref([])
   const submitterAuthorTypeSaving = ref('')
@@ -35,13 +36,11 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   let submitterTimer = null
 
   const submitterFilteredVideos = computed(() => {
-    const rows = filterSubmitterVideos(submitterVideos.value)
-    const start = (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE
-    return rows.slice(start, start + SUBMITTER_PAGE_SIZE)
+    return submitterVideos.value
   })
 
   const submitterFilteredTotal = computed(() => {
-    return filterSubmitterVideos(submitterVideos.value).length
+    return submitterTotal.value
   })
 
   const submitterPageCount = computed(() => {
@@ -87,13 +86,25 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   async function loadSubmitterVideos(quiet = false) {
     if (!quiet) submitterLoading.value = true
     try {
+      const durationRange = submitterDurationRange()
       const payload = await submitterApi.listVideos({
         detail: submitterListDetail.value,
         batch: submitterFocusedBatch.value,
         uploader: submitterUploader.value,
         sort: submitterSort.value,
+        limit: SUBMITTER_PAGE_SIZE,
+        offset: (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE,
+        durationMin: durationRange.min,
+        durationMax: durationRange.max,
+        submissionStatus: submitterUploadFilter.value,
       })
       submitterVideos.value = payload?.items || []
+      submitterTotal.value = Number(payload?.total || 0)
+      if (submitterPage.value > submitterPageCount.value) {
+        submitterPage.value = submitterPageCount.value
+        await loadSubmitterVideos(quiet)
+        return
+      }
       warmSubmitterThumbnails()
       submitterError.value = ''
       updateSubmitterPolling()
@@ -133,6 +144,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       if (submitterUploadFilter.value !== 'all' && submitterSubmissionStatus(item) !== submitterUploadFilter.value) return false
       return matchesSubmitterDurationFilter(item)
     })
+  }
+
+  function submitterDurationRange() {
+    if (submitterDurationFilter.value === 'short') return { min: 0, max: 120 }
+    if (submitterDurationFilter.value === 'medium') return { min: 121, max: 1200 }
+    if (submitterDurationFilter.value === 'long') return { min: 1201, max: null }
+    return { min: null, max: null }
   }
 
   function submitterSubmissionStatus(item) {
@@ -184,9 +202,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         ydbi_submitted_at: new Date().toISOString(),
         ydbi_rejected_at: null,
       })
-      if (submitterPage.value > submitterPageCount.value) {
-        submitterPage.value = submitterPageCount.value
-      }
+      await loadSubmitterVideos(true)
       submitterMessage.value = `已提交到 YouBi 下载队列，type=${authorConfig.type}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
@@ -208,9 +224,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         ydbi_submission_status: 'rejected',
         ydbi_rejected_at: new Date().toISOString(),
       })
-      if (submitterPage.value > submitterPageCount.value) {
-        submitterPage.value = submitterPageCount.value
-      }
+      await loadSubmitterVideos(true)
       submitterMessage.value = '已标记为拒稿。'
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
@@ -341,8 +355,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorTypeError.value = ''
   }
 
-  function setSubmitterPage(page) {
+  async function setSubmitterPage(page) {
     submitterPage.value = Math.min(Math.max(1, page), submitterPageCount.value)
+    await loadSubmitterVideos()
   }
 
   async function createSubmitterVideo() {
@@ -506,6 +521,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterSubmittingId,
     submitterRejectingId,
     submitterPage,
+    submitterTotal,
     submitterAuthorTypeOpen,
     submitterAuthorTypeRows,
     submitterAuthorTypeSaving,
