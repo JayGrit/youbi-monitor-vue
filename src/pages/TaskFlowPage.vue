@@ -154,14 +154,6 @@ function demucsStage(flow) {
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
 
-        <RawDatabaseTables
-          v-if="selectedStageKey === SPEECH_STAGE_KEY"
-          :tables="speechTables()"
-          :table-columns="tableColumns"
-          :table-cell-text="tableCellText"
-          :table-cell-summary="tableCellSummary"
-        />
-
         <template v-else-if="selectedStage.key !== 'demucs'">
           <StageFieldTable :rows="fieldRows(selectedStage)" />
           <RawDatabaseTables

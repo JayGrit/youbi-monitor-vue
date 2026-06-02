@@ -27,8 +27,7 @@ const playingAudioKey = ref('')
 const audioByKey = new Map()
 
 const speechColumnLabels = {
-  source_text: '原文',
-  dst_text: '译文',
+  text: '文本',
   reference_wav_url: '原声',
   tts_wav_url: '配音',
   more_info: '更多',
@@ -93,17 +92,23 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flow-section">
-    <h4>Whisper / Translator / Speaker Joined Rows</h4>
+    <h4>Demucs / Whisper / Translator / Speaker Joined Rows</h4>
     <div class="raw-table-scroll">
       <table class="speech-table">
         <thead>
           <tr>
-            <th v-for="column in speechColumns()" :key="column">{{ speechColumnLabel(column) }}</th>
+            <th
+              v-for="column in speechColumns()"
+              :key="column"
+              :class="`speech-col-${column}`"
+            >
+              {{ speechColumnLabel(column) }}
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in speechRows()" :key="row.segment_id || row.item_index">
-            <td v-for="column in speechColumns()" :key="column">
+            <td v-for="column in speechColumns()" :key="column" :class="`speech-col-${column}`">
               <template v-if="!showSpeechColumn(row, column)"></template>
               <template v-else-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
                 <button
@@ -127,37 +132,37 @@ onBeforeUnmount(() => {
                   </template>
                 </dl>
               </details>
-              <div v-else-if="column === 'dst_text'" class="speech-text-cell speech-edit-cell">
-                <template v-if="isEditingSpeechDstText(row)">
-                  <textarea
-                    :value="speechEditDraft"
-                    class="speech-edit-textarea"
-                    rows="5"
-                    @input="emit('update:speechEditDraft', $event.target.value)"
-                  ></textarea>
-                  <div class="speech-edit-actions">
-                    <button type="button" :disabled="speechEditSaving" @click="saveSpeechDstText(row)">
-                      {{ speechEditSaving ? 'Saving' : 'Save' }}
+              <div v-else-if="column === 'text'" class="speech-text-cell speech-combined-text">
+                <p class="speech-source-text">{{ row.source_text || '-' }}</p>
+                <div class="speech-translation-text speech-edit-cell">
+                  <template v-if="isEditingSpeechDstText(row)">
+                    <textarea
+                      :value="speechEditDraft"
+                      class="speech-edit-textarea"
+                      rows="5"
+                      @input="emit('update:speechEditDraft', $event.target.value)"
+                    ></textarea>
+                    <div class="speech-edit-actions">
+                      <button type="button" :disabled="speechEditSaving" @click="saveSpeechDstText(row)">
+                        {{ speechEditSaving ? 'Saving' : 'Save' }}
+                      </button>
+                      <button type="button" :disabled="speechEditSaving" @click="cancelSpeechEdit">Cancel</button>
+                    </div>
+                    <p v-if="speechEditError" class="speech-edit-error">{{ speechEditError }}</p>
+                  </template>
+                  <template v-else>
+                    <button
+                      v-if="canEditSpeechDstText(row)"
+                      type="button"
+                      class="speech-edit-trigger"
+                      @click="beginSpeechEdit(row)"
+                    >
+                      {{ row.dst_text || '-' }}
                     </button>
-                    <button type="button" :disabled="speechEditSaving" @click="cancelSpeechEdit">Cancel</button>
-                  </div>
-                  <p v-if="speechEditError" class="speech-edit-error">{{ speechEditError }}</p>
-                </template>
-                <template v-else>
-                  <button
-                    v-if="canEditSpeechDstText(row)"
-                    type="button"
-                    class="speech-edit-trigger"
-                    @click="beginSpeechEdit(row)"
-                  >
-                    {{ row.dst_text || '-' }}
-                  </button>
-                  <p v-else>{{ row.dst_text || '-' }}</p>
-                </template>
+                    <p v-else>{{ row.dst_text || '-' }}</p>
+                  </template>
+                </div>
               </div>
-              <p v-else-if="column === 'source_text'" class="speech-text-cell">
-                {{ row[column] || '-' }}
-              </p>
               <span v-else-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>
               <details v-else>
                 <summary>{{ tableCellSummary(column, row[column]) }}</summary>

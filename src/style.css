@@ -2073,17 +2073,47 @@ h1 {
 }
 
 .speech-table {
-  min-width: 1120px;
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: collapse;
+  background: #ffffff;
 }
 
 .speech-table th,
 .speech-table td {
   max-width: none;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  color: #344156;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.speech-table th:nth-child(1),
-.speech-table th:nth-child(2) {
-  min-width: 320px;
+.speech-table th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  color: #536277;
+  font-weight: 720;
+}
+
+.speech-table .speech-col-text {
+  width: 100%;
+  min-width: 720px;
+}
+
+.speech-table .speech-col-reference_wav_url,
+.speech-table .speech-col-tts_wav_url {
+  width: 58px;
+  min-width: 58px;
+  text-align: center;
+}
+
+.speech-table .speech-col-more_info {
+  width: 220px;
+  min-width: 220px;
 }
 
 .raw-table th,
@@ -2154,13 +2184,33 @@ h1 {
 
 .speech-text-cell {
   margin: 0;
-  min-width: 320px;
-  max-width: 520px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   color: #243044;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.65;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.speech-combined-text {
+  display: grid;
+  gap: 10px;
+}
+
+.speech-source-text,
+.speech-translation-text p {
+  margin: 0;
+}
+
+.speech-source-text {
+  color: #172033;
+  font-weight: 620;
+}
+
+.speech-translation-text {
+  color: #334155;
 }
 
 .speech-edit-cell p {
@@ -2216,7 +2266,7 @@ h1 {
   border-radius: 6px;
   color: #243044;
   font: inherit;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.55;
   padding: 8px 10px;
 }
@@ -3465,17 +3515,15 @@ a.submitter-cell:hover {
   }
 
   .speech-table {
-    min-width: 860px;
+    min-width: 760px;
   }
 
-  .speech-table th:nth-child(1),
-  .speech-table th:nth-child(2) {
-    min-width: 240px;
+  .speech-table .speech-col-text {
+    min-width: 520px;
   }
 
   .speech-text-cell {
-    min-width: 240px;
-    max-width: 360px;
+    font-size: 14px;
   }
 
   .raw-table audio,
