@@ -59,11 +59,26 @@ const rawAlignedRows = computed(() => {
 const splitRows = computed(() => {
   const pysbdSegments = sortedRows(props.processing?.pysbdSegments, 'pysbdIndex')
   const splitSegments = sortedRows(props.processing?.splitSegments, 'splitIndex')
-  const groups = new Map()
+  const groups = new Map(pysbdSegments.map(row => [Number(row.id), []]))
+
   for (const split of splitSegments) {
-    const key = Number(split.pysbdSegmentId)
-    groups.set(key, [...(groups.get(key) || []), split])
+    let bestPysbd = null
+    let bestOverlap = 0
+    for (const pysbd of pysbdSegments) {
+      const overlap = overlapMs(pysbd, split)
+      if (overlap > bestOverlap) {
+        bestPysbd = pysbd
+        bestOverlap = overlap
+      }
+    }
+    if (!bestPysbd && split.pysbdSegmentId != null) {
+      bestPysbd = pysbdSegments.find(pysbd => Number(pysbd.id) === Number(split.pysbdSegmentId)) || null
+    }
+    if (bestPysbd) {
+      groups.get(Number(bestPysbd.id))?.push(split)
+    }
   }
+
   return pysbdSegments
     .map(pysbd => ({
       pysbd,
