@@ -22,6 +22,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const uploaderDiagnosticsLoading = ref(false)
   const uploaderDiagnosticsLoadingTask = ref('')
   const uploaderDiagnosticsError = ref('')
+  const whisperWordTimestampsByTask = ref({})
   let flowTimer = null
 
   const selectedStage = computed(() => {
@@ -74,6 +75,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return taskId ? uploaderDiagnosticsByTask.value[taskId] || [] : []
   })
 
+  const whisperWordTimestamps = computed(() => {
+    const taskId = selectedTaskFlow.value?.task?.id
+    return taskId ? whisperWordTimestampsByTask.value[taskId] || [] : []
+  })
+
   watch(
     () => [selectedStageKey.value, selectedTaskFlow.value?.task?.id],
     ([stageKey, taskId]) => {
@@ -106,7 +112,15 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       flowLoading.value = true
     }
     try {
-      selectedTaskFlow.value = await monitorApi.loadTaskFlow(taskId)
+      const [flow, words] = await Promise.all([
+        monitorApi.loadTaskFlow(taskId),
+        monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []),
+      ])
+      selectedTaskFlow.value = flow
+      whisperWordTimestampsByTask.value = {
+        ...whisperWordTimestampsByTask.value,
+        [taskId]: Array.isArray(words) ? words : [],
+      }
       flowError.value = ''
     } catch (err) {
       flowError.value = err instanceof Error ? err.message : String(err)
@@ -493,6 +507,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     uploaderDiagnostics,
     uploaderDiagnosticsLoading,
     uploaderDiagnosticsError,
+    whisperWordTimestamps,
     selectedStage,
     flowTabs,
     openTaskFlow,

@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const props = defineProps({
   media: { type: Array, default: () => [] },
+  words: { type: Array, default: () => [] },
   logAudioEvent: { type: Function, required: true },
 })
 
@@ -10,6 +11,7 @@ const waveformByUrl = ref({})
 const playbackByKey = ref({})
 const waveformCanvas = ref(null)
 const audioElements = new Map()
+const wordElements = new Map()
 const resizeObserver = typeof ResizeObserver === 'undefined'
   ? null
   : new ResizeObserver(entries => {
@@ -24,6 +26,28 @@ const audioItems = computed(() => [
   { key: 'vocals', title: '人声音频', shortTitle: '人声', asset: findAsset('vocals') },
   { key: 'bgm', title: '背景声音频', shortTitle: '背景声', asset: findAsset('bgm') },
 ])
+
+const transcriptWords = computed(() => props.words
+  .map((word, index) => ({
+    key: `${word.segmentIndex ?? word.segment_index ?? 0}-${word.wordIndex ?? word.word_index ?? index}`,
+    text: String(word.text || '').trim(),
+    startTime: Number(word.startTime ?? word.start_time ?? 0),
+    endTime: Number(word.endTime ?? word.end_time ?? 0),
+  }))
+  .filter(word => word.text && Number.isFinite(word.startTime) && Number.isFinite(word.endTime))
+  .sort((left, right) => left.startTime - right.startTime || left.endTime - right.endTime))
+
+const activeWordIndex = computed(() => {
+  const currentMs = Number(playbackByKey.value.vocals?.currentTime || 0) * 1000
+  if (!currentMs || !transcriptWords.value.length) return -1
+  return transcriptWords.value.findIndex(word => currentMs >= word.startTime && currentMs <= word.endTime)
+})
+
+watch(activeWordIndex, async index => {
+  if (index < 0) return
+  await nextTick()
+  wordElements.get(index)?.scrollIntoView({ block: 'nearest', inline: 'center' })
+})
 
 watch(
   () => props.media.map(asset => asset.url).join('|'),
@@ -69,6 +93,21 @@ function setAudioRef(key, element) {
   } else {
     audioElements.delete(key)
   }
+}
+
+function setWordRef(index, element) {
+  if (element) {
+    wordElements.set(index, element)
+  } else {
+    wordElements.delete(index)
+  }
+}
+
+function seekVocals(word) {
+  const audio = audioElements.get('vocals')
+  if (!audio || !Number.isFinite(word.startTime)) return
+  audio.currentTime = Math.max(0, word.startTime / 1000)
+  updatePlayback('vocals', { target: audio })
 }
 
 async function loadWaveform(asset) {
@@ -272,6 +311,19 @@ function hexToRgba(hex, alpha) {
     </div>
 
     <canvas class="demucs-waveform" :ref="setCanvasRef"></canvas>
+
+    <div v-if="transcriptWords.length" class="demucs-transcript">
+      <button
+        v-for="(word, index) in transcriptWords"
+        :key="word.key"
+        :ref="element => setWordRef(index, element)"
+        type="button"
+        :class="['demucs-transcript-word', index === activeWordIndex ? 'active' : '']"
+        @click="seekVocals(word)"
+      >
+        {{ word.text }}
+      </button>
+    </div>
 
     <div class="demucs-waveform-status">
       <template v-for="item in audioItems" :key="item.key">

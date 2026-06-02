@@ -24,6 +24,7 @@ defineProps({
   uploaderDiagnostics: { type: Array, default: () => [] },
   uploaderDiagnosticsLoading: { type: Boolean, default: false },
   uploaderDiagnosticsError: { type: String, default: '' },
+  whisperWordTimestamps: { type: Array, default: () => [] },
   flowTaskTitle: { type: Function, required: true },
   flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
@@ -118,6 +119,7 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
         <DemucsAudioPanel
           v-if="selectedStage.key === 'demucs'"
           :media="demucsAudioMedia(selectedStage)"
+          :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
         />
 

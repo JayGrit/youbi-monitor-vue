@@ -1859,6 +1859,38 @@ h1 {
   background: transparent;
 }
 
+.demucs-transcript {
+  max-height: 168px;
+  overflow: auto;
+  padding: 10px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 2;
+}
+
+.demucs-transcript-word {
+  margin: 0 2px 4px 0;
+  padding: 1px 3px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.demucs-transcript-word:hover {
+  background: #eef2f7;
+}
+
+.demucs-transcript-word.active {
+  background: #111827;
+  color: #ffffff;
+}
+
 .demucs-waveform-status {
   min-height: 18px;
   display: flex;
