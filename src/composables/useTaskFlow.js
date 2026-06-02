@@ -44,7 +44,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const running = speechStages.find(stage => stage.status === 'running')
     const active = failed || running || speechStages[speechStages.length - 1]
     return [
-      ...nonSpeechStages.filter(stage => stage.key === 'downloader' || stage.key === 'demucs'),
+      ...nonSpeechStages.filter(stage => stage.key === 'downloader'),
       {
         ...active,
         key: SPEECH_STAGE_KEY,
@@ -92,7 +92,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   async function openTaskFlow(task, stageKey = 'downloader') {
     if (!task?.taskId) return
     flowPageOpen.value = true
-    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
+    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) || stageKey === 'demucs' ? SPEECH_STAGE_KEY : stageKey
     selectedTaskFlow.value = null
     cancelSpeechEdit()
     await loadTaskFlow(task.taskId)
@@ -255,6 +255,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         end_time: segment.end_time ?? asr.end_time,
         asr_text: asr.text || '',
         src_text: segment.src_text || '',
+        source_text: segment.src_text || asr.text || '',
         dst_text: segment.dst_text || '',
         speaker: segment.speaker || asr.speaker || '',
         status: segment.status || '',
@@ -303,9 +304,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   function speechColumns() {
     return [
-      'item_index',
-      'asr_text',
-      'src_text',
+      'source_text',
       'dst_text',
       'reference_wav_url',
       'tts_wav_url',
@@ -314,9 +313,6 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function showSpeechColumn(row, column) {
-    if (column === 'asr_text') {
-      return !sameText(row.asr_text, row.src_text)
-    }
     return true
   }
 

@@ -56,6 +56,10 @@ defineProps({
 })
 
 const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
+
+function demucsStage(flow) {
+  return flow?.stages?.find(stage => stage.key === 'demucs') || null
+}
 </script>
 
 <template>
@@ -117,14 +121,14 @@ const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
         />
 
         <DemucsAudioPanel
-          v-if="selectedStage.key === 'demucs'"
-          :media="demucsAudioMedia(selectedStage)"
+          v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          :media="demucsAudioMedia(demucsStage(selectedTaskFlow))"
           :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
         />
 
         <StageMediaGrid
-          v-else-if="stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />

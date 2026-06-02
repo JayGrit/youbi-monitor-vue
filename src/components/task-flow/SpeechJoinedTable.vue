@@ -1,7 +1,8 @@
 <script setup>
+import { onBeforeUnmount, ref } from 'vue'
 import { formatJson, isLongValue } from '../../utils/jsonDisplay'
 
-defineProps({
+const props = defineProps({
   speechEditDraft: { type: String, default: '' },
   speechEditSaving: { type: Boolean, default: false },
   speechEditError: { type: String, default: '' },
@@ -21,6 +22,73 @@ defineProps({
 })
 
 const emit = defineEmits(['update:speechEditDraft'])
+
+const playingAudioKey = ref('')
+const audioByKey = new Map()
+
+const speechColumnLabels = {
+  source_text: '原文',
+  dst_text: '译文',
+  reference_wav_url: '原声',
+  tts_wav_url: '配音',
+  more_info: '更多',
+}
+
+function speechColumnLabel(column) {
+  return speechColumnLabels[column] || column
+}
+
+function speechAudioKey(row, column) {
+  return `${row.segment_id || row.item_index || ''}:${column}`
+}
+
+function speechAudioLabel(row, column) {
+  const key = speechAudioKey(row, column)
+  const name = speechColumnLabel(column)
+  return playingAudioKey.value === key ? `暂停${name}` : `播放${name}`
+}
+
+function toggleSpeechAudio(row, column) {
+  const asset = props.speechAudioAsset(row, column)
+  if (!asset) return
+  const key = speechAudioKey(row, column)
+  let audio = audioByKey.get(key)
+  if (!audio) {
+    audio = new Audio(asset.url)
+    audio.preload = 'none'
+    audio.addEventListener('play', event => props.logAudioEvent('play', asset, event))
+    audio.addEventListener('playing', event => props.logAudioEvent('playing', asset, event))
+    audio.addEventListener('waiting', event => props.logAudioEvent('waiting', asset, event))
+    audio.addEventListener('error', event => props.logAudioEvent('error', asset, event))
+    audio.addEventListener('pause', () => {
+      if (playingAudioKey.value === key) playingAudioKey.value = ''
+    })
+    audio.addEventListener('ended', () => {
+      if (playingAudioKey.value === key) playingAudioKey.value = ''
+    })
+    audioByKey.set(key, audio)
+  }
+  if (playingAudioKey.value === key && !audio.paused) {
+    audio.pause()
+    return
+  }
+  for (const [otherKey, otherAudio] of audioByKey.entries()) {
+    if (otherKey !== key && !otherAudio.paused) otherAudio.pause()
+  }
+  playingAudioKey.value = key
+  audio.play().catch(error => {
+    playingAudioKey.value = ''
+    console.error('[monitor-audio] play failed', { name: asset.name, url: asset.url, error })
+  })
+}
+
+onBeforeUnmount(() => {
+  for (const audio of audioByKey.values()) {
+    audio.pause()
+    audio.src = ''
+  }
+  audioByKey.clear()
+})
 </script>
 
 <template>
@@ -30,29 +98,28 @@ const emit = defineEmits(['update:speechEditDraft'])
       <table class="speech-table">
         <thead>
           <tr>
-            <th v-for="column in speechColumns()" :key="column">{{ column }}</th>
+            <th v-for="column in speechColumns()" :key="column">{{ speechColumnLabel(column) }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in speechRows()" :key="row.item_index">
+          <tr v-for="row in speechRows()" :key="row.segment_id || row.item_index">
             <td v-for="column in speechColumns()" :key="column">
               <template v-if="!showSpeechColumn(row, column)"></template>
               <template v-else-if="column === 'reference_wav_url' || column === 'tts_wav_url'">
-                <audio
+                <button
                   v-if="speechAudioAsset(row, column)"
-                  :src="speechAudioAsset(row, column).url"
-                  controls
-                  preload="none"
-                  @loadstart="event => logAudioEvent('loadstart', speechAudioAsset(row, column), event)"
-                  @play="event => logAudioEvent('play', speechAudioAsset(row, column), event)"
-                  @playing="event => logAudioEvent('playing', speechAudioAsset(row, column), event)"
-                  @waiting="event => logAudioEvent('waiting', speechAudioAsset(row, column), event)"
-                  @error="event => logAudioEvent('error', speechAudioAsset(row, column), event)"
-                ></audio>
+                  type="button"
+                  :class="['speech-audio-button', { playing: playingAudioKey === speechAudioKey(row, column) }]"
+                  :aria-label="speechAudioLabel(row, column)"
+                  :title="speechAudioLabel(row, column)"
+                  @click="toggleSpeechAudio(row, column)"
+                >
+                  <span></span>
+                </button>
                 <span v-else>-</span>
               </template>
               <details v-else-if="column === 'more_info'" class="speech-more">
-                <summary>More</summary>
+                <summary>更多</summary>
                 <dl>
                   <template v-for="[name, value] in speechMoreRows(row)" :key="name">
                     <dt>{{ name }}</dt>
@@ -77,18 +144,18 @@ const emit = defineEmits(['update:speechEditDraft'])
                   <p v-if="speechEditError" class="speech-edit-error">{{ speechEditError }}</p>
                 </template>
                 <template v-else>
-                  <p>{{ row.dst_text || '-' }}</p>
                   <button
                     v-if="canEditSpeechDstText(row)"
                     type="button"
-                    class="speech-edit-button"
+                    class="speech-edit-trigger"
                     @click="beginSpeechEdit(row)"
                   >
-                    Edit
+                    {{ row.dst_text || '-' }}
                   </button>
+                  <p v-else>{{ row.dst_text || '-' }}</p>
                 </template>
               </div>
-              <p v-else-if="column === 'asr_text' || column === 'src_text'" class="speech-text-cell">
+              <p v-else-if="column === 'source_text'" class="speech-text-cell">
                 {{ row[column] || '-' }}
               </p>
               <span v-else-if="!isLongValue(row[column])">{{ tableCellText(column, row[column]) }}</span>

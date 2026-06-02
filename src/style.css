@@ -2073,7 +2073,7 @@ h1 {
 }
 
 .speech-table {
-  min-width: 1680px;
+  min-width: 1120px;
 }
 
 .speech-table th,
@@ -2081,9 +2081,8 @@ h1 {
   max-width: none;
 }
 
-.speech-table th:nth-child(2),
-.speech-table th:nth-child(3),
-.speech-table th:nth-child(4) {
+.speech-table th:nth-child(1),
+.speech-table th:nth-child(2) {
   min-width: 320px;
 }
 
@@ -2168,7 +2167,6 @@ h1 {
   margin: 0;
 }
 
-.speech-edit-button,
 .speech-edit-actions button {
   min-height: 28px;
   border: 1px solid #cfd8e3;
@@ -2182,11 +2180,25 @@ h1 {
   padding: 0 10px;
 }
 
-.speech-edit-button {
-  margin-top: 8px;
+.speech-edit-trigger {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: text;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.speech-edit-button:hover,
+.speech-edit-trigger:hover {
+  color: #111827;
+}
+
 .speech-edit-actions button:hover:not(:disabled) {
   background: #eef3f8;
 }
@@ -2207,6 +2219,41 @@ h1 {
   font-size: 12px;
   line-height: 1.55;
   padding: 8px 10px;
+}
+
+.speech-audio-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfd8e3;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #243044;
+  cursor: pointer;
+}
+
+.speech-audio-button:hover {
+  background: #eef3f8;
+}
+
+.speech-audio-button span {
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid currentColor;
+}
+
+.speech-audio-button.playing span {
+  width: 10px;
+  height: 12px;
+  margin-left: 0;
+  border: 0;
+  border-left: 3px solid currentColor;
+  border-right: 3px solid currentColor;
 }
 
 .submitter-page {
@@ -3418,12 +3465,11 @@ a.submitter-cell:hover {
   }
 
   .speech-table {
-    min-width: 1160px;
+    min-width: 860px;
   }
 
-  .speech-table th:nth-child(2),
-  .speech-table th:nth-child(3),
-  .speech-table th:nth-child(4) {
+  .speech-table th:nth-child(1),
+  .speech-table th:nth-child(2) {
     min-width: 240px;
   }
 
