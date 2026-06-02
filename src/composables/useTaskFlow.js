@@ -211,7 +211,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function hiddenColumn(column) {
-    return ['created_at', 'updated_at', 'words_json'].includes(column)
+    return ['created_at', 'updated_at'].includes(column)
   }
 
   function columnRank(column) {
@@ -239,9 +239,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const whisper = stages.find(stage => stage.key === 'whisper')
     const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
     const asrSegments = tableRows(whisper, 'yd_asr_segment')
-    const fixedAsr = asrSegments.filter(row => row.segment_type === 'fixed')
-    const rawAsr = asrSegments.filter(row => row.segment_type === 'raw')
-    const asrByIndex = rowsByIndex(fixedAsr.length ? fixedAsr : rawAsr)
+    const asrByIndex = rowsByIndex(asrSegments)
     const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
     const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
       .map(index => Number(index))
