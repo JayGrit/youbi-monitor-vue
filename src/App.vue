@@ -144,6 +144,7 @@ const {
   uploaderDiagnosticsLoading,
   uploaderDiagnosticsError,
   whisperWordTimestamps,
+  whisperProcessing,
   selectedStage,
   flowTabs,
   openTaskFlow,
@@ -456,6 +457,7 @@ function audioErrorMessage(code) {
       :uploader-diagnostics-loading="uploaderDiagnosticsLoading"
       :uploader-diagnostics-error="uploaderDiagnosticsError"
       :whisper-word-timestamps="whisperWordTimestamps"
+      :whisper-processing="whisperProcessing"
       :flow-task-title="flowTaskTitle"
       :flow-duration-seconds="flowDurationSeconds"
       :refresh-task-flow="refreshTaskFlow"

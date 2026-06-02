@@ -43,6 +43,10 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/whisper-word-timestamps`)
     },
 
+    loadWhisperProcessing(taskId) {
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/whisper-processing`)
+    },
+
     loadUploaderDiagnostics(taskId) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/uploader-diagnostics`)
     },

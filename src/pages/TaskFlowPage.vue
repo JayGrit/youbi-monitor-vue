@@ -8,6 +8,7 @@ import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
 import UploaderDiagnostics from '../components/task-flow/UploaderDiagnostics.vue'
+import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
 import { formatDuration } from '../utils/format'
 
@@ -25,6 +26,7 @@ defineProps({
   uploaderDiagnosticsLoading: { type: Boolean, default: false },
   uploaderDiagnosticsError: { type: String, default: '' },
   whisperWordTimestamps: { type: Array, default: () => [] },
+  whisperProcessing: { type: Object, default: null },
   flowTaskTitle: { type: Function, required: true },
   flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
@@ -152,6 +154,11 @@ function demucsStage(flow) {
           :table-cell-text="tableCellText"
           :table-cell-summary="tableCellSummary"
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
+        />
+
+        <WhisperProcessingPanel
+          v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          :processing="whisperProcessing"
         />
 
         <template v-else-if="selectedStage.key !== 'demucs'">

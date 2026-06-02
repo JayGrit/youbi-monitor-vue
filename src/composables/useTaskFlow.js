@@ -23,6 +23,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const uploaderDiagnosticsLoadingTask = ref('')
   const uploaderDiagnosticsError = ref('')
   const whisperWordTimestampsByTask = ref({})
+  const whisperProcessingByTask = ref({})
   let flowTimer = null
 
   const selectedStage = computed(() => {
@@ -80,6 +81,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return taskId ? whisperWordTimestampsByTask.value[taskId] || [] : []
   })
 
+  const whisperProcessing = computed(() => {
+    const taskId = selectedTaskFlow.value?.task?.id
+    return taskId ? whisperProcessingByTask.value[taskId] || null : null
+  })
+
   watch(
     () => [selectedStageKey.value, selectedTaskFlow.value?.task?.id],
     ([stageKey, taskId]) => {
@@ -112,14 +118,19 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       flowLoading.value = true
     }
     try {
-      const [flow, words] = await Promise.all([
+      const [flow, words, processing] = await Promise.all([
         monitorApi.loadTaskFlow(taskId),
         monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []),
+        monitorApi.loadWhisperProcessing(taskId).catch(() => null),
       ])
       selectedTaskFlow.value = flow
       whisperWordTimestampsByTask.value = {
         ...whisperWordTimestampsByTask.value,
         [taskId]: Array.isArray(words) ? words : [],
+      }
+      whisperProcessingByTask.value = {
+        ...whisperProcessingByTask.value,
+        [taskId]: processing && typeof processing === 'object' ? processing : null,
       }
       flowError.value = ''
     } catch (err) {
@@ -499,6 +510,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     uploaderDiagnosticsLoading,
     uploaderDiagnosticsError,
     whisperWordTimestamps,
+    whisperProcessing,
     selectedStage,
     flowTabs,
     openTaskFlow,
