@@ -2074,7 +2074,7 @@ h1 {
 
 .speech-table {
   width: 100%;
-  min-width: 1040px;
+  min-width: 900px;
   border-collapse: collapse;
   background: #ffffff;
 }
@@ -2101,14 +2101,7 @@ h1 {
 
 .speech-table .speech-col-text {
   width: 100%;
-  min-width: 720px;
-}
-
-.speech-table .speech-col-reference_wav_url,
-.speech-table .speech-col-tts_wav_url {
-  width: 58px;
-  min-width: 58px;
-  text-align: center;
+  min-width: 680px;
 }
 
 .speech-table .speech-col-more_info {
@@ -2199,6 +2192,19 @@ h1 {
   gap: 10px;
 }
 
+.speech-text-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.speech-audio-placeholder {
+  width: 34px;
+  height: 34px;
+}
+
 .speech-source-text,
 .speech-translation-text p {
   margin: 0;
@@ -2211,6 +2217,7 @@ h1 {
 
 .speech-translation-text {
   color: #334155;
+  min-width: 0;
 }
 
 .speech-edit-cell p {
@@ -2258,17 +2265,16 @@ h1 {
   opacity: 0.6;
 }
 
-.speech-edit-textarea {
+.speech-edit-input {
   width: 100%;
-  min-height: 116px;
-  resize: vertical;
+  min-height: 34px;
   border: 1px solid #cfd8e3;
   border-radius: 6px;
   color: #243044;
   font: inherit;
   font-size: 15px;
-  line-height: 1.55;
-  padding: 8px 10px;
+  line-height: 1.35;
+  padding: 0 10px;
 }
 
 .speech-audio-button {

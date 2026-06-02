@@ -305,8 +305,6 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   function speechColumns() {
     return [
       'text',
-      'reference_wav_url',
-      'tts_wav_url',
       'more_info',
     ]
   }
