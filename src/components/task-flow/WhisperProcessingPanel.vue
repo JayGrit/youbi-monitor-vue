@@ -92,7 +92,7 @@ const splitRows = computed(() => {
                   v-for="(segment, index) in row.children"
                   :key="segment.id"
                   class="segment-chip"
-                  :class="index % 2 === 0 ? 'tone-red' : 'tone-green'"
+                  :class="index % 2 === 0 ? 'tone-red' : 'tone-blue'"
                   :title="`Aligned #${segment.alignedIndex} · ${rangeLabel(segment)}`"
                 >
                   {{ segment.text }}
@@ -123,7 +123,7 @@ const splitRows = computed(() => {
                   v-for="(segment, index) in row.children"
                   :key="segment.id"
                   class="segment-chip"
-                  :class="index % 2 === 0 ? 'tone-red' : 'tone-green'"
+                  :class="index % 2 === 0 ? 'tone-red' : 'tone-blue'"
                   :title="`Split #${segment.splitIndex} · ${rangeLabel(segment)} · ${segment.splitReason || ''}`"
                 >
                   {{ segment.text }}
@@ -223,9 +223,9 @@ const splitRows = computed(() => {
   background: #fff1f0;
 }
 
-.tone-green {
-  color: #067647;
-  background: #ecfdf3;
+.tone-blue {
+  color: #175cd3;
+  background: #eff8ff;
 }
 
 .segment-empty {
