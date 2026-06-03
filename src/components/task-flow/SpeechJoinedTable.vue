@@ -170,9 +170,17 @@ function rowKey(row) {
 
 function rowTone(row) {
   if (row?.speech_view === 'translator-chunk') {
-    return Number(row.chunk_index || 0) % 2 === 0 ? 'blue' : 'red'
+    let chunkIndex = Number(row.chunk_index || 0)
+    if (row.row_role === 'reference_before') chunkIndex -= 1
+    if (row.row_role === 'reference_after') chunkIndex += 1
+    return chunkIndex % 2 === 0 ? 'blue' : 'red'
   }
   return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
+}
+
+function rowReferenceEdgeTone(row) {
+  if (!row?.is_reference || row?.speech_view !== 'translator-chunk') return ''
+  return Number(row.chunk_index || 0) % 2 === 0 ? 'blue' : 'red'
 }
 
 function rowSplitBadge(row) {
@@ -427,6 +435,8 @@ onBeforeUnmount(() => {
                 'speech-reference-row': row.is_reference,
                 'speech-reference-before': row.row_role === 'reference_before',
                 'speech-reference-after': row.row_role === 'reference_after',
+                'speech-reference-edge-blue': rowReferenceEdgeTone(row) === 'blue',
+                'speech-reference-edge-red': rowReferenceEdgeTone(row) === 'red',
                 'speech-translator-chunk-row': row.speech_view === 'translator-chunk',
               },
             ]"

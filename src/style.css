@@ -2412,7 +2412,7 @@ h1 {
   background: #eff8ff;
 }
 
-.speech-table tr.speech-reference-row.tone-blue td::before {
+.speech-table tr.speech-reference-edge-blue td::before {
   background: #bfdbfe;
 }
 
@@ -2420,7 +2420,7 @@ h1 {
   background: #fff1f0;
 }
 
-.speech-table tr.speech-reference-row.tone-red td::before {
+.speech-table tr.speech-reference-edge-red td::before {
   background: #fecdd3;
 }
 
