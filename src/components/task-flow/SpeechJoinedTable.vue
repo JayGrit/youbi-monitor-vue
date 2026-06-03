@@ -22,6 +22,7 @@ const props = defineProps({
   words: { type: Array, default: () => [] },
   processing: { type: Object, default: null },
   vocalsPlayback: { type: Object, default: () => ({ currentMs: 0, playing: false }) },
+  seekVocalsPlayback: { type: Function, default: null },
 })
 
 const emit = defineEmits(['update:speechEditDraft'])
@@ -165,6 +166,15 @@ function hasGapBefore(row) {
 
 function rowBlockSummary(row) {
   return blockSummaryByKey.value[rowKey(row)] || ''
+}
+
+function canSeekVocals(row) {
+  return Boolean(props.seekVocalsPlayback && Number.isFinite(strictRowTime(row, 'start_time')))
+}
+
+function seekRowVocals(row) {
+  if (!canSeekVocals(row)) return
+  props.seekVocalsPlayback(strictRowTime(row, 'start_time'))
 }
 
 function createBlockSummary() {
@@ -406,7 +416,13 @@ onBeforeUnmount(() => {
                     <span></span>
                   </button>
                   <span v-else class="speech-audio-placeholder"></span>
-                  <p class="speech-source-text">
+                  <button
+                    type="button"
+                    :class="['speech-source-text', { clickable: canSeekVocals(row) }]"
+                    :disabled="!canSeekVocals(row)"
+                    title="跳转到人声音频进度"
+                    @click="seekRowVocals(row)"
+                  >
                     <template v-if="rowWords(row).length">
                       <span
                         v-for="word in rowWords(row)"
@@ -417,7 +433,7 @@ onBeforeUnmount(() => {
                       </span>
                     </template>
                     <template v-else>{{ row.source_text || '-' }}</template>
-                  </p>
+                  </button>
                 </div>
                 <div class="speech-text-line">
                   <button

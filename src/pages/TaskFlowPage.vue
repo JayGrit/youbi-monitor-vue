@@ -60,9 +60,14 @@ defineProps({
 
 const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
 const vocalsPlayback = ref({ currentMs: 0, playing: false })
+const demucsAudioPanel = ref(null)
 
 function demucsStage(flow) {
   return flow?.stages?.find(stage => stage.key === 'demucs') || null
+}
+
+function seekVocalsPlayback(ms) {
+  demucsAudioPanel.value?.seekVocals(ms)
 }
 </script>
 
@@ -126,6 +131,7 @@ function demucsStage(flow) {
 
         <DemucsAudioPanel
           v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          ref="demucsAudioPanel"
           :media="demucsAudioMedia(demucsStage(selectedTaskFlow))"
           :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
@@ -159,6 +165,7 @@ function demucsStage(flow) {
           :words="whisperWordTimestamps"
           :processing="whisperProcessing"
           :vocals-playback="vocalsPlayback"
+          :seek-vocals-playback="seekVocalsPlayback"
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
 

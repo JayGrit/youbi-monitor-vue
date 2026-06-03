@@ -257,6 +257,15 @@ function stopPlaybackTicker() {
   animationFrame = 0
 }
 
+function seekVocals(ms) {
+  const audio = audioElements.get('vocals')
+  const targetSeconds = Number(ms || 0) / 1000
+  if (!audio || !Number.isFinite(targetSeconds) || targetSeconds < 0) return
+  const duration = Number.isFinite(audio.duration) ? audio.duration : 0
+  audio.currentTime = duration > 0 ? Math.min(targetSeconds, duration) : targetSeconds
+  updatePlayback('vocals', { target: audio })
+}
+
 function hexToRgba(hex, alpha) {
   const value = hex.replace('#', '')
   const number = Number.parseInt(value, 16)
@@ -265,6 +274,10 @@ function hexToRgba(hex, alpha) {
   const blue = number & 255
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`
 }
+
+defineExpose({
+  seekVocals,
+})
 </script>
 
 <template>

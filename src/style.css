@@ -2289,8 +2289,30 @@ h1 {
 }
 
 .speech-source-text {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: #172033;
+  cursor: default;
+  font: inherit;
   font-weight: 620;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.speech-source-text.clickable {
+  cursor: pointer;
+}
+
+.speech-source-text.clickable:hover {
+  color: #1d4ed8;
+}
+
+.speech-source-text:disabled {
+  color: #172033;
 }
 
 .speech-source-word {
