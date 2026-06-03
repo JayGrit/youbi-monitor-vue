@@ -128,18 +128,18 @@ const blockSummaryByKey = computed(() => {
   return summaries
 })
 
-const translatorChunkLastRowKeyByChunk = computed(() => {
-  const lastRows = {}
+const translatorChunkFirstRowKeyByChunk = computed(() => {
+  const firstRows = {}
   for (const row of rows.value) {
     if (row?.speech_view !== 'translator-chunk') continue
     const chunkIndex = row.chunk_index ?? ''
-    const current = lastRows[chunkIndex]
-    if (!current || Number(row.row_order ?? 0) >= Number(current.row_order ?? 0)) {
-      lastRows[chunkIndex] = row
+    const current = firstRows[chunkIndex]
+    if (!current || Number(row.row_order ?? 0) < Number(current.row_order ?? 0)) {
+      firstRows[chunkIndex] = row
     }
   }
   return Object.fromEntries(
-    Object.entries(lastRows).map(([chunkIndex, row]) => [chunkIndex, rowKey(row)])
+    Object.entries(firstRows).map(([chunkIndex, row]) => [chunkIndex, rowKey(row)])
   )
 })
 
@@ -186,7 +186,7 @@ function hasGapBefore(row) {
 
 function rowBlockSummary(row) {
   if (row?.speech_view === 'translator-chunk') {
-    if (translatorChunkLastRowKeyByChunk.value[row.chunk_index ?? ''] !== rowKey(row)) return ''
+    if (translatorChunkFirstRowKeyByChunk.value[row.chunk_index ?? ''] !== rowKey(row)) return ''
     return `normal len ${row.normal_text_len ?? 0} / ref len ${row.reference_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
   }
   return blockSummaryByKey.value[rowKey(row)] || ''

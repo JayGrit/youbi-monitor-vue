@@ -2293,7 +2293,7 @@ h1 {
 .speech-block-summary {
   position: absolute;
   right: -7px;
-  bottom: -7px;
+  top: -7px;
   z-index: 1;
   border: 1px solid rgb(15 23 42 / 0.14);
   border-radius: 4px;
@@ -2381,7 +2381,16 @@ h1 {
 }
 
 .speech-table tr.speech-reference-row td {
+  position: relative;
   color: #5f2f12;
+}
+
+.speech-table tr.speech-reference-row td::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(10%, 88px);
+  pointer-events: none;
 }
 
 .speech-table tr.speech-reference-row .speech-source-text,
@@ -2391,11 +2400,19 @@ h1 {
 }
 
 .speech-table tr.speech-reference-row.tone-blue td {
-  background: #dbeafe;
+  background: #eff8ff;
+}
+
+.speech-table tr.speech-reference-row.tone-blue td::before {
+  background: #bfdbfe;
 }
 
 .speech-table tr.speech-reference-row.tone-red td {
-  background: #ffe4e6;
+  background: #fff1f0;
+}
+
+.speech-table tr.speech-reference-row.tone-red td::before {
+  background: #fecdd3;
 }
 
 .speech-table tr.speech-reference-row .speech-split-badge,
