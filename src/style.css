@@ -2381,21 +2381,28 @@ h1 {
 }
 
 .speech-table tr.speech-reference-row td {
-  background: #ecfdf5;
-  color: #166534;
+  color: #5f2f12;
 }
 
 .speech-table tr.speech-reference-row .speech-source-text,
 .speech-table tr.speech-reference-row .speech-source-text:disabled {
-  color: #166534;
+  color: #5f2f12;
   font-style: italic;
+}
+
+.speech-table tr.speech-reference-row.tone-blue td {
+  background: #dbeafe;
+}
+
+.speech-table tr.speech-reference-row.tone-red td {
+  background: #ffe4e6;
 }
 
 .speech-table tr.speech-reference-row .speech-split-badge,
 .speech-table tr.speech-reference-row .speech-block-summary {
-  border-color: rgb(22 101 52 / 0.18);
-  background: rgb(240 253 244 / 0.94);
-  color: #166534;
+  border-color: rgb(95 47 18 / 0.18);
+  background: rgb(255 255 255 / 0.9);
+  color: #5f2f12;
 }
 
 .speech-translation-text {

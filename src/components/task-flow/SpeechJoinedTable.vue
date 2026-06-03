@@ -128,6 +128,21 @@ const blockSummaryByKey = computed(() => {
   return summaries
 })
 
+const translatorChunkLastRowKeyByChunk = computed(() => {
+  const lastRows = {}
+  for (const row of rows.value) {
+    if (row?.speech_view !== 'translator-chunk') continue
+    const chunkIndex = row.chunk_index ?? ''
+    const current = lastRows[chunkIndex]
+    if (!current || Number(row.row_order ?? 0) >= Number(current.row_order ?? 0)) {
+      lastRows[chunkIndex] = row
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(lastRows).map(([chunkIndex, row]) => [chunkIndex, rowKey(row)])
+  )
+})
+
 const speechColumnLabels = {
   text: '文本',
   reference_wav_url: '原声',
@@ -154,17 +169,14 @@ function rowKey(row) {
 }
 
 function rowTone(row) {
-  if (row?.speech_view === 'translator-chunk') return ''
+  if (row?.speech_view === 'translator-chunk') {
+    return Number(row.chunk_index || 0) % 2 === 0 ? 'blue' : 'red'
+  }
   return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
 }
 
 function rowSplitBadge(row) {
-  if (row?.speech_view === 'translator-chunk') {
-    const badges = [`chunk ${row.chunk_index ?? '-'}`]
-    if (row.row_role && row.row_role !== 'normal') badges.push(row.row_role)
-    if (row.normal_text_len != null) badges.push(`len ${row.normal_text_len}`)
-    return badges
-  }
+  if (row?.speech_view === 'translator-chunk') return []
   return splitRowInfoByKey.value[rowKey(row)]?.badges || []
 }
 
@@ -174,7 +186,8 @@ function hasGapBefore(row) {
 
 function rowBlockSummary(row) {
   if (row?.speech_view === 'translator-chunk') {
-    return `normal ${row.normal_text_len ?? 0} / ref ${row.reference_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
+    if (translatorChunkLastRowKeyByChunk.value[row.chunk_index ?? ''] !== rowKey(row)) return ''
+    return `normal len ${row.normal_text_len ?? 0} / ref len ${row.reference_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
   }
   return blockSummaryByKey.value[rowKey(row)] || ''
 }
