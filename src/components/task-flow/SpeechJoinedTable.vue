@@ -105,6 +105,27 @@ const gapRowByKey = computed(() => {
   return gaps
 })
 
+const gapLineCount = computed(() => Object.keys(gapRowByKey.value).length)
+
+const blockSummaryByKey = computed(() => {
+  if (gapThresholdMs.value === null) return {}
+  const summaries = {}
+  let block = createBlockSummary()
+  let previousRow = null
+  for (const row of rows.value) {
+    if (previousRow && hasGapBefore(row)) {
+      summaries[rowKey(previousRow)] = formatBlockSummary(block)
+      block = createBlockSummary()
+    }
+    addRowToBlock(block, row)
+    previousRow = row
+  }
+  if (previousRow) {
+    summaries[rowKey(previousRow)] = formatBlockSummary(block)
+  }
+  return summaries
+})
+
 const speechColumnLabels = {
   text: '文本',
   reference_wav_url: '原声',
@@ -140,6 +161,31 @@ function rowSplitBadge(row) {
 
 function hasGapBefore(row) {
   return gapRowByKey.value[rowKey(row)] != null
+}
+
+function rowBlockSummary(row) {
+  return blockSummaryByKey.value[rowKey(row)] || ''
+}
+
+function createBlockSummary() {
+  return {
+    sourceLength: 0,
+    translationLength: 0,
+  }
+}
+
+function addRowToBlock(block, row) {
+  block.sourceLength += textLength(row?.source_text || row?.asr_text || '')
+  block.translationLength += textLength(row?.dst_text || '')
+}
+
+function formatBlockSummary(block) {
+  const total = block.sourceLength + block.translationLength
+  return `EN ${block.sourceLength} / CN ${block.translationLength} / total ${total}`
+}
+
+function textLength(value) {
+  return Array.from(String(value || '')).length
 }
 
 function sortedRows(rows, key) {
@@ -309,6 +355,7 @@ onBeforeUnmount(() => {
           aria-label="行间时间戳间隔阈值"
         />
       </label>
+      <span class="speech-gap-count">{{ gapLineCount }} 条线</span>
     </div>
     <div class="raw-table-scroll">
       <table class="speech-table">
@@ -343,6 +390,7 @@ onBeforeUnmount(() => {
                 <span v-if="rowSplitBadge(row).length" class="speech-split-badges">
                   <span v-for="badge in rowSplitBadge(row)" :key="badge" class="speech-split-badge">{{ badge }}</span>
                 </span>
+                <span v-if="rowBlockSummary(row)" class="speech-block-summary">{{ rowBlockSummary(row) }}</span>
                 <div class="speech-text-line">
                   <button
                     v-if="speechAudioAsset(row, 'reference_wav_url')"
