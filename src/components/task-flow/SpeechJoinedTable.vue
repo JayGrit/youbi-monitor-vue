@@ -27,6 +27,7 @@ const props = defineProps({
 const emit = defineEmits(['update:speechEditDraft'])
 
 const playingAudioKey = ref('')
+const gapThresholdText = ref('')
 const audioByKey = new Map()
 
 const transcriptWords = computed(() => props.words
@@ -40,13 +41,25 @@ const transcriptWords = computed(() => props.words
   .filter(word => word.text && Number.isFinite(word.startTime) && Number.isFinite(word.endTime))
   .sort((left, right) => left.startTime - right.startTime || left.endTime - right.endTime))
 
-const splitRowToneByKey = computed(() => {
-  const rows = props.speechRows()
-  const rowInfos = rows.map(row => ({
+const rows = computed(() => props.speechRows())
+
+const gapThresholdMs = computed(() => {
+  const text = String(gapThresholdText.value || '').trim().replace(/秒$/u, 's')
+  if (!text) return null
+  const match = text.match(/^(\d+(?:\.\d+)?)\s*(ms|s)?$/i)
+  if (!match) return null
+  const value = Number(match[1])
+  if (!Number.isFinite(value) || value < 0) return null
+  return match[2]?.toLowerCase() === 'ms' ? value : value * 1000
+})
+
+const splitRowInfoByKey = computed(() => {
+  const rowInfos = rows.value.map(row => ({
     key: rowKey(row),
+    row,
     pysbdKey: rowPysbdKey(row),
   }))
-  const tones = {}
+  const infos = {}
   let toneIndex = 0
   let index = 0
   while (index < rowInfos.length) {
@@ -58,13 +71,38 @@ const splitRowToneByKey = computed(() => {
     if (pysbdKey && end - index > 1) {
       const tone = toneIndex % 2 === 0 ? 'blue' : 'red'
       for (let cursor = index; cursor < end; cursor += 1) {
-        tones[rowInfos[cursor].key] = tone
+        const split = rowSplitSegment(rowInfos[cursor].row)
+        infos[rowInfos[cursor].key] = {
+          tone,
+          first: cursor === index,
+          label: cursor === index ? splitLabel(split, end - index) : '',
+        }
       }
       toneIndex += 1
     }
     index = end
   }
-  return tones
+  return infos
+})
+
+const gapRowByKey = computed(() => {
+  const threshold = gapThresholdMs.value
+  if (threshold === null) return {}
+  const rowInfos = rows.value.map(row => ({
+    key: rowKey(row),
+    start: strictRowTime(row, 'start_time'),
+    end: strictRowTime(row, 'end_time'),
+  }))
+  const gaps = {}
+  for (let index = 1; index < rowInfos.length; index += 1) {
+    const previous = rowInfos[index - 1]
+    const current = rowInfos[index]
+    if (!Number.isFinite(previous.end) || !Number.isFinite(current.start)) continue
+    if (current.start - previous.end > threshold) {
+      gaps[current.key] = current.start - previous.end
+    }
+  }
+  return gaps
 })
 
 const speechColumnLabels = {
@@ -93,7 +131,15 @@ function rowKey(row) {
 }
 
 function rowTone(row) {
-  return splitRowToneByKey.value[rowKey(row)] || ''
+  return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
+}
+
+function rowSplitBadge(row) {
+  return splitRowInfoByKey.value[rowKey(row)]?.label || ''
+}
+
+function hasGapBefore(row) {
+  return gapRowByKey.value[rowKey(row)] != null
 }
 
 function sortedRows(rows, key) {
@@ -102,6 +148,12 @@ function sortedRows(rows, key) {
 
 function rowTime(row, key) {
   return Number(row?.[key] ?? 0)
+}
+
+function strictRowTime(row, key) {
+  const value = row?.[key]
+  if (value === null || value === undefined || value === '') return NaN
+  return Number(value)
 }
 
 function segmentTime(segment, key) {
@@ -139,6 +191,26 @@ function rowSplitSegment(row) {
     }
   }
   return bestSegment
+}
+
+function splitField(segment, ...keys) {
+  for (const key of keys) {
+    const value = segment?.[key]
+    if (value !== null && value !== undefined && String(value).trim() !== '') {
+      return String(value).trim()
+    }
+  }
+  return ''
+}
+
+function splitLabel(split, count) {
+  const reason = splitField(split, 'splitReason', 'split_reason', 'reason')
+  const method = splitField(split, 'splitMethod', 'split_method', 'method', 'splitStrategy', 'split_strategy')
+  const parts = []
+  if (reason) parts.push(reason)
+  if (method) parts.push(method)
+  if (!parts.length) parts.push(`${count} split`)
+  return parts.join(' / ')
 }
 
 function rowWords(row) {
@@ -202,6 +274,18 @@ onBeforeUnmount(() => {
 <template>
   <div class="flow-section">
     <h4>Demucs / Whisper / Translator / Speaker Joined Rows</h4>
+    <div class="speech-gap-toolbar">
+      <label>
+        间隔线阈值
+        <input
+          v-model="gapThresholdText"
+          type="text"
+          inputmode="decimal"
+          placeholder="0.5s"
+          aria-label="行间时间戳间隔阈值"
+        />
+      </label>
+    </div>
     <div class="raw-table-scroll">
       <table class="speech-table">
         <thead>
@@ -213,9 +297,12 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr
-            v-for="row in speechRows()"
+            v-for="row in rows"
             :key="row.segment_id || row.item_index"
-            :class="rowTone(row) ? `speech-split-row tone-${rowTone(row)}` : ''"
+            :class="[
+              rowTone(row) ? `speech-split-row tone-${rowTone(row)}` : '',
+              { 'speech-gap-row': hasGapBefore(row) },
+            ]"
           >
             <td v-for="column in speechColumns()" :key="column" :class="`speech-col-${column}`">
               <template v-if="!showSpeechColumn(row, column)"></template>
@@ -229,6 +316,7 @@ onBeforeUnmount(() => {
                 </dl>
               </details>
               <div v-else-if="column === 'text'" class="speech-text-cell speech-combined-text">
+                <span v-if="rowSplitBadge(row)" class="speech-split-badge">{{ rowSplitBadge(row) }}</span>
                 <div class="speech-text-line">
                   <button
                     v-if="speechAudioAsset(row, 'reference_wav_url')"
