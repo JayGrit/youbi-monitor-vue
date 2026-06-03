@@ -245,7 +245,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return shortValue(value, 70)
   }
 
-  function speechRows() {
+  function speechRows(view = 'whisper') {
+    if (view === 'translator-chunk') {
+      return translatorChunkRows()
+    }
     const stages = selectedTaskFlow.value?.stages || []
     const whisper = stages.find(stage => stage.key === 'whisper')
     const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
@@ -260,6 +263,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       const asr = asrByIndex[index] || {}
       const segment = speakerByIndex[index] || {}
       return {
+        row_key: `whisper:${index}`,
+        speech_view: 'whisper',
         segment_id: segment.id || '',
         item_index: index,
         start_time: segment.start_time ?? asr.start_time,
@@ -281,6 +286,65 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         error_message: segment.error_message || '',
       }
     })
+  }
+
+  function translatorChunkRows() {
+    const stages = selectedTaskFlow.value?.stages || []
+    const translator = stages.find(stage => stage.key === 'translator')
+    const speaker = stages.find(stage => stage.key === 'speaker') || translator
+    const chunkRows = tableRows(translator, 'translator-chunk')
+    const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
+    return [...chunkRows]
+      .sort((left, right) => {
+        const leftChunk = Number(left.chunk_index ?? 0)
+        const rightChunk = Number(right.chunk_index ?? 0)
+        const leftOrder = Number(left.row_order ?? 0)
+        const rightOrder = Number(right.row_order ?? 0)
+        return leftChunk - rightChunk || leftOrder - rightOrder || Number(left.id || 0) - Number(right.id || 0)
+      })
+      .map(row => {
+        const itemIndex = Number(row.item_index)
+        const segment = speakerByIndex[itemIndex] || {}
+        const role = row.row_role || (row.is_reference ? 'reference' : 'normal')
+        const isReference = Boolean(Number(row.is_reference || 0)) || role !== 'normal'
+        return {
+          row_key: `translator-chunk:${row.chunk_index}:${row.row_order}:${itemIndex}`,
+          speech_view: 'translator-chunk',
+          segment_id: isReference ? '' : segment.id || '',
+          item_index: itemIndex,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          asr_text: row.text || '',
+          src_text: segment.src_text || row.text || '',
+          source_text: row.text || segment.src_text || '',
+          dst_text: isReference ? '' : segment.dst_text || '',
+          speaker: segment.speaker || '',
+          status: isReference ? role : segment.status || '',
+          attempt_count: isReference ? '' : segment.attempt_count ?? '',
+          speed_ratio: isReference ? '' : formatRatio(segment.speed_ratio),
+          actual_start_time: isReference ? '' : segment.actual_start_time ?? '',
+          actual_end_time: isReference ? '' : segment.actual_end_time ?? '',
+          src_lang: isReference ? '' : segment.src_lang || '',
+          dst_lang: isReference ? '' : segment.dst_lang || '',
+          reference_wav_url: isReference ? '' : segment.reference_wav_url || '',
+          tts_wav_url: isReference ? '' : segment.tts_wav_url || '',
+          error_message: isReference ? '' : segment.error_message || '',
+          chunk_index: row.chunk_index,
+          row_order: row.row_order,
+          row_role: role,
+          is_reference: isReference,
+          normal_text_len: row.normal_text_len,
+          reference_text_len: row.reference_text_len,
+          total_text_len: row.total_text_len,
+          normal_item_count: row.normal_item_count,
+          chunk_start_time: row.chunk_start_time,
+          chunk_end_time: row.chunk_end_time,
+          gap_before_ms: row.gap_before_ms,
+          gap_after_ms: row.gap_after_ms,
+          reference_reason: row.reference_reason || '',
+          reference_distance_ms: row.reference_distance_ms ?? '',
+        }
+      })
   }
 
   function tableRows(stage, tableName) {
@@ -333,8 +397,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function speechMoreRows(row) {
-    return [
+    const rows = [
       ['segment_id', row.segment_id || '-'],
+      ['chunk_index', row.chunk_index ?? '-'],
+      ['row_role', row.row_role || '-'],
+      ['row_order', row.row_order ?? '-'],
       ['start_time', formatTimeline(row.start_time)],
       ['end_time', formatTimeline(row.end_time)],
       ['actual_start_time', formatTimeline(row.actual_start_time)],
@@ -347,9 +414,25 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       ['speed_ratio', row.speed_ratio || '-'],
       ['error_message', row.error_message || '-'],
     ]
+    if (row.speech_view === 'translator-chunk') {
+      rows.push(
+        ['normal_text_len', row.normal_text_len ?? '-'],
+        ['reference_text_len', row.reference_text_len ?? '-'],
+        ['total_text_len', row.total_text_len ?? '-'],
+        ['normal_item_count', row.normal_item_count ?? '-'],
+        ['chunk_start_time', formatTimeline(row.chunk_start_time)],
+        ['chunk_end_time', formatTimeline(row.chunk_end_time)],
+        ['gap_before_ms', row.gap_before_ms ?? '-'],
+        ['gap_after_ms', row.gap_after_ms ?? '-'],
+        ['reference_reason', row.reference_reason || '-'],
+        ['reference_distance_ms', row.reference_distance_ms === '' ? '-' : row.reference_distance_ms],
+      )
+    }
+    return rows
   }
 
   function speechRowKey(row) {
+    if (row?.row_key) return String(row.row_key)
     return row?.segment_id ? String(row.segment_id) : `index:${row?.item_index ?? ''}`
   }
 

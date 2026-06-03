@@ -29,6 +29,7 @@ const emit = defineEmits(['update:speechEditDraft'])
 
 const playingAudioKey = ref('')
 const gapThresholdText = ref('')
+const speechView = ref('whisper')
 const audioByKey = new Map()
 
 const transcriptWords = computed(() => props.words
@@ -42,7 +43,7 @@ const transcriptWords = computed(() => props.words
   .filter(word => word.text && Number.isFinite(word.startTime) && Number.isFinite(word.endTime))
   .sort((left, right) => left.startTime - right.startTime || left.endTime - right.endTime))
 
-const rows = computed(() => props.speechRows())
+const rows = computed(() => props.speechRows(speechView.value))
 
 const gapThresholdMs = computed(() => {
   const text = String(gapThresholdText.value || '').trim().replace(/秒$/u, 's')
@@ -139,7 +140,7 @@ function speechColumnLabel(column) {
 }
 
 function speechAudioKey(row, column) {
-  return `${row.segment_id || row.item_index || ''}:${column}`
+  return `${rowKey(row)}:${column}`
 }
 
 function speechAudioLabel(row, column) {
@@ -149,14 +150,21 @@ function speechAudioLabel(row, column) {
 }
 
 function rowKey(row) {
-  return String(row.segment_id || row.item_index || '')
+  return String(row.row_key || row.segment_id || row.item_index || '')
 }
 
 function rowTone(row) {
+  if (row?.speech_view === 'translator-chunk') return ''
   return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
 }
 
 function rowSplitBadge(row) {
+  if (row?.speech_view === 'translator-chunk') {
+    const badges = [`chunk ${row.chunk_index ?? '-'}`]
+    if (row.row_role && row.row_role !== 'normal') badges.push(row.row_role)
+    if (row.normal_text_len != null) badges.push(`len ${row.normal_text_len}`)
+    return badges
+  }
   return splitRowInfoByKey.value[rowKey(row)]?.badges || []
 }
 
@@ -165,6 +173,9 @@ function hasGapBefore(row) {
 }
 
 function rowBlockSummary(row) {
+  if (row?.speech_view === 'translator-chunk') {
+    return `normal ${row.normal_text_len ?? 0} / ref ${row.reference_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
+  }
   return blockSummaryByKey.value[rowKey(row)] || ''
 }
 
@@ -355,6 +366,22 @@ onBeforeUnmount(() => {
   <div class="flow-section">
     <h4>Demucs / Whisper / Translator / Speaker Joined Rows</h4>
     <div class="speech-gap-toolbar">
+      <div class="speech-view-toggle" aria-label="表格视角">
+        <button
+          type="button"
+          :class="{ active: speechView === 'whisper' }"
+          @click="speechView = 'whisper'"
+        >
+          Whisper
+        </button>
+        <button
+          type="button"
+          :class="{ active: speechView === 'translator-chunk' }"
+          @click="speechView = 'translator-chunk'"
+        >
+          Translator 分块
+        </button>
+      </div>
       <label>
         间隔线阈值
         <input
@@ -379,10 +406,14 @@ onBeforeUnmount(() => {
         <tbody>
           <tr
             v-for="row in rows"
-            :key="row.segment_id || row.item_index"
+            :key="rowKey(row)"
             :class="[
               rowTone(row) ? `speech-split-row tone-${rowTone(row)}` : '',
-              { 'speech-gap-row': hasGapBefore(row) },
+              {
+                'speech-gap-row': hasGapBefore(row),
+                'speech-reference-row': row.is_reference,
+                'speech-translator-chunk-row': row.speech_view === 'translator-chunk',
+              },
             ]"
           >
             <td v-for="column in speechColumns()" :key="column" :class="`speech-col-${column}`">
