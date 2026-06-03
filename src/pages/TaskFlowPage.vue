@@ -11,6 +11,7 @@ import UploaderDiagnostics from '../components/task-flow/UploaderDiagnostics.vue
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
 import { formatDuration } from '../utils/format'
+import { ref } from 'vue'
 
 defineProps({
   selectedTaskFlow: { type: Object, default: null },
@@ -58,6 +59,7 @@ defineProps({
 })
 
 const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
+const vocalsPlayback = ref({ currentMs: 0, playing: false })
 
 function demucsStage(flow) {
   return flow?.stages?.find(stage => stage.key === 'demucs') || null
@@ -127,6 +129,7 @@ function demucsStage(flow) {
           :media="demucsAudioMedia(demucsStage(selectedTaskFlow))"
           :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
+          @vocals-playback="vocalsPlayback = $event"
         />
 
         <StageMediaGrid
@@ -153,6 +156,9 @@ function demucsStage(flow) {
           :begin-speech-edit="beginSpeechEdit"
           :table-cell-text="tableCellText"
           :table-cell-summary="tableCellSummary"
+          :words="whisperWordTimestamps"
+          :processing="whisperProcessing"
+          :vocals-playback="vocalsPlayback"
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
 

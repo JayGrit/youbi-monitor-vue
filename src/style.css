@@ -2215,6 +2215,31 @@ h1 {
   font-weight: 620;
 }
 
+.speech-source-word {
+  display: inline;
+  border-radius: 3px;
+  margin-right: 0.25em;
+  padding: 1px 2px;
+}
+
+.speech-source-word.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.speech-split-row.tone-blue td {
+  background: #eff8ff;
+}
+
+.speech-split-row.tone-red td {
+  background: #fff1f0;
+}
+
+.speech-split-row.tone-blue + .speech-split-row.tone-blue td,
+.speech-split-row.tone-red + .speech-split-row.tone-red td {
+  border-top-color: rgba(255, 255, 255, 0.7);
+}
+
 .speech-translation-text {
   color: #334155;
   min-width: 0;

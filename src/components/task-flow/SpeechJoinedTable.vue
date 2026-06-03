@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { formatJson, isLongValue } from '../../utils/jsonDisplay'
 
 const props = defineProps({
@@ -19,12 +19,53 @@ const props = defineProps({
   beginSpeechEdit: { type: Function, required: true },
   tableCellText: { type: Function, required: true },
   tableCellSummary: { type: Function, required: true },
+  words: { type: Array, default: () => [] },
+  processing: { type: Object, default: null },
+  vocalsPlayback: { type: Object, default: () => ({ currentMs: 0, playing: false }) },
 })
 
 const emit = defineEmits(['update:speechEditDraft'])
 
 const playingAudioKey = ref('')
 const audioByKey = new Map()
+
+const transcriptWords = computed(() => props.words
+  .map((word, index) => ({
+    key: `${word.segmentIndex ?? word.segment_index ?? 0}-${word.wordIndex ?? word.word_index ?? index}`,
+    text: String(word.text || '').trim(),
+    segmentIndex: Number(word.segmentIndex ?? word.segment_index),
+    startTime: Number(word.startTime ?? word.start_time ?? 0),
+    endTime: Number(word.endTime ?? word.end_time ?? 0),
+  }))
+  .filter(word => word.text && Number.isFinite(word.startTime) && Number.isFinite(word.endTime))
+  .sort((left, right) => left.startTime - right.startTime || left.endTime - right.endTime))
+
+const splitRowToneByKey = computed(() => {
+  const rows = props.speechRows()
+  const rowInfos = rows.map(row => ({
+    key: rowKey(row),
+    pysbdKey: rowPysbdKey(row),
+  }))
+  const tones = {}
+  let toneIndex = 0
+  let index = 0
+  while (index < rowInfos.length) {
+    const pysbdKey = rowInfos[index].pysbdKey
+    let end = index + 1
+    while (pysbdKey && end < rowInfos.length && rowInfos[end].pysbdKey === pysbdKey) {
+      end += 1
+    }
+    if (pysbdKey && end - index > 1) {
+      const tone = toneIndex % 2 === 0 ? 'blue' : 'red'
+      for (let cursor = index; cursor < end; cursor += 1) {
+        tones[rowInfos[cursor].key] = tone
+      }
+      toneIndex += 1
+    }
+    index = end
+  }
+  return tones
+})
 
 const speechColumnLabels = {
   text: '文本',
@@ -45,6 +86,74 @@ function speechAudioLabel(row, column) {
   const key = speechAudioKey(row, column)
   const name = speechColumnLabel(column)
   return playingAudioKey.value === key ? `暂停${name}` : `播放${name}`
+}
+
+function rowKey(row) {
+  return String(row.segment_id || row.item_index || '')
+}
+
+function rowTone(row) {
+  return splitRowToneByKey.value[rowKey(row)] || ''
+}
+
+function sortedRows(rows, key) {
+  return [...(Array.isArray(rows) ? rows : [])].sort((a, b) => Number(a?.[key] || 0) - Number(b?.[key] || 0))
+}
+
+function rowTime(row, key) {
+  return Number(row?.[key] ?? 0)
+}
+
+function segmentTime(segment, key) {
+  return Number(segment?.[key] ?? segment?.[key.replace('_', '')] ?? 0)
+}
+
+function overlapMs(row, segment) {
+  const start = Math.max(rowTime(row, 'start_time'), segmentTime(segment, 'startTime'))
+  const end = Math.min(rowTime(row, 'end_time'), segmentTime(segment, 'endTime'))
+  return Math.max(0, end - start)
+}
+
+function rowPysbdKey(row) {
+  const split = rowSplitSegment(row)
+  if (!split) return ''
+  if (split.pysbdSegmentId != null) return `id:${split.pysbdSegmentId}`
+  const pysbd = sortedRows(props.processing?.pysbdSegments, 'pysbdIndex')
+    .find(segment => overlapMs(row, segment) > 0)
+  if (pysbd?.id != null) return `id:${pysbd.id}`
+  return ''
+}
+
+function rowSplitSegment(row) {
+  const splitSegments = sortedRows(props.processing?.splitSegments, 'splitIndex')
+  const itemIndex = Number(row?.item_index)
+  const byIndex = splitSegments.find(segment => Number(segment.splitIndex) === itemIndex)
+  if (byIndex) return byIndex
+  let bestSegment = null
+  let bestOverlap = 0
+  for (const segment of splitSegments) {
+    const overlap = overlapMs(row, segment)
+    if (overlap > bestOverlap) {
+      bestSegment = segment
+      bestOverlap = overlap
+    }
+  }
+  return bestSegment
+}
+
+function rowWords(row) {
+  const itemIndex = Number(row?.item_index)
+  const bySegment = transcriptWords.value.filter(word => word.segmentIndex === itemIndex)
+  if (bySegment.length) return bySegment
+  const start = rowTime(row, 'start_time')
+  const end = rowTime(row, 'end_time')
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return []
+  return transcriptWords.value.filter(word => word.endTime >= start && word.startTime <= end)
+}
+
+function isActiveWord(word) {
+  const currentMs = Number(props.vocalsPlayback?.currentMs || 0)
+  return Boolean(props.vocalsPlayback?.playing && currentMs >= word.startTime && currentMs <= word.endTime)
 }
 
 function toggleSpeechAudio(row, column) {
@@ -103,7 +212,11 @@ onBeforeUnmount(() => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in speechRows()" :key="row.segment_id || row.item_index">
+          <tr
+            v-for="row in speechRows()"
+            :key="row.segment_id || row.item_index"
+            :class="rowTone(row) ? `speech-split-row tone-${rowTone(row)}` : ''"
+          >
             <td v-for="column in speechColumns()" :key="column" :class="`speech-col-${column}`">
               <template v-if="!showSpeechColumn(row, column)"></template>
               <details v-else-if="column === 'more_info'" class="speech-more">
@@ -131,7 +244,18 @@ onBeforeUnmount(() => {
                     <span></span>
                   </button>
                   <span v-else class="speech-audio-placeholder"></span>
-                  <p class="speech-source-text">{{ row.source_text || '-' }}</p>
+                  <p class="speech-source-text">
+                    <template v-if="rowWords(row).length">
+                      <span
+                        v-for="word in rowWords(row)"
+                        :key="word.key"
+                        :class="['speech-source-word', { active: isActiveWord(word) }]"
+                      >
+                        {{ word.text }}
+                      </span>
+                    </template>
+                    <template v-else>{{ row.source_text || '-' }}</template>
+                  </p>
                 </div>
                 <div class="speech-text-line">
                   <button
