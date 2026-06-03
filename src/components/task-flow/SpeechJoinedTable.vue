@@ -425,6 +425,8 @@ onBeforeUnmount(() => {
               {
                 'speech-gap-row': hasGapBefore(row),
                 'speech-reference-row': row.is_reference,
+                'speech-reference-before': row.row_role === 'reference_before',
+                'speech-reference-after': row.row_role === 'reference_after',
                 'speech-translator-chunk-row': row.speech_view === 'translator-chunk',
               },
             ]"
