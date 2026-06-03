@@ -2219,12 +2219,19 @@ h1 {
   gap: 10px;
 }
 
-.speech-split-badge {
+.speech-split-badges {
   position: absolute;
   top: -7px;
-  left: -7px;
+  right: -7px;
   z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
   max-width: min(360px, calc(100% - 12px));
+}
+
+.speech-split-badge {
   border: 1px solid rgb(15 23 42 / 0.16);
   border-radius: 4px;
   background: rgb(255 255 255 / 0.86);

@@ -75,7 +75,7 @@ const splitRowInfoByKey = computed(() => {
         infos[rowInfos[cursor].key] = {
           tone,
           first: cursor === index,
-          label: cursor === index ? splitLabel(split, end - index) : '',
+          badges: cursor === index ? splitBadges(split, end - index) : [],
         }
       }
       toneIndex += 1
@@ -135,7 +135,7 @@ function rowTone(row) {
 }
 
 function rowSplitBadge(row) {
-  return splitRowInfoByKey.value[rowKey(row)]?.label || ''
+  return splitRowInfoByKey.value[rowKey(row)]?.badges || []
 }
 
 function hasGapBefore(row) {
@@ -203,14 +203,38 @@ function splitField(segment, ...keys) {
   return ''
 }
 
-function splitLabel(split, count) {
+function splitReasonBadges(reason) {
+  const normalized = String(reason || '').trim().toLowerCase()
+  if (normalized === 'text_too_long') return ['text']
+  if (normalized === 'duration_too_long' || normalized === 'audio_too_long') return ['audio']
+  if (normalized === 'text_and_duration_too_long') return ['text', 'audio']
+  if (!normalized || normalized === 'none') return []
+  return [normalized.replace(/_too_long$/u, '').replace(/^duration$/u, 'audio')]
+}
+
+function splitMethodBadge(method, split) {
+  const normalized = String(method || '').trim().toLowerCase()
+  if (normalized === 'minor_punctuation') {
+    const punctuation = splitField(split, 'splitPunctuation', 'split_punctuation', 'punctuation')
+    return punctuation ? `punct: ${punctuation}` : 'punct'
+  }
+  if (normalized === 'weak_conjunction') {
+    const conjunction = splitField(split, 'splitConjunction', 'split_conjunction', 'conjunction')
+    return conjunction ? `conj: ${conjunction}` : 'conj'
+  }
+  if (normalized === 'semantic_wtpsplit') return 'wtp'
+  if (!normalized || normalized === 'none' || normalized === 'unknown') return ''
+  return normalized
+}
+
+function splitBadges(split, count) {
   const reason = splitField(split, 'splitReason', 'split_reason', 'reason')
   const method = splitField(split, 'splitMethod', 'split_method', 'method', 'splitStrategy', 'split_strategy')
-  const parts = []
-  if (reason) parts.push(reason)
-  if (method) parts.push(method)
-  if (!parts.length) parts.push(`${count} split`)
-  return parts.join(' / ')
+  const badges = [...splitReasonBadges(reason)]
+  const methodBadge = splitMethodBadge(method, split)
+  if (methodBadge) badges.push(methodBadge)
+  if (!badges.length) badges.push(`${count} split`)
+  return badges
 }
 
 function rowWords(row) {
@@ -316,7 +340,9 @@ onBeforeUnmount(() => {
                 </dl>
               </details>
               <div v-else-if="column === 'text'" class="speech-text-cell speech-combined-text">
-                <span v-if="rowSplitBadge(row)" class="speech-split-badge">{{ rowSplitBadge(row) }}</span>
+                <span v-if="rowSplitBadge(row).length" class="speech-split-badges">
+                  <span v-for="badge in rowSplitBadge(row)" :key="badge" class="speech-split-badge">{{ badge }}</span>
+                </span>
                 <div class="speech-text-line">
                   <button
                     v-if="speechAudioAsset(row, 'reference_wav_url')"
