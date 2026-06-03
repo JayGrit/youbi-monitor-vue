@@ -413,6 +413,112 @@ h1 {
   opacity: 0.55;
 }
 
+.uploader-phone-panel {
+  margin-top: 16px;
+}
+
+.uploader-phone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #172033;
+  font-size: 14px;
+}
+
+.uploader-phone-head span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.uploader-phone-table {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+
+.uploader-phone-row {
+  min-width: 760px;
+  display: grid;
+  grid-template-columns: 72px repeat(3, minmax(180px, 1fr));
+  align-items: stretch;
+  gap: 8px;
+}
+
+.uploader-phone-platform-cell,
+.uploader-phone-head-cell,
+.uploader-phone-select-cell {
+  min-height: 42px;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.uploader-phone-platform-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploader-phone-platform-cell img {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.uploader-phone-head-cell {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.uploader-phone-head-cell input,
+.uploader-phone-head-cell textarea,
+.uploader-phone-select-cell select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #243044;
+  font: inherit;
+  font-size: 12px;
+}
+
+.uploader-phone-head-cell input,
+.uploader-phone-select-cell select {
+  min-height: 30px;
+  padding: 0 8px;
+}
+
+.uploader-phone-head-cell textarea {
+  min-height: 48px;
+  padding: 7px 8px;
+  resize: vertical;
+}
+
+.uploader-phone-head-cell small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.uploader-phone-select-cell {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+}
+
+.uploader-phone-head-cell input:disabled,
+.uploader-phone-head-cell textarea:disabled,
+.uploader-phone-select-cell select:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .account-row.unavailable {
   border-radius: 8px;
   background: #fff1f2;

@@ -106,6 +106,10 @@ const {
   uploadBackfillSelectedSet,
   uploadBackfillAllSelected,
   uploadBackfillError,
+  uploaderPhoneMatrix,
+  uploaderPhoneLoading,
+  uploaderPhoneSavingKey,
+  uploaderPhoneError,
   startAccountPolling,
   clearAccountPagePolling,
   clearAccountPolling,
@@ -120,6 +124,8 @@ const {
   toggleUploadBackfillRow,
   toggleUploadBackfillAll,
   registerSelectedUploadBackfill,
+  saveUploaderPhone,
+  saveUploaderPhoneAccount,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -413,6 +419,7 @@ function audioErrorMessage(code) {
     <AccountsPage
       v-else-if="activePage === 'accounts'"
       :account-key-groups="accountKeyGroups"
+      :account-platforms="ACCOUNT_PLATFORMS"
       :bilibili-qr-code="bilibiliQrCode"
       :bilibili-qr-message="bilibiliQrMessage"
       :xiaohongshu-qr-code="xiaohongshuQrCode"
@@ -426,6 +433,10 @@ function audioErrorMessage(code) {
       :upload-backfill-selected-set="uploadBackfillSelectedSet"
       :upload-backfill-all-selected="uploadBackfillAllSelected"
       :upload-backfill-error="uploadBackfillError"
+      :uploader-phone-matrix="uploaderPhoneMatrix"
+      :uploader-phone-loading="uploaderPhoneLoading"
+      :uploader-phone-saving-key="uploaderPhoneSavingKey"
+      :uploader-phone-error="uploaderPhoneError"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
       :save-platform-key="savePlatformKey"
@@ -437,6 +448,8 @@ function audioErrorMessage(code) {
       :toggle-upload-backfill-row="toggleUploadBackfillRow"
       :toggle-upload-backfill-all="toggleUploadBackfillAll"
       :register-selected-upload-backfill="registerSelectedUploadBackfill"
+      :save-uploader-phone="saveUploaderPhone"
+      :save-uploader-phone-account="saveUploaderPhoneAccount"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"

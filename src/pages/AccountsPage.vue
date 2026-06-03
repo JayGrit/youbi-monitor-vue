@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
   accountKeyGroups: { type: Array, default: () => [] },
+  accountPlatforms: { type: Array, default: () => [] },
   bilibiliQrCode: { type: Object, default: null },
   bilibiliQrMessage: { type: String, default: '' },
   xiaohongshuQrCode: { type: Object, default: null },
@@ -18,6 +19,10 @@ const props = defineProps({
   uploadBackfillSelectedSet: { type: Object, required: true },
   uploadBackfillAllSelected: { type: Boolean, default: false },
   uploadBackfillError: { type: String, default: '' },
+  uploaderPhoneMatrix: { type: Object, default: () => ({ phones: [], platforms: [] }) },
+  uploaderPhoneLoading: { type: Boolean, default: false },
+  uploaderPhoneSavingKey: { type: String, default: '' },
+  uploaderPhoneError: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
@@ -29,6 +34,8 @@ const props = defineProps({
   toggleUploadBackfillRow: { type: Function, required: true },
   toggleUploadBackfillAll: { type: Function, required: true },
   registerSelectedUploadBackfill: { type: Function, required: true },
+  saveUploaderPhone: { type: Function, required: true },
+  saveUploaderPhoneAccount: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
@@ -45,6 +52,16 @@ const accountEditMode = ref(false)
 const accountEditBusy = ref(false)
 const accountAvatarCache = ref({})
 const editingNameKeys = ref({})
+
+const phonePlatformAccounts = computed(() => {
+  const groups = new Map()
+  for (const row of props.uploaderPhoneMatrix?.platforms || []) {
+    groups.set(row.platform, row.accounts || [])
+  }
+  return groups
+})
+
+const phoneRows = computed(() => props.uploaderPhoneMatrix?.phones || [])
 
 function accountName(type, row) {
   return row?.draftDisplayName || props.accountDisplay(row, type)
@@ -240,6 +257,41 @@ function nextSendDisplay(row) {
 
 function nextSendStale(row) {
   return nextSendDisplay(row).startsWith('已等待')
+}
+
+function phoneAccountField(platform) {
+  return `${platform}AccountId`
+}
+
+function phoneAccountValue(phone, platform) {
+  const value = phone?.[phoneAccountField(platform)]
+  return value == null ? '' : String(value)
+}
+
+function phoneAccountOptions(platform) {
+  return phonePlatformAccounts.value.get(platform) || []
+}
+
+function accountOptionText(account) {
+  const name = account?.displayName || account?.accountKey || ''
+  return name === account?.accountKey ? name : `${name} (${account.accountKey})`
+}
+
+function phoneCellSaving(phone, platform) {
+  return props.uploaderPhoneSavingKey === `${phone?.id}:${platform}`
+}
+
+function phoneHeaderSaving(phone) {
+  return props.uploaderPhoneSavingKey === `phone:${phone?.id}`
+}
+
+async function savePhoneMeta(phone) {
+  await props.saveUploaderPhone(phone)
+}
+
+async function savePhonePlatform(phone, platform, event) {
+  const value = event?.target?.value || ''
+  await props.saveUploaderPhoneAccount(phone, platform, value)
 }
 </script>
 
@@ -466,6 +518,69 @@ function nextSendStale(row) {
       </div>
 
       <p v-if="platformErrorText()" class="inline-error">{{ platformErrorText() }}</p>
+    </section>
+
+    <section class="biliup-panel uploader-phone-panel" aria-label="手机号账号矩阵">
+      <div class="uploader-phone-head">
+        <strong>手机号账号</strong>
+        <span v-if="uploaderPhoneLoading">加载中</span>
+      </div>
+      <div v-if="phoneRows.length" class="uploader-phone-table">
+        <div
+          class="uploader-phone-row uploader-phone-header-row"
+          :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
+        >
+          <span class="uploader-phone-platform-cell"></span>
+          <span v-for="phone in phoneRows" :key="phone.id" class="uploader-phone-head-cell">
+            <input
+              v-model="phone.draftRemark"
+              type="text"
+              aria-label="手机号备注"
+              placeholder="备注"
+              :disabled="phoneHeaderSaving(phone)"
+              @change="savePhoneMeta(phone)"
+            />
+            <small>{{ phone.phone }}</small>
+            <textarea
+              v-model="phone.draftNote"
+              aria-label="文本备注"
+              placeholder="文本备注"
+              rows="2"
+              :disabled="phoneHeaderSaving(phone)"
+              @change="savePhoneMeta(phone)"
+            ></textarea>
+          </span>
+        </div>
+        <div
+          v-for="platform in accountPlatforms"
+          :key="platform.type"
+          class="uploader-phone-row"
+          :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
+        >
+          <span class="uploader-phone-platform-cell">
+            <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
+          </span>
+          <span v-for="phone in phoneRows" :key="`${platform.type}-${phone.id}`" class="uploader-phone-select-cell">
+            <select
+              :value="phoneAccountValue(phone, platform.type)"
+              :disabled="phoneCellSaving(phone, platform.type)"
+              :aria-label="`${platform.label} ${phone.phone}`"
+              @change="savePhonePlatform(phone, platform.type, $event)"
+            >
+              <option value="">-</option>
+              <option
+                v-for="account in phoneAccountOptions(platform.type)"
+                :key="account.id"
+                :value="String(account.id)"
+              >
+                {{ accountOptionText(account) }}
+              </option>
+            </select>
+          </span>
+        </div>
+      </div>
+      <div v-else class="empty-state">暂无手机号配置</div>
+      <p v-if="uploaderPhoneError" class="inline-error">{{ uploaderPhoneError }}</p>
     </section>
   </section>
 </template>

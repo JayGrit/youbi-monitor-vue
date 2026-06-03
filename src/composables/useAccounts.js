@@ -53,6 +53,10 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   const uploadBackfillBusy = ref(false)
   const uploadBackfillSelectedIds = ref([])
   const uploadBackfillError = ref('')
+  const uploaderPhoneMatrix = ref({ phones: [], platforms: [] })
+  const uploaderPhoneLoading = ref(false)
+  const uploaderPhoneSavingKey = ref('')
+  const uploaderPhoneError = ref('')
   let accountTimer = null
   let bilibiliQrTimer = null
   let xiaohongshuQrTimer = null
@@ -118,6 +122,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       loadShipinhaoStatus(),
       loadKuaishouStatus(),
       loadJinritoutiaoStatus(),
+      loadUploaderPhones(),
     ])
   }
 
@@ -228,6 +233,80 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   async function loadJinritoutiaoAccounts() {
     jinritoutiaoAccounts.value = await accountsApi.jinritoutiao.list()
     jinritoutiaoRows.value = accountRows(jinritoutiaoAccounts.value)
+  }
+
+  async function loadUploaderPhones() {
+    uploaderPhoneLoading.value = true
+    try {
+      const payload = await accountsApi.uploaderPhones()
+      uploaderPhoneMatrix.value = {
+        phones: (payload?.phones || []).map(phone => ({
+          ...phone,
+          draftRemark: phone.remark || '',
+          draftNote: phone.note || '',
+        })),
+        platforms: payload?.platforms || [],
+      }
+      uploaderPhoneError.value = ''
+    } catch (err) {
+      uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      uploaderPhoneLoading.value = false
+    }
+  }
+
+  async function saveUploaderPhone(phone) {
+    if (!phone?.id) return
+    const savingKey = `phone:${phone.id}`
+    uploaderPhoneSavingKey.value = savingKey
+    try {
+      const payload = await accountsApi.updateUploaderPhone(phone.id, phone.draftRemark || '', phone.draftNote || '')
+      mergeUploaderPhone(payload)
+      uploaderPhoneError.value = ''
+    } catch (err) {
+      uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      if (uploaderPhoneSavingKey.value === savingKey) {
+        uploaderPhoneSavingKey.value = ''
+      }
+    }
+  }
+
+  async function saveUploaderPhoneAccount(phone, platform, accountId) {
+    if (!phone?.id || !platform) return
+    const normalizedAccountId = Number(accountId || 0)
+    const savingKey = `${phone.id}:${platform}`
+    uploaderPhoneSavingKey.value = savingKey
+    try {
+      const payload = await accountsApi.updateUploaderPhoneAccount(
+        phone.id,
+        platform,
+        Number.isFinite(normalizedAccountId) && normalizedAccountId > 0 ? normalizedAccountId : null,
+      )
+      mergeUploaderPhone(payload)
+      uploaderPhoneError.value = ''
+    } catch (err) {
+      uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      if (uploaderPhoneSavingKey.value === savingKey) {
+        uploaderPhoneSavingKey.value = ''
+      }
+    }
+  }
+
+  function mergeUploaderPhone(payload) {
+    if (!payload?.id) return
+    uploaderPhoneMatrix.value = {
+      ...uploaderPhoneMatrix.value,
+      phones: uploaderPhoneMatrix.value.phones.map(phone => {
+        if (phone.id !== payload.id) return phone
+        return {
+          ...payload,
+          draftRemark: payload.remark || '',
+          draftNote: payload.note || '',
+        }
+      }),
+    }
   }
 
   async function openUploadBackfill(platform, platformLabel, accountKey, type) {
@@ -1060,6 +1139,10 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     uploadBackfillSelectedSet,
     uploadBackfillAllSelected,
     uploadBackfillError,
+    uploaderPhoneMatrix,
+    uploaderPhoneLoading,
+    uploaderPhoneSavingKey,
+    uploaderPhoneError,
     loadBiliupStatus,
     loadAccountPage,
     startAccountPolling,
@@ -1076,6 +1159,9 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     loadKuaishouAccounts,
     loadJinritoutiaoStatus,
     loadJinritoutiaoAccounts,
+    loadUploaderPhones,
+    saveUploaderPhone,
+    saveUploaderPhoneAccount,
     startBilibiliQrLogin,
     renewBilibiliAccount,
     refreshBilibiliRow,

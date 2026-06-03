@@ -59,6 +59,15 @@ export function createAccountsApi(apiBase) {
     registerUploadBackfill(platform, accountKey, type, taskIds) {
       return postJson(`${apiBase}/upload-backfill/register`, { platform, accountKey, type, taskIds })
     },
+    uploaderPhones() {
+      return requestJson(`${apiBase}/uploader-phones`)
+    },
+    updateUploaderPhone(phoneId, remark, note) {
+      return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}`, { remark, note })
+    },
+    updateUploaderPhoneAccount(phoneId, platform, accountId) {
+      return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId })
+    },
     bilibili: {
       ...platformAccountApi(apiBase, 'bilibili', 'bilibili/accounts'),
       renew(accountKey) {
