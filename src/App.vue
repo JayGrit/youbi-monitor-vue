@@ -187,6 +187,7 @@ const {
   submitterPlatform,
   submitterBusy,
   submitterAuthorBusy,
+  submitterTypeFilter,
   submitterUploader,
   submitterDurationFilter,
   submitterUploadFilter,
@@ -208,6 +209,8 @@ const {
   submitterFilteredTotal,
   submitterPageCount,
   submitterStatusCounts,
+  submitterAuthorTypeFilters,
+  submitterAuthorOptions,
   loadSubmitterVideos,
   applySubmitterFilters,
   loadSubmitterAuthors,
@@ -358,6 +361,7 @@ function audioErrorMessage(code) {
       v-model:submitter-url="submitterUrl"
       v-model:submitter-author="submitterAuthor"
       v-model:submitter-platform="submitterPlatform"
+      v-model:submitter-type-filter="submitterTypeFilter"
       v-model:submitter-uploader="submitterUploader"
       v-model:submitter-duration-filter="submitterDurationFilter"
       v-model:submitter-sort="submitterSort"
@@ -370,6 +374,8 @@ function audioErrorMessage(code) {
       :submitter-busy="submitterBusy"
       :submitter-author-busy="submitterAuthorBusy"
       :submitter-authors="submitterAuthors"
+      :submitter-author-type-filters="submitterAuthorTypeFilters"
+      :submitter-author-options="submitterAuthorOptions"
       :submitter-filtered-videos="submitterFilteredVideos"
       :submitter-filtered-total="submitterFilteredTotal"
       :submitter-page="submitterPage"

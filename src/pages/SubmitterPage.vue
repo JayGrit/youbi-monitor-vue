@@ -17,8 +17,11 @@ defineProps({
   submitterAuthor: { type: String, default: '' },
   submitterPlatform: { type: String, default: 'youtube' },
   submitterAuthorBusy: { type: Boolean, default: false },
+  submitterTypeFilter: { type: String, default: '' },
   submitterUploader: { type: String, default: '' },
   submitterAuthors: { type: Array, default: () => [] },
+  submitterAuthorTypeFilters: { type: Array, default: () => [] },
+  submitterAuthorOptions: { type: Array, default: () => [] },
   submitterDurationFilter: { type: String, default: 'all' },
   submitterSort: { type: String, default: 'updated_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
@@ -60,6 +63,7 @@ const emit = defineEmits([
   'update:submitterUrl',
   'update:submitterAuthor',
   'update:submitterPlatform',
+  'update:submitterTypeFilter',
   'update:submitterUploader',
   'update:submitterDurationFilter',
   'update:submitterSort',
@@ -117,13 +121,23 @@ const emit = defineEmits([
     <section class="submitter-controls">
       <div class="submitter-filter-grid">
         <label>
+          <span>Type</span>
+          <select
+            :value="submitterTypeFilter"
+            @change="emit('update:submitterTypeFilter', $event.target.value); emit('update:submitterUploader', ''); applySubmitterFilters()"
+          >
+            <option value="">全部 type</option>
+            <option v-for="type in submitterAuthorTypeFilters" :key="type" :value="type">{{ type }}</option>
+          </select>
+        </label>
+        <label>
           <span>作者</span>
           <select
             :value="submitterUploader"
             @change="emit('update:submitterUploader', $event.target.value); applySubmitterFilters()"
           >
             <option value="">全部作者</option>
-            <option v-for="author in submitterAuthors" :key="author" :value="author">{{ author }}</option>
+            <option v-for="author in submitterAuthorOptions" :key="author" :value="author">{{ author }}</option>
           </select>
         </label>
         <label>

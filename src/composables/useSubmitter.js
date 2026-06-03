@@ -12,6 +12,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterPlatform = ref('youtube')
   const submitterBusy = ref(false)
   const submitterAuthorBusy = ref(false)
+  const submitterTypeFilter = ref('')
   const submitterUploader = ref('')
   const submitterDurationFilter = ref('all')
   const submitterUploadFilter = ref('unuploaded')
@@ -34,6 +35,23 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
   let submitterTimer = null
+
+  const submitterAuthorTypeFilters = computed(() => {
+    const types = new Set()
+    for (const row of submitterAuthorTypeRows.value) {
+      const type = String(row?.type || row?.draftType || '').trim()
+      if (type) types.add(type)
+    }
+    return [...types].sort((left, right) => left.localeCompare(right))
+  })
+
+  const submitterAuthorOptions = computed(() => {
+    const typeFilter = submitterTypeFilter.value.trim()
+    return submitterAuthorTypeRows.value
+      .filter(row => !typeFilter || String(row?.type || row?.draftType || '').trim() === typeFilter)
+      .map(row => String(row?.author || '').trim())
+      .filter(Boolean)
+  })
 
   const submitterFilteredVideos = computed(() => {
     return submitterVideos.value
@@ -90,6 +108,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const payload = await submitterApi.listVideos({
         detail: submitterListDetail.value,
         batch: submitterFocusedBatch.value,
+        type: submitterTypeFilter.value,
         uploader: submitterUploader.value,
         sort: submitterSort.value,
         limit: SUBMITTER_PAGE_SIZE,
@@ -122,14 +141,16 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function loadSubmitterAuthors() {
     try {
-      const payload = await submitterApi.listAuthors()
-      submitterAuthors.value = payload?.items || []
+      const authorsPayload = await submitterApi.listAuthors()
+      submitterAuthors.value = authorsPayload?.items || []
+      await loadSubmitterAuthorTypes()
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
   }
 
   async function resetSubmitterFilters() {
+    submitterTypeFilter.value = ''
     submitterUploader.value = ''
     submitterDurationFilter.value = 'all'
     submitterUploadFilter.value = 'unuploaded'
@@ -264,30 +285,42 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function loadSubmitterAuthorTypes() {
     try {
-      const [payload] = await Promise.all([
-        submitterApi.listAuthorTypes(),
-        submitterAuthors.value.length ? Promise.resolve() : loadSubmitterAuthors(),
-      ])
+      const payload = await submitterApi.listAuthorTypes()
       const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
       const authors = new Set([...submitterAuthors.value, ...byAuthor.keys()].filter(Boolean))
-      submitterAuthorTypeRows.value = [...authors].sort((left, right) => left.localeCompare(right)).map(author => ({
-        author,
-        type: String(byAuthor.get(author)?.type || ''),
-        draftType: String(byAuthor.get(author)?.type || ''),
-        needSubtitle: byAuthor.get(author)?.needSubtitle !== false,
-        draftNeedSubtitle: byAuthor.get(author)?.needSubtitle !== false,
-        needDubbing: byAuthor.get(author)?.needSubtitle !== false && byAuthor.get(author)?.needDubbing !== false,
-        draftNeedDubbing: byAuthor.get(author)?.needSubtitle !== false && byAuthor.get(author)?.needDubbing !== false,
-        needSeparation: byAuthor.get(author)?.needSeparation !== false,
-        draftNeedSeparation: byAuthor.get(author)?.needSeparation !== false,
-        sourceLanguage: String(byAuthor.get(author)?.sourceLanguage || byAuthor.get(author)?.source_language || '英文'),
-        draftSourceLanguage: String(byAuthor.get(author)?.sourceLanguage || byAuthor.get(author)?.source_language || '英文'),
-        targetLanguage: String(byAuthor.get(author)?.targetLanguage || byAuthor.get(author)?.target_language || '中文'),
-        draftTargetLanguage: String(byAuthor.get(author)?.targetLanguage || byAuthor.get(author)?.target_language || '中文'),
+      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...authors].map(author => {
+        const item = byAuthor.get(author)
+        return {
+          author,
+          type: String(item?.type || ''),
+          draftType: String(item?.type || ''),
+          needSubtitle: item?.needSubtitle !== false,
+          draftNeedSubtitle: item?.needSubtitle !== false,
+          needDubbing: item?.needSubtitle !== false && item?.needDubbing !== false,
+          draftNeedDubbing: item?.needSubtitle !== false && item?.needDubbing !== false,
+          needSeparation: item?.needSeparation !== false,
+          draftNeedSeparation: item?.needSeparation !== false,
+          sourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
+          draftSourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
+          targetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
+          draftTargetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
+        }
       }))
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     }
+  }
+
+  function sortSubmitterAuthorTypeRows(rows) {
+    return rows.sort((left, right) => {
+      const leftType = String(left?.type || left?.draftType || '').trim()
+      const rightType = String(right?.type || right?.draftType || '').trim()
+      if (leftType && !rightType) return -1
+      if (!leftType && rightType) return 1
+      const typeOrder = leftType.localeCompare(rightType)
+      if (typeOrder !== 0) return typeOrder
+      return String(left?.author || '').localeCompare(String(right?.author || ''))
+    })
   }
 
   async function saveSubmitterAuthorType(row) {
@@ -323,6 +356,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       row.draftSourceLanguage = row.sourceLanguage
       row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)
       row.draftTargetLanguage = row.targetLanguage
+      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...submitterAuthorTypeRows.value])
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     } finally {
@@ -349,6 +383,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterAuthors.value = submitterAuthors.value.filter(item => item !== author)
       if (submitterUploader.value === author) {
         submitterUploader.value = ''
+      }
+      if (submitterTypeFilter.value && !submitterAuthorTypeFilters.value.includes(submitterTypeFilter.value)) {
+        submitterTypeFilter.value = ''
       }
       await loadSubmitterVideos(true)
     } catch (err) {
@@ -517,6 +554,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterPlatform,
     submitterBusy,
     submitterAuthorBusy,
+    submitterTypeFilter,
     submitterUploader,
     submitterDurationFilter,
     submitterUploadFilter,
@@ -539,6 +577,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterFilteredTotal,
     submitterPageCount,
     submitterStatusCounts,
+    submitterAuthorTypeFilters,
+    submitterAuthorOptions,
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
