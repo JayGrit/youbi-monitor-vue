@@ -37,6 +37,7 @@ const {
   taskTypeFilter,
   taskStageFilter,
   taskPage,
+  taskTotalCount,
   taskActionsExpanded,
   openFailureKey,
   uploadRetryPlatform,
@@ -310,6 +311,7 @@ function audioErrorMessage(code) {
       :task-stage-filter="taskStageFilter"
       :task-stage-filters="taskStageFilters"
       :task-page="taskPage"
+      :task-total-count="taskTotalCount"
       :task-page-count="taskPageCount"
       :task-actions-expanded="taskActionsExpanded"
       :filtered-tasks="filteredTasks"

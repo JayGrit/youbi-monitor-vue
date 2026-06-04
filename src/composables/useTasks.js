@@ -28,6 +28,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskTypeFilter = ref('all')
   const taskStageFilter = ref('all')
   const taskPage = ref(1)
+  const taskTotalCount = ref(0)
   const taskActionsExpanded = ref(false)
   const openFailureKey = ref('')
   const taskThumbUrls = ref({})
@@ -78,9 +79,17 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     })
   })
 
-  const taskPageCount = computed(() => Math.max(1, Math.ceil(filteredTasks.value.length / MONITOR_PAGE_SIZE)))
+  const isServerPagedView = computed(() => {
+    return taskStatusFilter.value === 'all' && taskTypeFilter.value === 'all' && taskStageFilter.value === 'all'
+  })
+
+  const taskPageCount = computed(() => {
+    const count = isServerPagedView.value ? taskTotalCount.value : filteredTasks.value.length
+    return Math.max(1, Math.ceil(count / MONITOR_PAGE_SIZE))
+  })
 
   const pagedTasks = computed(() => {
+    if (isServerPagedView.value) return filteredTasks.value
     const page = Math.min(Math.max(1, taskPage.value), taskPageCount.value)
     const offset = (page - 1) * MONITOR_PAGE_SIZE
     return filteredTasks.value.slice(offset, offset + MONITOR_PAGE_SIZE)
@@ -115,8 +124,9 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   async function loadTasks() {
     try {
-      const payload = await monitorApi.loadMonitorTasks()
+      const payload = await monitorApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE)
       tasks.value = payload.tasks || []
+      taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
       if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
       serviceHeartbeats.value = payload.serviceHeartbeats || []
       serverTime.value = payload.serverTime || ''
@@ -365,7 +375,10 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   function setTaskPage(value) {
     const page = Number(value)
     if (!Number.isFinite(page)) return
-    taskPage.value = Math.min(Math.max(1, Math.trunc(page)), taskPageCount.value)
+    const nextPage = Math.min(Math.max(1, Math.trunc(page)), taskPageCount.value)
+    if (nextPage === taskPage.value) return
+    taskPage.value = nextPage
+    loadTasks()
   }
 
   async function copyText(value) {
@@ -474,6 +487,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     taskTypeFilter,
     taskStageFilter,
     taskPage,
+    taskTotalCount,
     taskActionsExpanded,
     openFailureKey,
     taskThumbUrls,

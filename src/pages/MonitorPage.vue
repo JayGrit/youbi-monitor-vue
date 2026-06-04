@@ -1,8 +1,8 @@
 <script setup>
-import { createPlatformIconUrls, uploadPlatformText } from '../domain/constants'
+import { createPlatformIconUrls, MONITOR_PAGE_SIZE, uploadPlatformText } from '../domain/constants'
 import { formatDateTime, formatDuration } from '../utils/format'
 
-defineProps({
+const props = defineProps({
   error: { type: String, default: '' },
   loading: { type: Boolean, default: false },
   tasks: { type: Array, default: () => [] },
@@ -15,6 +15,7 @@ defineProps({
   taskStageFilter: { type: String, default: 'all' },
   taskStageFilters: { type: Array, default: () => [] },
   taskPage: { type: Number, default: 1 },
+  taskTotalCount: { type: Number, default: 0 },
   taskPageCount: { type: Number, default: 1 },
   taskActionsExpanded: { type: Boolean, default: false },
   filteredTasks: { type: Array, default: () => [] },
@@ -90,6 +91,13 @@ function platformIconUrl(platform) {
 function platformTitle(platformStatus) {
   const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
   return `${platform} · ${platformStatus.status}`
+}
+
+function displayTaskCount() {
+  if (props.taskStatusFilter === 'all' && props.taskTypeFilter === 'all' && props.taskStageFilter === 'all') {
+    return props.taskTotalCount || props.filteredTasks.length
+  }
+  return props.filteredTasks.length
 }
 
 function showStageTime(node) {
@@ -394,7 +402,7 @@ function onlineDeviceNames(service) {
     </article>
 
     <nav v-if="!loading && filteredTasks.length > 0" class="task-pagination" aria-label="任务分页">
-      <span>共 {{ filteredTasks.length }} 个，一页 50 个</span>
+      <span>共 {{ displayTaskCount() }} 个，一页 {{ MONITOR_PAGE_SIZE }} 个</span>
       <div>
         <button type="button" :disabled="taskPage <= 1" @click="emit('setTaskPage', taskPage - 1)">上一页</button>
         <strong>{{ taskPage }} / {{ taskPageCount }}</strong>
