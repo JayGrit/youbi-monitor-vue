@@ -267,6 +267,10 @@ function phoneAccountValue(phone, platform) {
   return value == null ? '' : String(value)
 }
 
+function phoneNoteValue(phone) {
+  return String(phone?.note || '')
+}
+
 function selectedPhoneAccount(phone, platform) {
   const accountId = phoneAccountValue(phone, platform)
   if (!accountId) return null
@@ -282,6 +286,30 @@ function accountOptionText(account) {
   const remark = account?.remark || ''
   const text = name === account?.accountKey ? name : `${name} (${account.accountKey})`
   return remark ? `${text} - ${remark}` : text
+}
+
+function phoneCellInputValue(phone, platform) {
+  const note = phoneNoteValue(phone)
+  if (note) return note
+  const account = selectedPhoneAccount(phone, platform)
+  return account ? accountOptionText(account) : ''
+}
+
+function phoneCellListId(phone, platform) {
+  return `uploader-phone-options-${platform}-${phone?.id}`
+}
+
+function findPhoneAccountOption(platform, value) {
+  const normalized = String(value || '').trim()
+  if (!normalized) return null
+  return phoneAccountOptions(platform).find(account => {
+    return [
+      String(account.id),
+      account.accountKey,
+      account.displayName,
+      accountOptionText(account),
+    ].filter(Boolean).some(item => String(item).trim() === normalized)
+  }) || null
 }
 
 function phoneAccountAvatar(account) {
@@ -300,8 +328,9 @@ function phoneCellSaving(phone, platform) {
 }
 
 async function savePhonePlatform(phone, platform, event) {
-  const value = event?.target?.value || ''
-  await props.saveUploaderPhoneAccount(phone, platform, value)
+  const value = String(event?.target?.value || '').trim()
+  const account = findPhoneAccountOption(platform, value)
+  await props.saveUploaderPhoneAccount(phone, platform, account?.id || null, account ? '' : value)
 }
 </script>
 
@@ -543,6 +572,7 @@ async function savePhonePlatform(phone, platform, event) {
           <span class="uploader-phone-platform-cell"></span>
           <span v-for="phone in phoneRows" :key="phone.id" class="uploader-phone-head-cell">
             <strong>{{ phone.phone }}</strong>
+            <small v-if="phone.remark">{{ phone.remark }}</small>
           </span>
         </div>
         <div
@@ -555,38 +585,23 @@ async function savePhonePlatform(phone, platform, event) {
             <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
           </span>
           <span v-for="phone in phoneRows" :key="`${platform.type}-${phone.id}`" class="uploader-phone-select-cell">
-            <span v-if="selectedPhoneAccount(phone, platform.type)" class="uploader-phone-account-card">
-              <span class="uploader-phone-account-avatar">
-                <img
-                  v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
-                  :src="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
-                  :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
-              </span>
-              <span class="uploader-phone-account-text">
-                <strong>{{ selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey }}</strong>
-                <small v-if="selectedPhoneAccount(phone, platform.type).remark">{{ selectedPhoneAccount(phone, platform.type).remark }}</small>
-              </span>
-            </span>
-            <span v-else class="uploader-phone-account-empty">-</span>
-            <select
-              :value="phoneAccountValue(phone, platform.type)"
+            <input
+              type="text"
+              :value="phoneCellInputValue(phone, platform.type)"
+              :list="phoneCellListId(phone, platform.type)"
               :disabled="phoneCellSaving(phone, platform.type)"
               :aria-label="`${platform.label} ${phone.phone}`"
               @change="savePhonePlatform(phone, platform.type, $event)"
-            >
-              <option value="">-</option>
+              @keyup.enter="savePhonePlatform(phone, platform.type, $event)"
+            />
+            <datalist :id="phoneCellListId(phone, platform.type)">
               <option
                 v-for="account in phoneAccountOptions(platform.type)"
                 :key="account.id"
-                :value="String(account.id)"
+                :value="accountOptionText(account)"
               >
-                {{ accountOptionText(account) }}
               </option>
-            </select>
+            </datalist>
           </span>
         </div>
       </div>

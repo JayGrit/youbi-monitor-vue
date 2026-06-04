@@ -451,7 +451,7 @@ h1 {
 .uploader-phone-platform-cell,
 .uploader-phone-head-cell,
 .uploader-phone-select-cell {
-  min-height: 42px;
+  min-height: 46px;
   border: 1px solid #dbe4ee;
   border-radius: 8px;
   background: #ffffff;
@@ -471,13 +471,16 @@ h1 {
 }
 
 .uploader-phone-head-cell {
-  display: inline-flex;
+  min-width: 0;
+  display: grid;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   padding: 8px;
+  text-align: center;
 }
 
-.uploader-phone-select-cell select {
+.uploader-phone-select-cell input {
   width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
@@ -487,9 +490,19 @@ h1 {
   font-size: 12px;
 }
 
-.uploader-phone-select-cell select {
-  min-height: 30px;
+.uploader-phone-select-cell input {
+  min-width: 0;
+  min-height: 32px;
   padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uploader-phone-head-cell strong,
+.uploader-phone-head-cell small {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .uploader-phone-head-cell strong {
@@ -497,7 +510,13 @@ h1 {
   font-size: 13px;
   font-weight: 760;
   line-height: 1.2;
-  overflow-wrap: anywhere;
+}
+
+.uploader-phone-head-cell small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .uploader-phone-select-cell {
@@ -568,7 +587,7 @@ h1 {
   text-align: center;
 }
 
-.uploader-phone-select-cell select:disabled {
+.uploader-phone-select-cell input:disabled {
   cursor: wait;
   opacity: 0.65;
 }

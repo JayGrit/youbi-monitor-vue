@@ -62,8 +62,8 @@ export function createAccountsApi(apiBase) {
     uploaderPhones() {
       return requestJson(`${apiBase}/uploader-phones`)
     },
-    updateUploaderPhoneAccount(phoneId, platform, accountId) {
-      return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId })
+    updateUploaderPhoneAccount(phoneId, platform, accountId, note) {
+      return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId, note })
     },
     bilibili: {
       ...platformAccountApi(apiBase, 'bilibili', 'bilibili/accounts'),
