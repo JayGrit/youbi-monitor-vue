@@ -91,6 +91,10 @@ function platformTitle(platformStatus) {
   const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
   return `${platform} · ${platformStatus.status}`
 }
+
+function showStageTime(node) {
+  return !['translator', 'speaker', 'uploader'].includes(node?.key)
+}
 </script>
 
 <template>
@@ -293,7 +297,7 @@ function platformTitle(platformStatus) {
                 />
               </span>
             </span>
-            <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
+            <span v-if="showStageTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
           </button>
           <div
             v-if="index < task.nodes.length - 1"
