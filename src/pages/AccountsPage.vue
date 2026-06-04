@@ -243,8 +243,8 @@ function phoneAccountValue(phone, platform) {
   return value == null ? '' : String(value)
 }
 
-function phoneNoteValue(phone) {
-  return String(phone?.note || '')
+function phoneNoteValue(phone, platform) {
+  return String(phoneBinding(phone, platform)?.note || '')
 }
 
 function phoneBinding(phone, platform) {
@@ -310,7 +310,7 @@ function accountOptionText(account) {
 }
 
 function phoneCellInputValue(phone, platform) {
-  const note = phoneNoteValue(phone)
+  const note = phoneNoteValue(phone, platform)
   if (note) return note
   const account = selectedPhoneAccount(phone, platform)
   return account ? accountOptionText(account) : ''
@@ -351,13 +351,13 @@ function phoneCellSaving(phone, platform) {
 async function savePhonePlatform(phone, platform, event) {
   const value = String(event?.target?.value || '').trim()
   const account = findPhoneAccountOption(platform, value)
-  await props.saveUploaderPhoneAccount(phone, platform, account?.id || null, account ? '' : value, false)
+  await props.saveUploaderPhoneAccount(phone, platform, account?.id || null, account ? '' : value, phoneCellDisabled(phone, platform))
 }
 
 async function togglePhoneDisabled(phone, platform) {
   const disabled = !phoneCellDisabled(phone, platform)
   const accountId = phoneAccountValue(phone, platform) || null
-  await props.saveUploaderPhoneAccount(phone, platform, accountId, phoneNoteValue(phone), disabled)
+  await props.saveUploaderPhoneAccount(phone, platform, accountId, phoneNoteValue(phone, platform), disabled)
 }
 
 async function savePhoneAccountProfile(phone, platform, event) {
@@ -627,12 +627,13 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             v-for="phone in phoneRows"
             :key="`${platform.type}-${phone.id}`"
             class="uploader-phone-select-cell"
-            :class="{ disabled: !uploaderPhoneEditMode && phoneCellDisabled(phone, platform.type) }"
+            :class="{ disabled: phoneCellDisabled(phone, platform.type) }"
           >
             <template v-if="uploaderPhoneEditMode">
               <div class="uploader-phone-edit-line">
                 <input
                   type="text"
+                  :class="{ 'disabled-note': phoneCellDisabled(phone, platform.type) }"
                   :value="phoneCellInputValue(phone, platform.type)"
                   :list="phoneCellListId(phone, platform.type)"
                   :disabled="phoneCellSaving(phone, platform.type)"
@@ -712,8 +713,13 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   </strong>
                 </span>
               </span>
-              <span v-else-if="phoneNoteValue(phone)" class="uploader-phone-note">{{ phoneNoteValue(phone) }}</span>
-              <span v-else-if="!phoneCellDisabled(phone, platform.type)" class="uploader-phone-account-empty">-</span>
+              <span
+                v-else-if="phoneNoteValue(phone, platform.type)"
+                class="uploader-phone-note"
+                :class="{ disabled: phoneCellDisabled(phone, platform.type) }"
+              >
+                {{ phoneNoteValue(phone, platform.type) }}
+              </span>
             </template>
           </span>
         </div>

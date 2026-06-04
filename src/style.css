@@ -521,6 +521,13 @@ h1 {
   text-overflow: ellipsis;
 }
 
+.uploader-phone-select-cell input.disabled-note {
+  border-color: #fca5a5;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-weight: 760;
+}
+
 .uploader-phone-head-cell strong,
 .uploader-phone-head-cell small {
   min-width: 0;
@@ -545,14 +552,15 @@ h1 {
 .uploader-phone-select-cell {
   display: grid;
   align-content: center;
+  align-items: center;
   justify-items: center;
   gap: 6px;
   padding: 6px;
 }
 
 .uploader-phone-select-cell.disabled {
-  border-color: #d7dee8;
-  background: #f1f5f9;
+  border-color: #b8c4d3;
+  background: #dbe3ec;
 }
 
 .uploader-phone-edit-line {
@@ -612,8 +620,8 @@ h1 {
 }
 
 .uploader-phone-disable-button.active {
-  border-color: #fecdd3;
-  background: #fff1f2;
+  border-color: #fda4af;
+  background: #ffe4e6;
   color: #be123c;
 }
 
@@ -625,6 +633,7 @@ h1 {
   align-items: center;
   gap: 8px;
   justify-content: center;
+  justify-self: center;
 }
 
 .uploader-phone-account-card.no-name {
@@ -688,6 +697,11 @@ h1 {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.uploader-phone-note.disabled {
+  color: #b91c1c;
+  font-weight: 780;
 }
 
 .uploader-phone-select-cell input:disabled {
