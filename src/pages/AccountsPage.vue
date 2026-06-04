@@ -48,7 +48,6 @@ const props = defineProps({
 const STALE_READY_MINUTES = 10
 
 const accountEditMode = ref(false)
-const accountEditBusy = ref(false)
 const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
 
@@ -129,31 +128,23 @@ function cancelAccountEditMode() {
   accountEditMode.value = false
 }
 
-async function saveAccountEdits() {
-  accountEditBusy.value = true
-  try {
-    for (const item of configuredAccounts()) {
-      const row = item.row
-      const changes = accountChanges(item)
-      if (changes.cooldown) {
-        await props.savePlatformCooldown(item.type, row)
-      }
-      if (changes.enabled) {
-        await props.togglePlatformEnabled(item.type, row)
-      }
-      if (changes.key) {
-        await props.savePlatformKey(item.type, row)
-      }
-    }
-    props.closeUploadBackfill()
-    accountEditMode.value = false
-  } finally {
-    accountEditBusy.value = false
-  }
-}
-
 function configuredAccounts() {
   return props.accountKeyGroups.flatMap(group => group.rows.filter(item => item.configured))
+}
+
+async function saveAccountKeyEdit(item) {
+  if (!item?.configured || !accountChanges(item).key) return
+  await props.savePlatformKey(item.type, item.row)
+}
+
+async function saveAccountCooldownEdit(item) {
+  if (!item?.configured || !accountChanges(item).cooldown) return
+  await props.savePlatformCooldown(item.type, item.row)
+}
+
+async function saveAccountEnabledEdit(item) {
+  if (!item?.configured || !accountChanges(item).enabled) return
+  await props.togglePlatformEnabled(item.type, item.row)
 }
 
 function forEachConfiguredAccount(callback) {
@@ -398,10 +389,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
         <div></div>
         <div class="account-edit-actions">
           <template v-if="accountEditMode">
-            <button type="button" :disabled="accountEditBusy" @click="cancelAccountEditMode">取消</button>
-            <button type="button" class="primary" :disabled="accountEditBusy" @click="saveAccountEdits">
-              {{ accountEditBusy ? '保存中' : '保存' }}
-            </button>
+            <button type="button" @click="cancelAccountEditMode">完成</button>
           </template>
           <button v-else type="button" @click="enterAccountEditMode">编辑</button>
         </div>
@@ -468,6 +456,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   class="account-key-input"
                   aria-label="账号 key"
                   placeholder="账号 key"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  @change="saveAccountKeyEdit(item)"
                 />
               </span>
               <span v-if="accountEditMode" data-label="操作">
@@ -488,6 +478,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   min="0"
                   step="1"
                   aria-label="最小冷却分钟"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  @change="saveAccountCooldownEdit(item)"
                 />
                 <span>-</span>
                 <input
@@ -496,6 +488,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   min="0"
                   step="1"
                   aria-label="最大冷却分钟"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  @change="saveAccountCooldownEdit(item)"
                 />
               </span>
               <span v-if="item.configured && accountEditMode" data-label="启用">
@@ -504,6 +498,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     v-model="item.row.draftEnabled"
                     type="checkbox"
                     :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    @change="saveAccountEnabledEdit(item)"
                   />
                   {{ item.row.draftEnabled ? '启用' : '禁用' }}
                 </label>

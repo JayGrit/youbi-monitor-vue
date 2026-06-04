@@ -139,6 +139,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     if (!row?.accountKey) return null
     const nextKey = (row.draftKey || '').trim()
     if (!nextKey || nextKey === row.accountKey) return null
+    setPlatformBusyKey(platform, rowKey(row))
     try {
       const payload = await accountsApi[platform].saveKey(row.accountKey, nextKey)
       mergePlatformRow(platform, payload, row.slot)
@@ -148,21 +149,25 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     } catch (err) {
       platformState[platform].error.value = err instanceof Error ? err.message : String(err)
       return null
+    } finally {
+      setPlatformBusyKey(platform, '')
     }
   }
 
   async function togglePlatformEnabled(platform, row) {
     if (!row?.accountKey) return
-    const nextEnabled = row.enabled === false
+    const nextEnabled = row.draftEnabled !== false
     const previousEnabled = row.enabled
     row.enabled = nextEnabled
     setPlatformBusyKey(platform, rowKey(row))
     try {
       const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
       mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       row.enabled = previousEnabled
+      row.draftEnabled = previousEnabled !== false
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
       setPlatformBusyKey(platform, '')
