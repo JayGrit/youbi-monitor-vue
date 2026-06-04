@@ -124,7 +124,6 @@ const {
   toggleUploadBackfillRow,
   toggleUploadBackfillAll,
   registerSelectedUploadBackfill,
-  saveUploaderPhone,
   saveUploaderPhoneAccount,
   accountDisplay,
   accountAvatarUrl,
@@ -448,7 +447,6 @@ function audioErrorMessage(code) {
       :toggle-upload-backfill-row="toggleUploadBackfillRow"
       :toggle-upload-backfill-all="toggleUploadBackfillAll"
       :register-selected-upload-backfill="registerSelectedUploadBackfill"
-      :save-uploader-phone="saveUploaderPhone"
       :save-uploader-phone-account="saveUploaderPhoneAccount"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"

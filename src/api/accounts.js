@@ -62,9 +62,6 @@ export function createAccountsApi(apiBase) {
     uploaderPhones() {
       return requestJson(`${apiBase}/uploader-phones`)
     },
-    updateUploaderPhone(phoneId, remark, note) {
-      return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}`, { remark, note })
-    },
     updateUploaderPhoneAccount(phoneId, platform, accountId) {
       return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId })
     },

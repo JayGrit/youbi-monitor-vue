@@ -34,7 +34,6 @@ const props = defineProps({
   toggleUploadBackfillRow: { type: Function, required: true },
   toggleUploadBackfillAll: { type: Function, required: true },
   registerSelectedUploadBackfill: { type: Function, required: true },
-  saveUploaderPhone: { type: Function, required: true },
   saveUploaderPhoneAccount: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
@@ -260,11 +259,11 @@ function nextSendStale(row) {
 }
 
 function phoneAccountField(platform) {
-  return `${platform}AccountId`
+  return platform
 }
 
 function phoneAccountValue(phone, platform) {
-  const value = phone?.[phoneAccountField(platform)]
+  const value = phone?.accounts?.[phoneAccountField(platform)]
   return value == null ? '' : String(value)
 }
 
@@ -279,14 +278,6 @@ function accountOptionText(account) {
 
 function phoneCellSaving(phone, platform) {
   return props.uploaderPhoneSavingKey === `${phone?.id}:${platform}`
-}
-
-function phoneHeaderSaving(phone) {
-  return props.uploaderPhoneSavingKey === `phone:${phone?.id}`
-}
-
-async function savePhoneMeta(phone) {
-  await props.saveUploaderPhone(phone)
 }
 
 async function savePhonePlatform(phone, platform, event) {
@@ -532,23 +523,7 @@ async function savePhonePlatform(phone, platform, event) {
         >
           <span class="uploader-phone-platform-cell"></span>
           <span v-for="phone in phoneRows" :key="phone.id" class="uploader-phone-head-cell">
-            <input
-              v-model="phone.draftRemark"
-              type="text"
-              aria-label="手机号备注"
-              placeholder="备注"
-              :disabled="phoneHeaderSaving(phone)"
-              @change="savePhoneMeta(phone)"
-            />
-            <small>{{ phone.phone }}</small>
-            <textarea
-              v-model="phone.draftNote"
-              aria-label="文本备注"
-              placeholder="文本备注"
-              rows="2"
-              :disabled="phoneHeaderSaving(phone)"
-              @change="savePhoneMeta(phone)"
-            ></textarea>
+            <strong>{{ phone.phone }}</strong>
           </span>
         </div>
         <div

@@ -240,11 +240,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.uploaderPhones()
       uploaderPhoneMatrix.value = {
-        phones: (payload?.phones || []).map(phone => ({
-          ...phone,
-          draftRemark: phone.remark || '',
-          draftNote: phone.note || '',
-        })),
+        phones: payload?.phones || [],
         platforms: payload?.platforms || [],
       }
       uploaderPhoneError.value = ''
@@ -252,23 +248,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
     } finally {
       uploaderPhoneLoading.value = false
-    }
-  }
-
-  async function saveUploaderPhone(phone) {
-    if (!phone?.id) return
-    const savingKey = `phone:${phone.id}`
-    uploaderPhoneSavingKey.value = savingKey
-    try {
-      const payload = await accountsApi.updateUploaderPhone(phone.id, phone.draftRemark || '', phone.draftNote || '')
-      mergeUploaderPhone(payload)
-      uploaderPhoneError.value = ''
-    } catch (err) {
-      uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      if (uploaderPhoneSavingKey.value === savingKey) {
-        uploaderPhoneSavingKey.value = ''
-      }
     }
   }
 
@@ -300,11 +279,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       ...uploaderPhoneMatrix.value,
       phones: uploaderPhoneMatrix.value.phones.map(phone => {
         if (phone.id !== payload.id) return phone
-        return {
-          ...payload,
-          draftRemark: payload.remark || '',
-          draftNote: payload.note || '',
-        }
+        return payload
       }),
     }
   }
@@ -1160,7 +1135,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     loadJinritoutiaoStatus,
     loadJinritoutiaoAccounts,
     loadUploaderPhones,
-    saveUploaderPhone,
     saveUploaderPhoneAccount,
     startBilibiliQrLogin,
     renewBilibiliAccount,

@@ -471,13 +471,12 @@ h1 {
 }
 
 .uploader-phone-head-cell {
-  display: grid;
-  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
 }
 
-.uploader-phone-head-cell input,
-.uploader-phone-head-cell textarea,
 .uploader-phone-select-cell select {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -488,22 +487,17 @@ h1 {
   font-size: 12px;
 }
 
-.uploader-phone-head-cell input,
 .uploader-phone-select-cell select {
   min-height: 30px;
   padding: 0 8px;
 }
 
-.uploader-phone-head-cell textarea {
-  min-height: 48px;
-  padding: 7px 8px;
-  resize: vertical;
-}
-
-.uploader-phone-head-cell small {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
+.uploader-phone-head-cell strong {
+  color: #243044;
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .uploader-phone-select-cell {
@@ -512,8 +506,6 @@ h1 {
   padding: 6px;
 }
 
-.uploader-phone-head-cell input:disabled,
-.uploader-phone-head-cell textarea:disabled,
 .uploader-phone-select-cell select:disabled {
   cursor: wait;
   opacity: 0.65;
