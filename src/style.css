@@ -563,6 +563,49 @@ h1 {
   gap: 6px;
 }
 
+.uploader-phone-profile-editor {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.uploader-phone-profile-avatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.uploader-phone-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uploader-phone-profile-avatar input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.uploader-phone-profile-name {
+  min-width: 0;
+}
+
 .uploader-phone-disable-button {
   width: 48px;
   padding: 0;
@@ -762,25 +805,6 @@ h1 {
   border-radius: 50%;
 }
 
-.account-avatar-cell.editable {
-  cursor: pointer;
-}
-
-.account-avatar-cell.editable::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border: 1px dashed #94a3b8;
-  border-radius: 50%;
-}
-
-.account-avatar-cell input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
 .account-profile {
   min-width: 0;
   display: inline-flex;
@@ -831,25 +855,6 @@ h1 {
 .account-profile-text small {
   color: #64748b;
   font-size: 11px;
-}
-
-.account-profile-text input {
-  min-height: 30px;
-}
-
-.account-name-button {
-  max-width: 100%;
-  min-height: 30px;
-  border: 0;
-  background: transparent;
-  color: #172033;
-  padding: 0;
-  overflow: hidden;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-  font-weight: 760;
 }
 
 .account-qr-grid {

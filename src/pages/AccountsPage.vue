@@ -50,7 +50,6 @@ const STALE_READY_MINUTES = 10
 const accountEditMode = ref(false)
 const accountEditBusy = ref(false)
 const accountAvatarCache = ref({})
-const editingNameKeys = ref({})
 const uploaderPhoneEditMode = ref(false)
 
 const phonePlatformAccounts = computed(() => {
@@ -62,6 +61,18 @@ const phonePlatformAccounts = computed(() => {
 })
 
 const phoneRows = computed(() => props.uploaderPhoneMatrix?.phones || [])
+
+const accountRowsByPlatformKey = computed(() => {
+  const rows = new Map()
+  for (const group of props.accountKeyGroups || []) {
+    for (const item of group.rows || []) {
+      if (item?.type && item?.row?.accountKey) {
+        rows.set(`${item.type}:${item.row.accountKey}`, item.row)
+      }
+    }
+  }
+  return rows
+})
 
 function accountName(type, row) {
   return row?.draftDisplayName || props.accountDisplay(row, type)
@@ -75,7 +86,6 @@ function accountAvatar(type, row) {
 
 function accountDraft(row, type) {
   return {
-    displayName: props.accountDisplay(row, type),
     enabled: row.enabled !== false,
     key: row.accountKey || '',
     cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
@@ -90,8 +100,6 @@ function cooldownDraftMinutes(seconds, fallback) {
 
 function resetAccountDraft(item) {
   const draft = accountDraft(item.row, item.type)
-  item.row.draftDisplayName = draft.displayName
-  item.row.draftAvatarUrl = props.accountAvatarUrl(item.row)
   item.row.draftEnabled = draft.enabled
   item.row.draftKey = draft.key
   item.row.draftCooldownMinMinutes = draft.cooldownMinMinutes
@@ -102,7 +110,6 @@ function accountChanges(item) {
   const row = item.row
   const draft = accountDraft(row, item.type)
   return {
-    displayName: String(row.draftDisplayName || '').trim() !== draft.displayName,
     cooldown:
       String(row.draftCooldownMinMinutes ?? '').trim() !== draft.cooldownMinMinutes
       || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
@@ -118,7 +125,6 @@ function enterAccountEditMode() {
 
 function cancelAccountEditMode() {
   forEachConfiguredAccount(resetAccountDraft)
-  editingNameKeys.value = {}
   props.closeUploadBackfill()
   accountEditMode.value = false
 }
@@ -129,9 +135,6 @@ async function saveAccountEdits() {
     for (const item of configuredAccounts()) {
       const row = item.row
       const changes = accountChanges(item)
-      if (changes.displayName) {
-        await props.savePlatformAccountProfile(item.type, row)
-      }
       if (changes.cooldown) {
         await props.savePlatformCooldown(item.type, row)
       }
@@ -142,7 +145,6 @@ async function saveAccountEdits() {
         await props.savePlatformKey(item.type, row)
       }
     }
-    editingNameKeys.value = {}
     props.closeUploadBackfill()
     accountEditMode.value = false
   } finally {
@@ -160,33 +162,6 @@ function forEachConfiguredAccount(callback) {
 
 function visibleRows(group) {
   return group.rows.filter(item => accountEditMode.value || item.row.enabled !== false)
-}
-
-function isNameEditing(type, row) {
-  return Boolean(editingNameKeys.value[`${type}:${row?.accountKey || ''}`])
-}
-
-function startNameEdit(type, row) {
-  if (!accountEditMode.value) return
-  editingNameKeys.value = { ...editingNameKeys.value, [`${type}:${row?.accountKey || ''}`]: true }
-}
-
-async function handleAvatarUpload(event, item) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  try {
-    const profile = await props.uploadPlatformAccountAvatar(item.type, item.row, file)
-    item.row.avatarUrl = profile?.avatarUrl || item.row.avatarUrl
-    item.row.avatar_url = profile?.avatarUrl || item.row.avatar_url
-    item.row.draftAvatarUrl = normalizeAccountAvatarUrl(profile?.avatarUrl || item.row.draftAvatarUrl)
-    if (profile?.avatarUrl) {
-      const avatarUrl = normalizeAccountAvatarUrl(profile.avatarUrl)
-      delete accountAvatarCache.value[avatarUrl]
-      cacheAccountAvatar(avatarUrl)
-    }
-  } finally {
-    event.target.value = ''
-  }
 }
 
 async function cacheAccountAvatar(url) {
@@ -294,6 +269,35 @@ function phoneAccountName(account) {
   return displayName && displayName !== accountKey ? displayName : ''
 }
 
+function phoneSelectedAccountRow(phone, platform) {
+  const account = selectedPhoneAccount(phone, platform)
+  if (!account?.accountKey) return null
+  return accountRowsByPlatformKey.value.get(`${platform}:${account.accountKey}`) || null
+}
+
+function phoneAccountProfileName(phone, platform) {
+  const account = selectedPhoneAccount(phone, platform)
+  return phoneAccountName(account)
+}
+
+function phoneAccountProfileAvatar(phone, platform) {
+  const row = phoneSelectedAccountRow(phone, platform)
+  const account = selectedPhoneAccount(phone, platform)
+  return row ? accountAvatar(platform, row) : phoneAccountAvatar(account)
+}
+
+function syncPhoneAccountOption(platform, accountKey, profile) {
+  if (!accountKey || !profile) return
+  const account = phoneAccountOptions(platform).find(item => item.accountKey === accountKey)
+  if (!account) return
+  if (Object.prototype.hasOwnProperty.call(profile, 'displayName')) {
+    account.remark = profile.displayName || ''
+  }
+  if (profile.avatarUrl) {
+    account.avatarUrl = profile.avatarUrl
+  }
+}
+
 function phoneAccountOptions(platform) {
   return phonePlatformAccounts.value.get(platform) || []
 }
@@ -355,6 +359,36 @@ async function togglePhoneDisabled(phone, platform) {
   const accountId = phoneAccountValue(phone, platform) || null
   await props.saveUploaderPhoneAccount(phone, platform, accountId, phoneNoteValue(phone), disabled)
 }
+
+async function savePhoneAccountProfile(phone, platform, event) {
+  const row = phoneSelectedAccountRow(phone, platform)
+  const account = selectedPhoneAccount(phone, platform)
+  if (!row || !account) return
+  const nextName = String(event?.target?.value || '').trim()
+  const currentName = phoneAccountName(account)
+  if (nextName === currentName) return
+  row.draftDisplayName = nextName
+  const profile = await props.savePlatformAccountProfile(platform, row)
+  syncPhoneAccountOption(platform, account.accountKey, profile)
+}
+
+async function uploadPhoneAccountAvatar(phone, platform, event) {
+  const row = phoneSelectedAccountRow(phone, platform)
+  const account = selectedPhoneAccount(phone, platform)
+  const file = event?.target?.files?.[0]
+  if (!row || !account || !file) return
+  try {
+    const profile = await props.uploadPlatformAccountAvatar(platform, row, file)
+    syncPhoneAccountOption(platform, account.accountKey, profile)
+    if (profile?.avatarUrl) {
+      const avatarUrl = normalizeAccountAvatarUrl(profile.avatarUrl)
+      delete accountAvatarCache.value[avatarUrl]
+      cacheAccountAvatar(avatarUrl)
+    }
+  } finally {
+    if (event?.target) event.target.value = ''
+  }
+}
 </script>
 
 <template>
@@ -402,7 +436,7 @@ async function togglePhoneDisabled(phone, platform) {
               <span data-label="头像">
                 <label
                   v-if="item.configured"
-                  :class="['account-avatar-cell', { editable: accountEditMode }]"
+                  class="account-avatar-cell"
                 >
                   <img
                     v-if="accountAvatar(item.type, item.row)"
@@ -412,35 +446,12 @@ async function togglePhoneDisabled(phone, platform) {
                     decoding="async"
                   />
                   <span v-else class="account-avatar-fallback">{{ accountAvatarInitial(item.row, item.type) }}</span>
-                  <input
-                    v-if="accountEditMode"
-                    type="file"
-                    accept="image/*"
-                    aria-label="上传头像"
-                    @change="handleAvatarUpload($event, item)"
-                  />
                 </label>
                 <template v-else>-</template>
               </span>
               <span data-label="账号">
                 <span v-if="item.configured" class="account-profile-text">
-                  <template v-if="accountEditMode && isNameEditing(item.type, item.row)">
-                      <input
-                        v-model="item.row.draftDisplayName"
-                        type="text"
-                        aria-label="账号名"
-                        placeholder="账号名"
-                      />
-                  </template>
-                  <button
-                    v-else-if="accountEditMode"
-                    type="button"
-                    class="account-name-button"
-                    @click="startNameEdit(item.type, item.row)"
-                  >
-                    {{ accountName(item.type, item.row) }}
-                  </button>
-                  <strong v-else>{{ accountName(item.type, item.row) }}</strong>
+                  <strong>{{ accountName(item.type, item.row) }}</strong>
                 </span>
                 <template v-else>-</template>
               </span>
@@ -647,6 +658,37 @@ async function togglePhoneDisabled(phone, platform) {
                 >
                 </option>
               </datalist>
+              <div
+                v-if="selectedPhoneAccount(phone, platform.type) && phoneSelectedAccountRow(phone, platform.type)"
+                class="uploader-phone-profile-editor"
+              >
+                <label class="uploader-phone-profile-avatar">
+                  <img
+                    v-if="phoneAccountProfileAvatar(phone, platform.type)"
+                    :src="phoneAccountProfileAvatar(phone, platform.type)"
+                    :alt="phoneAccountProfileName(phone, platform.type) || selectedPhoneAccount(phone, platform.type).accountKey"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    aria-label="上传账号头像"
+                    :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
+                    @change="uploadPhoneAccountAvatar(phone, platform.type, $event)"
+                  />
+                </label>
+                <input
+                  type="text"
+                  class="uploader-phone-profile-name"
+                  :value="phoneAccountProfileName(phone, platform.type)"
+                  placeholder="账号名"
+                  :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
+                  @change="savePhoneAccountProfile(phone, platform.type, $event)"
+                  @keyup.enter="savePhoneAccountProfile(phone, platform.type, $event)"
+                />
+              </div>
             </template>
             <template v-else>
               <span
