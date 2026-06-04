@@ -30,6 +30,7 @@ const props = defineProps({
   savePlatformAccountProfile: { type: Function, required: true },
   uploadPlatformAccountAvatar: { type: Function, required: true },
   openUploadBackfill: { type: Function, required: true },
+  openTaskFlow: { type: Function, required: true },
   closeUploadBackfill: { type: Function, required: true },
   loadUploadBackfillCandidates: { type: Function, required: true },
   toggleUploadBackfillRow: { type: Function, required: true },
@@ -250,6 +251,20 @@ function nextSendDisplay(row) {
   const hours = Math.floor(minutes / 60)
   const restMinutes = minutes % 60
   return `${pad2(hours)}:${pad2(restMinutes)}`
+}
+
+function runningTaskId(row) {
+  return String(row?.uploadRunningTaskId || '').trim()
+}
+
+function nextSendRunning(row) {
+  return nextSendDisplay(row) === '发送中' && Boolean(runningTaskId(row))
+}
+
+function openRunningTask(row) {
+  const taskId = runningTaskId(row)
+  if (!taskId) return
+  props.openTaskFlow({ taskId }, 'uploader')
 }
 
 function nextSendStale(row) {
@@ -488,7 +503,15 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               </span>
               <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
-                {{ item.configured ? nextSendDisplay(item.row) : '-' }}
+                <button
+                  v-if="item.configured && nextSendRunning(item.row)"
+                  type="button"
+                  class="next-send-link"
+                  @click="openRunningTask(item.row)"
+                >
+                  {{ nextSendDisplay(item.row) }}
+                </button>
+                <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
               <span v-if="accountEditMode" data-label="Key">
                 <input

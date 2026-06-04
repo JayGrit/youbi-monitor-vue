@@ -446,6 +446,7 @@ function audioErrorMessage(code) {
       :save-platform-account-profile="savePlatformAccountProfile"
       :upload-platform-account-avatar="uploadPlatformAccountAvatar"
       :open-upload-backfill="openUploadBackfill"
+      :open-task-flow="openTaskFlow"
       :close-upload-backfill="closeUploadBackfill"
       :load-upload-backfill-candidates="loadUploadBackfillCandidates"
       :toggle-upload-backfill-row="toggleUploadBackfillRow"

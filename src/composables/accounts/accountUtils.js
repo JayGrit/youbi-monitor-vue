@@ -52,7 +52,7 @@ export function nextSendText(account) {
   if (account?.enabled === false) {
     return '已禁用'
   }
-  if (Number(account?.uploadRunningCount || 0) > 0) {
+  if (account?.uploadRunningTaskId || Number(account?.uploadRunningCount || 0) > 0) {
     return '发送中'
   }
   const next = parseLocalDateTime(account?.nextUploadAllowedAt)
