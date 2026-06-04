@@ -99,6 +99,13 @@ function showStageTime(node) {
 function showStageProgress(node) {
   return node?.key !== 'uploader'
 }
+
+function onlineDeviceNames(service) {
+  return (service?.devices || [])
+    .filter(device => device.online)
+    .map(device => String(device.deviceName || '').trim())
+    .filter(Boolean)
+}
 </script>
 
 <template>
@@ -116,8 +123,13 @@ function showStageProgress(node) {
         :title="onlineDeviceTitle(service)"
       >
         <strong>{{ service.serviceName }}</strong>
-        <span :class="['service-device-name', { offline: onlineDeviceText(service) === '离线' }]">
-          {{ onlineDeviceText(service) }}
+        <span v-if="onlineDeviceNames(service).length" class="service-device-names">
+          <span v-for="name in onlineDeviceNames(service)" :key="name" class="service-device-name">
+            {{ name }}
+          </span>
+        </span>
+        <span v-else class="service-device-name offline">
+          离线
         </span>
       </div>
     </div>
@@ -125,26 +137,41 @@ function showStageProgress(node) {
 
   <section class="task-list" aria-label="任务列表">
     <div class="task-filter-bar" aria-label="任务状态筛选">
-      <button
-        v-for="filter in taskStatusFilters"
-        :key="filter.key"
-        type="button"
-        :class="['task-filter-button', { active: taskStatusFilter === filter.key }]"
-        @click="emit('update:taskStatusFilter', filter.key)"
-      >
-        <span>{{ filter.label }}</span>
-        <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
-      </button>
-      <select
-        class="task-stage-filter"
-        :value="taskStageFilter"
-        aria-label="按执行中 stage 筛选"
-        title="按执行中 stage 筛选"
-        @change="emit('update:taskStageFilter', $event.target.value)"
-      >
-        <option value="all">⌄</option>
-        <option v-for="stage in taskStageFilters" :key="stage.key" :value="stage.key">{{ stage.label }}</option>
-      </select>
+      <template v-for="filter in taskStatusFilters" :key="filter.key">
+        <span
+          v-if="filter.key === 'running'"
+          :class="['task-running-filter', { active: taskStatusFilter === filter.key }]"
+        >
+          <button
+            type="button"
+            :class="['task-filter-button', { active: taskStatusFilter === filter.key }]"
+            @click="emit('update:taskStatusFilter', filter.key)"
+          >
+            <span>{{ filter.label }}</span>
+            <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
+          </button>
+          <select
+            v-if="taskStatusFilter === filter.key"
+            class="task-stage-filter"
+            :value="taskStageFilter"
+            aria-label="按执行中 stage 筛选"
+            title="按执行中 stage 筛选"
+            @change="emit('update:taskStageFilter', $event.target.value)"
+          >
+            <option value="all">全部阶段</option>
+            <option v-for="stage in taskStageFilters" :key="stage.key" :value="stage.key">{{ stage.label }}</option>
+          </select>
+        </span>
+        <button
+          v-else
+          type="button"
+          :class="['task-filter-button', { active: taskStatusFilter === filter.key }]"
+          @click="emit('update:taskStatusFilter', filter.key)"
+        >
+          <span>{{ filter.label }}</span>
+          <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
+        </button>
+      </template>
       <select
         class="task-type-filter"
         :value="taskTypeFilter"
