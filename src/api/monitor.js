@@ -2,8 +2,11 @@ import { requestJson } from './http'
 
 export function createMonitorApi(apiBase) {
   return {
-    loadMonitorTasks(page = 1, limit = 20) {
+    loadMonitorTasks(page = 1, limit = 20, filters = {}) {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+      if (filters.status && filters.status !== 'all') params.set('status', filters.status)
+      if (filters.type && filters.type !== 'all') params.set('type', filters.type)
+      if (filters.stage && filters.stage !== 'all') params.set('stage', filters.stage)
       return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`)
     },
 

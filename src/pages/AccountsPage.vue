@@ -436,11 +436,11 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <span>Platform</span>
             <span>头像</span>
             <span>账号</span>
-            <span>今日已发</span>
-            <span>冷却等待</span>
-            <span>失败任务</span>
-            <span>上次上传</span>
-            <span>下次可发送</span>
+            <span v-if="!accountEditMode">今日已发</span>
+            <span v-if="!accountEditMode">冷却等待</span>
+            <span v-if="!accountEditMode">失败任务</span>
+            <span v-if="!accountEditMode">上次上传</span>
+            <span v-if="!accountEditMode">下次可发送</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
@@ -481,26 +481,18 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 </span>
                 <template v-else>-</template>
               </span>
-              <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
-              <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
+              <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
                 {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
               </span>
-              <span class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
-              <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
-                <input
-                  v-if="item.configured && accountEditMode"
-                  v-model="item.row.draftNextUploadAllowedAt"
-                  type="datetime-local"
-                  class="next-send-input"
-                  aria-label="下次可发送时间"
-                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
-                  @change="saveAccountNextSendEdit(item)"
-                />
-                <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
+              <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
+              <span v-if="!accountEditMode" :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
+                {{ item.configured ? nextSendDisplay(item.row) : '-' }}
               </span>
-              <span v-if="item.configured && accountEditMode" data-label="Key">
+              <span v-if="accountEditMode" data-label="Key">
                 <input
+                  v-if="item.configured"
                   v-model="item.row.draftKey"
                   type="text"
                   class="account-key-input"
@@ -509,6 +501,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   :disabled="platformBusyKey(item.type) === item.row.accountKey"
                   @change="saveAccountKeyEdit(item)"
                 />
+                <template v-else>-</template>
               </span>
               <span v-if="accountEditMode" data-label="操作">
                 <button
@@ -521,29 +514,32 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 </button>
                 <template v-else>-</template>
               </span>
-              <span v-if="item.configured && accountEditMode" class="cooldown-editor" data-label="随机冷却">
-                <input
-                  v-model="item.row.draftCooldownMinMinutes"
-                  type="number"
-                  min="0"
-                  step="1"
-                  aria-label="最小冷却分钟"
-                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
-                  @change="saveAccountCooldownEdit(item)"
-                />
-                <span>-</span>
-                <input
-                  v-model="item.row.draftCooldownMaxMinutes"
-                  type="number"
-                  min="0"
-                  step="1"
-                  aria-label="最大冷却分钟"
-                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
-                  @change="saveAccountCooldownEdit(item)"
-                />
+              <span v-if="accountEditMode" class="cooldown-editor" data-label="随机冷却">
+                <template v-if="item.configured">
+                  <input
+                    v-model="item.row.draftCooldownMinMinutes"
+                    type="number"
+                    min="0"
+                    step="1"
+                    aria-label="最小冷却分钟"
+                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    @change="saveAccountCooldownEdit(item)"
+                  />
+                  <span>-</span>
+                  <input
+                    v-model="item.row.draftCooldownMaxMinutes"
+                    type="number"
+                    min="0"
+                    step="1"
+                    aria-label="最大冷却分钟"
+                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    @change="saveAccountCooldownEdit(item)"
+                  />
+                </template>
+                <template v-else>-</template>
               </span>
-              <span v-if="item.configured && accountEditMode" data-label="启用">
-                <label class="account-enabled-edit">
+              <span v-if="accountEditMode" data-label="启用">
+                <label v-if="item.configured" class="account-enabled-edit">
                   <input
                     v-model="item.row.draftEnabled"
                     type="checkbox"
@@ -552,6 +548,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   />
                   {{ item.row.draftEnabled ? '启用' : '禁用' }}
                 </label>
+                <template v-else>-</template>
               </span>
             </div>
             </div>

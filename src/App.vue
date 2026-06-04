@@ -45,10 +45,10 @@ const {
   uploadRetryLoading,
   uploadRetryBusy,
   uploadRetrySelectedIds,
-  taskFilterCounts,
   taskTypeFilters,
   taskStageFilters,
   filteredTasks,
+  hasTaskFilter,
   pagedTasks,
   taskPageCount,
   uploadRetryPlatformOptions,
@@ -305,7 +305,6 @@ function audioErrorMessage(code) {
       :service-heartbeats="serviceHeartbeats"
       :task-status-filters="taskStatusFilters"
       :task-status-filter="taskStatusFilter"
-      :task-filter-counts="taskFilterCounts"
       :task-type-filter="taskTypeFilter"
       :task-type-filters="taskTypeFilters"
       :task-stage-filter="taskStageFilter"
@@ -315,6 +314,7 @@ function audioErrorMessage(code) {
       :task-page-count="taskPageCount"
       :task-actions-expanded="taskActionsExpanded"
       :filtered-tasks="filteredTasks"
+      :has-task-filter="hasTaskFilter"
       :paged-tasks="pagedTasks"
       :open-failure-key="openFailureKey"
       :upload-retry-platform="uploadRetryPlatform"

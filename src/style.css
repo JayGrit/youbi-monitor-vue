@@ -141,6 +141,10 @@ h1 {
   gap: 14px;
 }
 
+.account-overview {
+  padding: 10px 12px;
+}
+
 .heartbeat-panel {
   border: 1px solid #dde5ee;
   background: #ffffff;
@@ -373,7 +377,7 @@ h1 {
 }
 
 .account-key-list {
-  width: min(60vw, 100%);
+  width: min(70vw, 100%);
   display: grid;
   gap: 0;
   margin: 14px auto 0;
@@ -394,7 +398,7 @@ h1 {
 }
 
 .account-group-grid.editing {
-  min-width: 1320px;
+  min-width: 960px;
 }
 
 .account-group-heading {
@@ -438,8 +442,8 @@ h1 {
 
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
-  min-width: 1200px;
-  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 86px 170px minmax(150px, 1fr) 92px 150px 74px;
+  min-width: 840px;
+  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 74px;
 }
 
 .account-backfill-button {
@@ -3667,7 +3671,7 @@ a.submitter-cell:hover {
   }
 
   .account-group-grid.editing {
-    min-width: 1180px;
+    min-width: 880px;
   }
 
   .account-row {
@@ -3682,8 +3686,8 @@ a.submitter-cell:hover {
 
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
-    min-width: 1080px;
-    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 78px 160px minmax(140px, 1fr) 88px 140px 64px;
+    min-width: 780px;
+    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 64px;
   }
 
   .task-row {

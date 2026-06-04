@@ -9,7 +9,6 @@ const props = defineProps({
   serviceHeartbeats: { type: Array, default: () => [] },
   taskStatusFilters: { type: Array, default: () => [] },
   taskStatusFilter: { type: String, default: 'all' },
-  taskFilterCounts: { type: Object, default: () => ({}) },
   taskTypeFilter: { type: String, default: 'all' },
   taskTypeFilters: { type: Array, default: () => [] },
   taskStageFilter: { type: String, default: 'all' },
@@ -19,6 +18,7 @@ const props = defineProps({
   taskPageCount: { type: Number, default: 1 },
   taskActionsExpanded: { type: Boolean, default: false },
   filteredTasks: { type: Array, default: () => [] },
+  hasTaskFilter: { type: Boolean, default: false },
   pagedTasks: { type: Array, default: () => [] },
   openFailureKey: { type: String, default: '' },
   uploadRetryPlatform: { type: String, default: '' },
@@ -94,10 +94,7 @@ function platformTitle(platformStatus) {
 }
 
 function displayTaskCount() {
-  if (props.taskStatusFilter === 'all' && props.taskTypeFilter === 'all' && props.taskStageFilter === 'all') {
-    return props.taskTotalCount || props.filteredTasks.length
-  }
-  return props.filteredTasks.length
+  return props.taskTotalCount || props.filteredTasks.length
 }
 
 function showStageTime(node) {
@@ -156,7 +153,6 @@ function onlineDeviceNames(service) {
             @click="emit('update:taskStatusFilter', filter.key)"
           >
             <span>{{ filter.label }}</span>
-            <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
           </button>
           <select
             v-if="taskStatusFilter === filter.key"
@@ -177,7 +173,6 @@ function onlineDeviceNames(service) {
           @click="emit('update:taskStatusFilter', filter.key)"
         >
           <span>{{ filter.label }}</span>
-          <strong>{{ taskFilterCounts[filter.key] || 0 }}</strong>
         </button>
       </template>
       <select
@@ -256,7 +251,7 @@ function onlineDeviceNames(service) {
       </div>
     </div>
 
-    <div v-if="!loading && tasks.length === 0" class="empty-state">
+    <div v-if="!loading && !hasTaskFilter && tasks.length === 0" class="empty-state">
       暂无任务
     </div>
     <div v-else-if="!loading && filteredTasks.length === 0" class="empty-state">

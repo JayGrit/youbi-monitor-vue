@@ -38,21 +38,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const uploadRetryBusy = ref(false)
   const uploadRetrySelectedIds = ref([])
 
-  const taskFilterCounts = computed(() => {
-    const counts = {
-      all: tasks.value.length,
-      success: 0,
-      failed: 0,
-      running: 0,
-    }
-    for (const task of tasks.value) {
-      if (task.status === 'success') counts.success += 1
-      if (task.status === 'failed') counts.failed += 1
-      if (task.status === 'running') counts.running += 1
-    }
-    return counts
-  })
-
   const taskTypeFilters = computed(() => {
     return [...new Set(tasks.value.map(task => taskTypeText(task)).filter(type => type !== '-'))]
       .sort((left, right) => left.localeCompare(right))
@@ -79,20 +64,16 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     })
   })
 
-  const isServerPagedView = computed(() => {
-    return taskStatusFilter.value === 'all' && taskTypeFilter.value === 'all' && taskStageFilter.value === 'all'
+  const hasTaskFilter = computed(() => {
+    return taskStatusFilter.value !== 'all' || taskTypeFilter.value !== 'all' || taskStageFilter.value !== 'all'
   })
 
   const taskPageCount = computed(() => {
-    const count = isServerPagedView.value ? taskTotalCount.value : filteredTasks.value.length
-    return Math.max(1, Math.ceil(count / MONITOR_PAGE_SIZE))
+    return Math.max(1, Math.ceil(taskTotalCount.value / MONITOR_PAGE_SIZE))
   })
 
   const pagedTasks = computed(() => {
-    if (isServerPagedView.value) return filteredTasks.value
-    const page = Math.min(Math.max(1, taskPage.value), taskPageCount.value)
-    const offset = (page - 1) * MONITOR_PAGE_SIZE
-    return filteredTasks.value.slice(offset, offset + MONITOR_PAGE_SIZE)
+    return filteredTasks.value
   })
 
   const onlineSummary = computed(() => {
@@ -124,7 +105,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   async function loadTasks() {
     try {
-      const payload = await monitorApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE)
+      const payload = await monitorApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE, {
+        status: taskStatusFilter.value,
+        type: taskTypeFilter.value,
+        stage: taskStageFilter.value,
+      })
       tasks.value = payload.tasks || []
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
       if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
@@ -358,18 +343,21 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   function setTaskTypeFilter(value) {
     taskTypeFilter.value = value
     taskPage.value = 1
+    loadTasks()
   }
 
   function setTaskStatusFilter(value) {
     taskStatusFilter.value = value
     if (value !== 'running') taskStageFilter.value = 'all'
     taskPage.value = 1
+    loadTasks()
   }
 
   function setTaskStageFilter(value) {
     taskStageFilter.value = value
     if (value !== 'all') taskStatusFilter.value = 'running'
     taskPage.value = 1
+    loadTasks()
   }
 
   function setTaskPage(value) {
@@ -496,10 +484,10 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadRetryLoading,
     uploadRetryBusy,
     uploadRetrySelectedIds,
-    taskFilterCounts,
     taskTypeFilters,
     taskStageFilters,
     filteredTasks,
+    hasTaskFilter,
     pagedTasks,
     taskPageCount,
     onlineSummary,
