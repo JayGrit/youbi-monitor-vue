@@ -1,0 +1,318 @@
+import { computed, ref } from 'vue'
+import {
+  ACCOUNT_PLATFORM_TYPES,
+  QR_LOGIN_PLATFORM_TYPES,
+  accountDisplay,
+  accountRows,
+  rowKey,
+} from './accountUtils'
+
+export function usePlatformAccounts(accountsApi, accountPlatforms) {
+  const platformState = Object.fromEntries(ACCOUNT_PLATFORM_TYPES.map(platform => [platform, createPlatformState()]))
+  const bilibiliRenewing = ref(false)
+  const qrTimers = Object.fromEntries(QR_LOGIN_PLATFORM_TYPES.map(platform => [platform, null]))
+
+  const accountKeyGroups = computed(() => {
+    const groups = new Map()
+    for (const platform of accountPlatforms) {
+      const rows = platformState[platform.type]?.rows.value || []
+      for (const row of rows) {
+        const key = String(row.accountKey || row.draftKey || '').trim()
+        if (!key) continue
+        if (!groups.has(key)) groups.set(key, { key, platforms: {} })
+        groups.get(key).platforms[platform.type] = row
+      }
+    }
+    return [...groups.values()]
+      .map(group => ({
+        ...group,
+        totalPlatformCount: accountPlatforms.length,
+        rows: accountPlatforms
+          .filter(platform => group.platforms[platform.type])
+          .map(platform => ({
+            ...platform,
+            row: group.platforms[platform.type],
+            configured: Boolean(group.platforms[platform.type]?.accountKey),
+            exists: true,
+          })),
+      }))
+      .sort((left, right) => right.rows.length - left.rows.length || left.key.localeCompare(right.key))
+  })
+
+  async function loadAccountOverview() {
+    try {
+      const payload = await accountsApi.overview()
+      for (const platform of ACCOUNT_PLATFORM_TYPES) {
+        const state = platformState[platform]
+        state.accounts.value = payload?.[platform] || []
+        state.rows.value = accountRows(state.accounts.value)
+        state.account.value = state.rows.value.find(row => row.accountKey) || state.rows.value[0]
+        state.error.value = ''
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      for (const platform of ACCOUNT_PLATFORM_TYPES) {
+        platformState[platform].error.value = message
+      }
+    }
+  }
+
+  function clearQrPolling() {
+    for (const platform of QR_LOGIN_PLATFORM_TYPES) {
+      clearQrTimer(platform)
+    }
+  }
+
+  async function startPlatformLogin(platform, row) {
+    if (!QR_LOGIN_PLATFORM_TYPES.includes(platform)) return null
+    try {
+      const key = row?.accountKey || '_auto'
+      platformState[platform].busyKey.value = rowKey(row)
+      const payload = await accountsApi[platform].startQrLogin(key)
+      platformState[platform].qrCode.value = payload
+      platformState[platform].qrMessage.value = '等待扫码确认'
+      pollQrCode(platform)
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      platformState[platform].busyKey.value = ''
+    }
+  }
+
+  async function pollQrCode(platform) {
+    if (!platformState[platform].qrCode.value?.authCode) return
+    clearQrTimer(platform)
+    await refreshQrCode(platform)
+    qrTimers[platform] = window.setInterval(() => refreshQrCode(platform), 1500)
+  }
+
+  async function refreshQrCode(platform) {
+    const state = platformState[platform]
+    if (!state.qrCode.value?.authCode) return
+    try {
+      const key = state.qrCode.value.accountKey || '_auto'
+      const payload = await accountsApi[platform].pollQrLogin(key, state.qrCode.value.authCode)
+      state.qrMessage.value = payload.message || '等待扫码确认'
+      if (payload.code === 'expired') {
+        clearQrTimer(platform)
+      }
+      if (payload.loggedIn) {
+        state.account.value = payload.account
+        await loadAccountOverview()
+        state.qrCode.value = null
+        clearQrTimer(platform)
+      }
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function renewBilibiliAccount(row) {
+    if (!row?.accountKey) return
+    bilibiliRenewing.value = true
+    platformState.bilibili.busyKey.value = rowKey(row)
+    try {
+      platformState.bilibili.account.value = await accountsApi.bilibili.renew(row.accountKey)
+      await loadAccountOverview()
+      platformState.bilibili.error.value = ''
+    } catch (err) {
+      platformState.bilibili.error.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      bilibiliRenewing.value = false
+      platformState.bilibili.busyKey.value = ''
+    }
+  }
+
+  async function refreshPlatformRow(platform, row) {
+    if (!row?.accountKey) return
+    try {
+      const account = await accountsApi[platform].refresh(row.accountKey)
+      mergePlatformRow(platform, account)
+      platformState[platform].account.value = account
+      platformState[platform].error.value = ''
+    } catch (err) {
+      platformState[platform].error.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function savePlatformKey(platform, row) {
+    if (!row?.accountKey) return null
+    const nextKey = (row.draftKey || '').trim()
+    if (!nextKey || nextKey === row.accountKey) return null
+    try {
+      const payload = await accountsApi[platform].saveKey(row.accountKey, nextKey)
+      mergePlatformRow(platform, payload, row.slot)
+      await loadAccountOverview()
+      platformState[platform].error.value = ''
+      return payload
+    } catch (err) {
+      platformState[platform].error.value = err instanceof Error ? err.message : String(err)
+      return null
+    }
+  }
+
+  async function togglePlatformEnabled(platform, row) {
+    if (!row?.accountKey) return
+    const nextEnabled = row.enabled === false
+    const previousEnabled = row.enabled
+    row.enabled = nextEnabled
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
+      mergePlatformRow(platform, account, row.slot)
+      setPlatformError(platform, '')
+    } catch (err) {
+      row.enabled = previousEnabled
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  async function savePlatformCooldown(platform, row) {
+    if (!row?.accountKey) return
+    const minMinutes = Number(row.draftCooldownMinMinutes)
+    const maxMinutes = Number(row.draftCooldownMaxMinutes)
+    if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 0 || maxMinutes < minMinutes) {
+      setPlatformError(platform, '冷却时间范围无效')
+      return
+    }
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setCooldown(
+        row.accountKey,
+        Math.round(minMinutes * 60),
+        Math.round(maxMinutes * 60),
+      )
+      mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  async function savePlatformAccountProfile(platform, row) {
+    if (!row?.accountKey) return null
+    const displayName = String(row.draftDisplayName || '').trim()
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const profile = await accountsApi[platform].updateProfile(row.accountKey, displayName)
+      row.displayName = profile?.displayName || ''
+      row.display_name = profile?.displayName || ''
+      row.draftDisplayName = row.displayName || accountDisplay(row, platform)
+      setPlatformError(platform, '')
+      return profile
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+      throw err
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  async function uploadPlatformAccountAvatar(platform, row, file) {
+    if (!row?.accountKey || !file) return null
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const profile = await accountsApi[platform].uploadAvatar(row.accountKey, file)
+      row.avatarUrl = profile?.avatarUrl || ''
+      row.avatar_url = profile?.avatarUrl || ''
+      row.draftAvatarUrl = row.avatarUrl
+      setPlatformError(platform, '')
+      return profile
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+      throw err
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  function mergePlatformRow(platform, account, preferredSlot) {
+    const state = platformState[platform]
+    const rows = [...state.rows.value]
+    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    if (index < 0 && preferredSlot) {
+      index = rows.findIndex(row => row.slot === preferredSlot)
+    }
+    if (index < 0) {
+      index = rows.findIndex(row => !row.accountKey)
+    }
+    if (index < 0) {
+      index = 0
+    }
+    rows[index] = {
+      ...account,
+      slot: rows[index]?.slot || index + 1,
+      draftKey: account.accountKey || '',
+    }
+    state.rows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
+  function platformBusyKey(platform) {
+    return platformState[platform]?.busyKey.value || ''
+  }
+
+  function platformErrorText() {
+    return [
+      platformState.douyin.error.value,
+      platformState.xiaohongshu.error.value,
+      platformState.bilibili.error.value,
+      platformState.shipinhao.error.value,
+      platformState.kuaishou.error.value,
+      platformState.jinritoutiao.error.value,
+    ].filter(Boolean).join('；')
+  }
+
+  function setPlatformError(platform, message) {
+    if (platformState[platform]) {
+      platformState[platform].error.value = message
+    }
+  }
+
+  function setPlatformBusyKey(platform, value) {
+    if (platformState[platform]) {
+      platformState[platform].busyKey.value = value
+    }
+  }
+
+  function clearQrTimer(platform) {
+    if (qrTimers[platform]) {
+      window.clearInterval(qrTimers[platform])
+      qrTimers[platform] = null
+    }
+  }
+
+  return {
+    platformState,
+    accountKeyGroups,
+    bilibiliRenewing,
+    loadAccountOverview,
+    clearQrPolling,
+    startPlatformLogin,
+    renewBilibiliAccount,
+    refreshPlatformRow,
+    savePlatformKey,
+    togglePlatformEnabled,
+    savePlatformCooldown,
+    savePlatformAccountProfile,
+    uploadPlatformAccountAvatar,
+    platformBusyKey,
+    platformErrorText,
+  }
+}
+
+function createPlatformState() {
+  return {
+    account: ref(null),
+    accounts: ref([]),
+    rows: ref(accountRows([])),
+    error: ref(''),
+    qrCode: ref(null),
+    qrMessage: ref(''),
+    busyKey: ref(''),
+  }
+}
