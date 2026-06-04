@@ -1165,7 +1165,7 @@ h1 {
 
 .task-row {
   display: grid;
-  grid-template-columns: 132px minmax(240px, 320px) minmax(720px, 1fr) 86px;
+  grid-template-columns: 132px minmax(240px, 320px) minmax(964px, 1fr) 120px;
   align-items: center;
   gap: 16px;
   padding: 16px;
@@ -1523,6 +1523,7 @@ h1 {
 }
 
 .task-action-rail button {
+  min-height: 28px;
   width: 100%;
 }
 
@@ -1546,6 +1547,11 @@ h1 {
   background: #ffffff;
 }
 
+.task-row.status-ready {
+  border-color: #dde6f0;
+  background: #ffffff;
+}
+
 .task-row.status-failed {
   border: 2px solid #fca5a5;
   background: #ffffff;
@@ -1561,7 +1567,7 @@ h1 {
   align-items: center;
   justify-content: start;
   gap: 0;
-  min-width: 920px;
+  min-width: 964px;
 }
 
 .stage-node {
