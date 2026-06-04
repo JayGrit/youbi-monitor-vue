@@ -350,7 +350,7 @@ h1 {
 .account-row {
   min-width: 780px;
   display: grid;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
+  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 86px 132px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -386,13 +386,13 @@ h1 {
 
 .account-row.account-platform-row {
   min-width: 780px;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px;
+  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 86px 132px;
 }
 
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
   min-width: 1200px;
-  grid-template-columns: 72px 72px minmax(170px, 1fr) 86px 86px 86px 120px minmax(150px, 1fr) 92px 150px 74px;
+  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 86px 170px minmax(150px, 1fr) 92px 150px 74px;
 }
 
 .account-backfill-button {
@@ -738,6 +738,12 @@ h1 {
   width: 100%;
   min-height: 30px;
   padding: 0 8px;
+}
+
+.next-send-input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 6px;
 }
 
 .account-toggle {
@@ -3576,18 +3582,18 @@ a.submitter-cell:hover {
 
   .account-row {
     min-width: 720px;
-    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px;
+    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 78px 120px;
   }
 
   .account-row.account-platform-row {
     min-width: 720px;
-    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px;
+    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 78px 120px;
   }
 
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
     min-width: 1080px;
-    grid-template-columns: 64px 64px minmax(150px, 1fr) 76px 76px 78px 110px minmax(140px, 1fr) 88px 140px 64px;
+    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 78px 160px minmax(140px, 1fr) 88px 140px 64px;
   }
 
   .task-row {
@@ -3785,7 +3791,7 @@ a.submitter-cell:hover {
   }
 
   .platform-mark {
-    grid-row: 1 / span 7;
+    grid-row: 1 / span 8;
     align-self: stretch;
     min-height: 42px;
     border: 1px solid #dbe4ee;
@@ -3794,7 +3800,7 @@ a.submitter-cell:hover {
   }
 
   .account-table.editing .platform-mark {
-    grid-row: 1 / span 11;
+    grid-row: 1 / span 12;
   }
 
   .account-avatar-cell {

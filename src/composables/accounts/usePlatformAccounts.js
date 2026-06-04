@@ -199,6 +199,22 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  async function savePlatformNextUploadAllowedAt(platform, row) {
+    if (!row?.accountKey) return
+    const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
+      mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
   async function savePlatformAccountProfile(platform, row) {
     if (!row?.accountKey) return null
     const displayName = String(row.draftDisplayName || '').trim()
@@ -303,6 +319,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformKey,
     togglePlatformEnabled,
     savePlatformCooldown,
+    savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,
     platformBusyKey,

@@ -31,6 +31,10 @@ function platformAccountApi(apiBase, platform) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds })
     },
 
+    setNextUploadAllowedAt(accountKey, nextUploadAllowedAt) {
+      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt })
+    },
+
     updateProfile(accountKey, displayName) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/profile`, { displayName })
     },

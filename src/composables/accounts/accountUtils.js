@@ -24,10 +24,17 @@ export function accountRows(accounts) {
     draftKey: account.accountKey || '',
     draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
     draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
+    draftNextUploadAllowedAt: dateTimeLocalValue(account.nextUploadAllowedAt),
     draftEnabled: account.enabled !== false,
     draftDisplayName: '',
     draftAvatarUrl: account.avatarUrl || account.avatar_url || '',
   }))
+}
+
+function dateTimeLocalValue(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return ''
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
 export function cooldownMinutes(seconds, fallback) {

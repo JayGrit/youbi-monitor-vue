@@ -25,6 +25,7 @@ const props = defineProps({
   uploaderPhoneError: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
+  savePlatformNextUploadAllowedAt: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
   savePlatformAccountProfile: { type: Function, required: true },
   uploadPlatformAccountAvatar: { type: Function, required: true },
@@ -89,6 +90,7 @@ function accountDraft(row, type) {
     key: row.accountKey || '',
     cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
     cooldownMaxMinutes: cooldownDraftMinutes(row.uploadCooldownMaxSeconds, 120),
+    nextUploadAllowedAt: dateTimeLocalValue(row.nextUploadAllowedAt),
   }
 }
 
@@ -103,6 +105,7 @@ function resetAccountDraft(item) {
   item.row.draftKey = draft.key
   item.row.draftCooldownMinMinutes = draft.cooldownMinMinutes
   item.row.draftCooldownMaxMinutes = draft.cooldownMaxMinutes
+  item.row.draftNextUploadAllowedAt = draft.nextUploadAllowedAt
 }
 
 function accountChanges(item) {
@@ -114,6 +117,7 @@ function accountChanges(item) {
       || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
     enabled: (row.draftEnabled !== false) !== draft.enabled,
     key: Boolean(String(row.draftKey || '').trim()) && String(row.draftKey || '').trim() !== draft.key,
+    nextUploadAllowedAt: String(row.draftNextUploadAllowedAt ?? '').trim() !== draft.nextUploadAllowedAt,
   }
 }
 
@@ -142,6 +146,11 @@ async function saveAccountCooldownEdit(item) {
   await props.savePlatformCooldown(item.type, item.row)
 }
 
+async function saveAccountNextSendEdit(item) {
+  if (!item?.configured || !accountChanges(item).nextUploadAllowedAt) return
+  await props.savePlatformNextUploadAllowedAt(item.type, item.row)
+}
+
 async function saveAccountEnabledEdit(item) {
   if (!item?.configured || !accountChanges(item).enabled) return
   await props.togglePlatformEnabled(item.type, item.row)
@@ -154,6 +163,10 @@ function forEachConfiguredAccount(callback) {
 function visibleRows(group) {
   return group.rows.filter(item => accountEditMode.value || item.row.enabled !== false)
 }
+
+const visiblePhonePlatforms = computed(() => {
+  return props.accountPlatforms.filter(platform => phoneAccountOptions(platform.type).length > 0)
+})
 
 async function cacheAccountAvatar(url) {
   url = normalizeAccountAvatarUrl(url)
@@ -190,6 +203,16 @@ function accountAvailable(row) {
     if (['available', 'valid', 'ok', '可用'].includes(value)) return true
   }
   return null
+}
+
+function accountRowUnavailable(item) {
+  return item?.configured && item.row?.enabled !== false && accountAvailable(item.row) === false
+}
+
+function dateTimeLocalValue(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return ''
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
 function lastUploadText(value) {
@@ -395,28 +418,31 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
         </div>
       </div>
       <div v-if="accountKeyGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
+        <div class="account-table account-table-heading" :class="{ editing: accountEditMode }">
+          <div class="account-row account-header account-platform-row">
+            <span>Platform</span>
+            <span>头像</span>
+            <span>账号</span>
+            <span>今日已发</span>
+            <span>冷却等待</span>
+            <span>失败任务</span>
+            <span>上次上传</span>
+            <span>下次可发送</span>
+            <span v-if="accountEditMode">Key</span>
+            <span v-if="accountEditMode">操作</span>
+            <span v-if="accountEditMode">随机冷却</span>
+            <span v-if="accountEditMode">启用</span>
+          </div>
+        </div>
         <section v-for="group in accountKeyGroups" :key="group.key" class="account-key-group">
           <div class="account-key-title">
             <strong>{{ group.key }}</strong>
           </div>
           <div v-if="visibleRows(group).length" class="account-table" :class="{ editing: accountEditMode }">
-            <div class="account-row account-header account-platform-row">
-              <span>Platform</span>
-              <span>头像</span>
-              <span>账号</span>
-              <span>今日已发</span>
-              <span>冷却等待</span>
-              <span>上次上传</span>
-              <span>下次可发送</span>
-              <span v-if="accountEditMode">Key</span>
-              <span v-if="accountEditMode">操作</span>
-              <span v-if="accountEditMode">随机冷却</span>
-              <span v-if="accountEditMode">启用</span>
-            </div>
             <div
               v-for="item in visibleRows(group)"
               :key="`${group.key}-${item.type}`"
-              :class="['account-row account-platform-row', { unavailable: item.configured && accountAvailable(item.row) === false }]"
+              :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item) }]"
             >
               <span class="platform-mark">
                 <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
@@ -445,9 +471,19 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               </span>
               <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span data-label="失败任务">{{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}</span>
               <span class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
-                {{ item.configured ? nextSendDisplay(item.row) : '-' }}
+                <input
+                  v-if="item.configured && accountEditMode"
+                  v-model="item.row.draftNextUploadAllowedAt"
+                  type="datetime-local"
+                  class="next-send-input"
+                  aria-label="下次可发送时间"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  @change="saveAccountNextSendEdit(item)"
+                />
+                <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
               <span v-if="item.configured && accountEditMode" data-label="Key">
                 <input
@@ -598,7 +634,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
           </button>
         </div>
       </div>
-      <div v-if="phoneRows.length" class="uploader-phone-table">
+      <div v-if="phoneRows.length && visiblePhonePlatforms.length" class="uploader-phone-table">
         <div
           class="uploader-phone-row uploader-phone-header-row"
           :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
@@ -610,7 +646,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
           </span>
         </div>
         <div
-          v-for="platform in accountPlatforms"
+          v-for="platform in visiblePhonePlatforms"
           :key="platform.type"
           class="uploader-phone-row"
           :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
