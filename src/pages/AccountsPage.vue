@@ -164,6 +164,15 @@ function visibleRows(group) {
   return group.rows.filter(item => accountEditMode.value || item.row.enabled !== false)
 }
 
+const visibleAccountGroups = computed(() => {
+  return (props.accountKeyGroups || [])
+    .map(group => ({
+      ...group,
+      visibleRows: visibleRows(group),
+    }))
+    .filter(group => group.visibleRows.length > 0)
+})
+
 const visiblePhonePlatforms = computed(() => {
   return props.accountPlatforms.filter(platform => phoneAccountOptions(platform.type).length > 0)
 })
@@ -417,8 +426,9 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
           <button v-else type="button" @click="enterAccountEditMode">编辑</button>
         </div>
       </div>
-      <div v-if="accountKeyGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
-        <div class="account-table account-table-heading" :class="{ editing: accountEditMode }">
+      <div v-if="visibleAccountGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
+        <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
+          <span class="account-type-header">Type</span>
           <div class="account-row account-header account-platform-row">
             <span>Platform</span>
             <span>头像</span>
@@ -434,13 +444,12 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <span v-if="accountEditMode">启用</span>
           </div>
         </div>
-        <section v-for="group in accountKeyGroups" :key="group.key" class="account-key-group">
-          <div class="account-key-title">
-            <strong>{{ group.key }}</strong>
-          </div>
-          <div v-if="visibleRows(group).length" class="account-table" :class="{ editing: accountEditMode }">
+        <section v-for="group in visibleAccountGroups" :key="group.key" class="account-key-group">
+          <div class="account-group-grid" :class="{ editing: accountEditMode }">
+            <strong class="account-type-cell">{{ group.key }}</strong>
+            <div class="account-table" :class="{ editing: accountEditMode }">
             <div
-              v-for="item in visibleRows(group)"
+              v-for="item in group.visibleRows"
               :key="`${group.key}-${item.type}`"
               :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item) }]"
             >
@@ -539,6 +548,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   {{ item.row.draftEnabled ? '启用' : '禁用' }}
                 </label>
               </span>
+            </div>
             </div>
           </div>
         </section>

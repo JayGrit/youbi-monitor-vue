@@ -373,29 +373,62 @@ h1 {
 }
 
 .account-key-list {
+  width: min(60vw, 100%);
   display: grid;
-  gap: 14px;
+  gap: 0;
   margin-top: 14px;
+  overflow-x: auto;
 }
 
 .account-key-group {
   border-top: 1px solid #e2e8f0;
-  padding-top: 12px;
 }
 
-.account-key-title {
+.account-group-grid {
+  min-width: 900px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  padding: 12px 0;
+}
+
+.account-group-grid.editing {
+  min-width: 1320px;
+}
+
+.account-group-heading {
+  padding-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.account-type-header,
+.account-type-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-type-header {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.account-type-cell {
+  align-self: stretch;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
   color: #172033;
   font-size: 14px;
+  font-weight: 780;
 }
 
-.account-key-title span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 680;
+.account-group-grid .account-table {
+  margin-top: 0;
 }
 
 .account-row.account-platform-row {
@@ -470,7 +503,7 @@ h1 {
 }
 
 .uploader-phone-table {
-  width: 100%;
+  width: min(60vw, 100%);
   display: grid;
   gap: 6px;
   margin-top: 14px;
@@ -3615,6 +3648,23 @@ a.submitter-cell:hover {
     width: 100%;
   }
 
+  .account-key-list {
+    width: 100%;
+  }
+
+  .uploader-phone-table {
+    width: 100%;
+  }
+
+  .account-group-grid {
+    min-width: 820px;
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .account-group-grid.editing {
+    min-width: 1180px;
+  }
+
   .account-row {
     min-width: 720px;
     grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 78px 120px;
@@ -3799,6 +3849,22 @@ a.submitter-cell:hover {
     gap: 10px;
   }
 
+  .account-key-list {
+    width: 100%;
+    overflow-x: visible;
+  }
+
+  .account-group-grid,
+  .account-group-grid.editing {
+    min-width: 0;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .account-type-cell {
+    min-height: 24px;
+  }
+
   .account-page-head {
     align-items: stretch;
     flex-direction: column;
@@ -3813,6 +3879,10 @@ a.submitter-cell:hover {
   }
 
   .account-header {
+    display: none;
+  }
+
+  .account-group-heading {
     display: none;
   }
 
