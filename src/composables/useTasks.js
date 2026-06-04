@@ -430,7 +430,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       statusText[node.status] || node.status,
     ]
     const progress = nodeProgress(node)
-    if (progress) {
+    if (progress && node?.key !== 'uploader') {
       parts.push(`任务点 ${progress}`)
     }
     if (Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0) {

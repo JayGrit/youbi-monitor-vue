@@ -1649,7 +1649,6 @@ h1 {
   overflow: hidden;
   border-radius: 5px;
   background: #ffffff;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.88);
 }
 
 .uploader-platform-icon img {
@@ -1671,13 +1670,14 @@ h1 {
 }
 
 .uploader-platform-icon.upload-status-failed::after {
-  background: rgb(220 38 38 / 0.58);
+  background:
+    linear-gradient(45deg, transparent calc(50% - 2px), #dc2626 calc(50% - 2px), #dc2626 calc(50% + 2px), transparent calc(50% + 2px)),
+    linear-gradient(-45deg, transparent calc(50% - 2px), #dc2626 calc(50% - 2px), #dc2626 calc(50% + 2px), transparent calc(50% + 2px)),
+    rgb(220 38 38 / 0.42);
 }
 
 .uploader-platform-icon.upload-status-running {
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.92),
-    0 0 0 2px rgb(37 99 235 / 0.95);
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 0.95);
 }
 
 .stage-link {

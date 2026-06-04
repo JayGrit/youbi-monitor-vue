@@ -95,6 +95,10 @@ function platformTitle(platformStatus) {
 function showStageTime(node) {
   return !['translator', 'speaker', 'uploader'].includes(node?.key)
 }
+
+function showStageProgress(node) {
+  return node?.key !== 'uploader'
+}
 </script>
 
 <template>
@@ -281,7 +285,7 @@ function showStageTime(node) {
             @click="openTaskFlow(task, node.key)"
           >
             <span class="stage-label">{{ stageName(node) }}</span>
-            <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
+            <span v-if="showStageProgress(node) && nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
             <span v-if="hasUploaderPlatformStatuses(node)" class="uploader-platform-icons" aria-label="上传平台状态">
               <span
                 v-for="platformStatus in node.platformStatuses"
