@@ -1,13 +1,9 @@
 import { postJson, requestJson } from './http'
 
-function platformAccountApi(apiBase, platform, accountsPath) {
+function platformAccountApi(apiBase, platform) {
   const base = `${apiBase}/${platform}`
 
   return {
-    list() {
-      return requestJson(`${apiBase}/${accountsPath}`)
-    },
-
     startQrLogin(accountKey) {
       return requestJson(`${base}/account/qrcode?accountKey=${encodeURIComponent(accountKey)}`, { method: 'POST' })
     },
@@ -52,6 +48,9 @@ function platformAccountApi(apiBase, platform, accountsPath) {
 
 export function createAccountsApi(apiBase) {
   return {
+    overview() {
+      return requestJson(`${apiBase}/accounts/overview`)
+    },
     uploadBackfillCandidates(platform, accountKey, type) {
       const params = new URLSearchParams({ platform, accountKey, type })
       return requestJson(`${apiBase}/upload-backfill/candidates?${params.toString()}`)
@@ -66,15 +65,15 @@ export function createAccountsApi(apiBase) {
       return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId, note, disabled })
     },
     bilibili: {
-      ...platformAccountApi(apiBase, 'bilibili', 'bilibili/accounts'),
+      ...platformAccountApi(apiBase, 'bilibili'),
       renew(accountKey) {
         return requestJson(`${apiBase}/bilibili/account/renew?accountKey=${encodeURIComponent(accountKey)}`, { method: 'POST' })
       },
     },
-    xiaohongshu: platformAccountApi(apiBase, 'xiaohongshu', 'xiaohongshu/accounts'),
-    shipinhao: platformAccountApi(apiBase, 'shipinhao', 'shipinhao/accounts'),
-    douyin: platformAccountApi(apiBase, 'douyin', 'douyin/accounts'),
-    kuaishou: platformAccountApi(apiBase, 'kuaishou', 'kuaishou/accounts'),
-    jinritoutiao: platformAccountApi(apiBase, 'jinritoutiao', 'jinritoutiao/accounts'),
+    xiaohongshu: platformAccountApi(apiBase, 'xiaohongshu'),
+    shipinhao: platformAccountApi(apiBase, 'shipinhao'),
+    douyin: platformAccountApi(apiBase, 'douyin'),
+    kuaishou: platformAccountApi(apiBase, 'kuaishou'),
+    jinritoutiao: platformAccountApi(apiBase, 'jinritoutiao'),
   }
 }

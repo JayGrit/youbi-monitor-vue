@@ -104,24 +104,47 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     return rows.length > 0 && rows.every(row => uploadBackfillSelectedSet.value.has(row.taskId))
   })
 
-  async function loadBiliupStatus() {
+  async function loadAccountOverview() {
     try {
-      await loadBilibiliAccounts()
+      const payload = await accountsApi.overview()
+      bilibiliAccounts.value = payload?.bilibili || []
+      bilibiliRows.value = accountRows(bilibiliAccounts.value)
       bilibiliAccount.value = bilibiliRows.value.find(row => row.accountKey) || bilibiliRows.value[0]
+      xiaohongshuAccounts.value = payload?.xiaohongshu || []
+      xiaohongshuRows.value = accountRows(xiaohongshuAccounts.value)
+      xiaohongshuAccount.value = xiaohongshuRows.value.find(row => row.accountKey) || xiaohongshuRows.value[0]
+      douyinAccounts.value = payload?.douyin || []
+      douyinRows.value = accountRows(douyinAccounts.value)
+      douyinAccount.value = douyinRows.value.find(row => row.accountKey) || douyinRows.value[0]
+      shipinhaoAccounts.value = payload?.shipinhao || []
+      shipinhaoRows.value = accountRows(shipinhaoAccounts.value)
+      shipinhaoAccount.value = shipinhaoRows.value.find(row => row.accountKey) || shipinhaoRows.value[0]
+      kuaishouAccounts.value = payload?.kuaishou || []
+      kuaishouRows.value = accountRows(kuaishouAccounts.value)
+      kuaishouAccount.value = kuaishouRows.value.find(row => row.accountKey) || kuaishouRows.value[0]
+      jinritoutiaoAccounts.value = payload?.jinritoutiao || []
+      jinritoutiaoRows.value = accountRows(jinritoutiaoAccounts.value)
+      jinritoutiaoAccount.value = jinritoutiaoRows.value.find(row => row.accountKey) || jinritoutiaoRows.value[0]
       bilibiliError.value = ''
+      xiaohongshuError.value = ''
+      douyinError.value = ''
+      shipinhaoError.value = ''
+      kuaishouError.value = ''
+      jinritoutiaoError.value = ''
     } catch (err) {
-      bilibiliError.value = err instanceof Error ? err.message : String(err)
+      const message = err instanceof Error ? err.message : String(err)
+      bilibiliError.value = message
+      xiaohongshuError.value = message
+      douyinError.value = message
+      shipinhaoError.value = message
+      kuaishouError.value = message
+      jinritoutiaoError.value = message
     }
   }
 
   async function loadAccountPage() {
     await Promise.allSettled([
-      loadBiliupStatus(),
-      loadXiaohongshuStatus(),
-      loadDouyinStatus(),
-      loadShipinhaoStatus(),
-      loadKuaishouStatus(),
-      loadJinritoutiaoStatus(),
+      loadAccountOverview(),
       loadUploaderPhones(),
     ])
   }
@@ -153,86 +176,6 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       window.clearInterval(douyinQrTimer)
       douyinQrTimer = null
     }
-  }
-
-  async function loadBilibiliAccounts() {
-    bilibiliAccounts.value = await accountsApi.bilibili.list()
-    bilibiliRows.value = accountRows(bilibiliAccounts.value)
-  }
-
-  async function loadXiaohongshuStatus() {
-    try {
-      await loadXiaohongshuAccounts()
-      xiaohongshuAccount.value = xiaohongshuRows.value.find(row => row.accountKey) || xiaohongshuRows.value[0]
-      xiaohongshuError.value = ''
-    } catch (err) {
-      xiaohongshuError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function loadXiaohongshuAccounts() {
-    xiaohongshuAccounts.value = await accountsApi.xiaohongshu.list()
-    xiaohongshuRows.value = accountRows(xiaohongshuAccounts.value)
-  }
-
-  async function loadDouyinStatus() {
-    try {
-      await loadDouyinAccounts()
-      douyinAccount.value = douyinRows.value.find(row => row.accountKey) || douyinRows.value[0]
-      douyinError.value = ''
-    } catch (err) {
-      douyinError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function loadDouyinAccounts() {
-    douyinAccounts.value = await accountsApi.douyin.list()
-    douyinRows.value = accountRows(douyinAccounts.value)
-  }
-
-  async function loadShipinhaoStatus() {
-    try {
-      await loadShipinhaoAccounts()
-      shipinhaoAccount.value = shipinhaoRows.value.find(row => row.accountKey) || shipinhaoRows.value[0]
-      shipinhaoError.value = ''
-    } catch (err) {
-      shipinhaoError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function loadShipinhaoAccounts() {
-    shipinhaoAccounts.value = await accountsApi.shipinhao.list()
-    shipinhaoRows.value = accountRows(shipinhaoAccounts.value)
-  }
-
-  async function loadKuaishouStatus() {
-    try {
-      await loadKuaishouAccounts()
-      kuaishouAccount.value = kuaishouRows.value.find(row => row.accountKey) || kuaishouRows.value[0]
-      kuaishouError.value = ''
-    } catch (err) {
-      kuaishouError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function loadKuaishouAccounts() {
-    kuaishouAccounts.value = await accountsApi.kuaishou.list()
-    kuaishouRows.value = accountRows(kuaishouAccounts.value)
-  }
-
-  async function loadJinritoutiaoStatus() {
-    try {
-      await loadJinritoutiaoAccounts()
-      jinritoutiaoAccount.value = jinritoutiaoRows.value.find(row => row.accountKey) || jinritoutiaoRows.value[0]
-      jinritoutiaoError.value = ''
-    } catch (err) {
-      jinritoutiaoError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  async function loadJinritoutiaoAccounts() {
-    jinritoutiaoAccounts.value = await accountsApi.jinritoutiao.list()
-    jinritoutiaoRows.value = accountRows(jinritoutiaoAccounts.value)
   }
 
   async function loadUploaderPhones() {
@@ -395,7 +338,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       bilibiliQrMessage.value = payload.message || '等待扫码确认'
       if (payload.loggedIn) {
         bilibiliAccount.value = payload.account
-        await loadBilibiliAccounts()
+        await loadAccountOverview()
         bilibiliQrCode.value = null
         if (bilibiliQrTimer) {
           window.clearInterval(bilibiliQrTimer)
@@ -413,7 +356,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     bilibiliBusyKey.value = rowKey(row)
     try {
       bilibiliAccount.value = await accountsApi.bilibili.renew(row.accountKey)
-      await loadBilibiliAccounts()
+      await loadAccountOverview()
       bilibiliError.value = ''
     } catch (err) {
       bilibiliError.value = err instanceof Error ? err.message : String(err)
@@ -442,7 +385,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.bilibili.saveKey(row.accountKey, nextKey)
       mergeAccountRow(payload, row.slot)
-      await loadBilibiliAccounts()
+      await loadAccountOverview()
       bilibiliError.value = ''
     } catch (err) {
       bilibiliError.value = err instanceof Error ? err.message : String(err)
@@ -479,7 +422,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       xiaohongshuQrMessage.value = payload.message || '等待扫码确认'
       if (payload.loggedIn) {
         xiaohongshuAccount.value = payload.account
-        await loadXiaohongshuAccounts()
+        await loadAccountOverview()
         xiaohongshuQrCode.value = null
         if (xiaohongshuQrTimer) {
           window.clearInterval(xiaohongshuQrTimer)
@@ -510,7 +453,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.xiaohongshu.saveKey(row.accountKey, nextKey)
       mergeXiaohongshuRow(payload, row.slot)
-      await loadXiaohongshuAccounts()
+      await loadAccountOverview()
       xiaohongshuError.value = ''
     } catch (err) {
       xiaohongshuError.value = err instanceof Error ? err.message : String(err)
@@ -553,7 +496,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       }
       if (payload.loggedIn) {
         douyinAccount.value = payload.account
-        await loadDouyinAccounts()
+        await loadAccountOverview()
         douyinQrCode.value = null
         if (douyinQrTimer) {
           window.clearInterval(douyinQrTimer)
@@ -584,7 +527,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.douyin.saveKey(row.accountKey, nextKey)
       mergeDouyinRow(payload, row.slot)
-      await loadDouyinAccounts()
+      await loadAccountOverview()
       douyinError.value = ''
     } catch (err) {
       douyinError.value = err instanceof Error ? err.message : String(err)
@@ -598,7 +541,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.kuaishou.saveKey(row.accountKey, nextKey)
       mergeKuaishouRow(payload, row.slot)
-      await loadKuaishouAccounts()
+      await loadAccountOverview()
       kuaishouError.value = ''
     } catch (err) {
       kuaishouError.value = err instanceof Error ? err.message : String(err)
@@ -612,7 +555,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.shipinhao.saveKey(row.accountKey, nextKey)
       mergeShipinhaoRow(payload, row.slot)
-      await loadShipinhaoAccounts()
+      await loadAccountOverview()
       shipinhaoError.value = ''
     } catch (err) {
       shipinhaoError.value = err instanceof Error ? err.message : String(err)
@@ -626,7 +569,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     try {
       const payload = await accountsApi.jinritoutiao.saveKey(row.accountKey, nextKey)
       mergeJinritoutiaoRow(payload, row.slot)
-      await loadJinritoutiaoAccounts()
+      await loadAccountOverview()
       jinritoutiaoError.value = ''
     } catch (err) {
       jinritoutiaoError.value = err instanceof Error ? err.message : String(err)
@@ -701,27 +644,27 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
       )
       if (platform === 'bilibili') {
         mergeAccountRow(account, row.slot)
-        await loadBilibiliAccounts()
+        await loadAccountOverview()
         bilibiliError.value = ''
       } else if (platform === 'xiaohongshu') {
         mergeXiaohongshuRow(account, row.slot)
-        await loadXiaohongshuAccounts()
+        await loadAccountOverview()
         xiaohongshuError.value = ''
       } else if (platform === 'douyin') {
         mergeDouyinRow(account, row.slot)
-        await loadDouyinAccounts()
+        await loadAccountOverview()
         douyinError.value = ''
       } else if (platform === 'shipinhao') {
         mergeShipinhaoRow(account, row.slot)
-        await loadShipinhaoAccounts()
+        await loadAccountOverview()
         shipinhaoError.value = ''
       } else if (platform === 'kuaishou') {
         mergeKuaishouRow(account, row.slot)
-        await loadKuaishouAccounts()
+        await loadAccountOverview()
         kuaishouError.value = ''
       } else if (platform === 'jinritoutiao') {
         mergeJinritoutiaoRow(account, row.slot)
-        await loadJinritoutiaoAccounts()
+        await loadAccountOverview()
         jinritoutiaoError.value = ''
       }
     } catch (err) {
@@ -1120,22 +1063,10 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     uploaderPhoneLoading,
     uploaderPhoneSavingKey,
     uploaderPhoneError,
-    loadBiliupStatus,
     loadAccountPage,
     startAccountPolling,
     clearAccountPagePolling,
     clearAccountPolling,
-    loadBilibiliAccounts,
-    loadXiaohongshuStatus,
-    loadXiaohongshuAccounts,
-    loadDouyinStatus,
-    loadDouyinAccounts,
-    loadShipinhaoStatus,
-    loadShipinhaoAccounts,
-    loadKuaishouStatus,
-    loadKuaishouAccounts,
-    loadJinritoutiaoStatus,
-    loadJinritoutiaoAccounts,
     loadUploaderPhones,
     saveUploaderPhoneAccount,
     startBilibiliQrLogin,
