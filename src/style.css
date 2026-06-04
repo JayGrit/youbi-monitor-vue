@@ -376,7 +376,7 @@ h1 {
   width: min(60vw, 100%);
   display: grid;
   gap: 0;
-  margin-top: 14px;
+  margin: 14px auto 0;
   overflow-x: auto;
 }
 
@@ -506,7 +506,7 @@ h1 {
   width: min(60vw, 100%);
   display: grid;
   gap: 6px;
-  margin-top: 14px;
+  margin: 14px auto 0;
   overflow-x: auto;
 }
 
@@ -837,6 +837,11 @@ h1 {
 }
 
 .next-send-stale {
+  color: #dc2626;
+  font-weight: 760;
+}
+
+.failed-task-count {
   color: #dc2626;
   font-weight: 760;
 }

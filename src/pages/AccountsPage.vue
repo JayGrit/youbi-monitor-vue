@@ -247,14 +247,17 @@ function nextSendDisplay(row) {
   const waitingMs = Date.now() - next.getTime()
   if (waitingMs < STALE_READY_MINUTES * 60 * 1000) return text
   const minutes = Math.floor(waitingMs / 60000)
-  if (minutes < 60) return `已等待 ${minutes} 分钟`
   const hours = Math.floor(minutes / 60)
   const restMinutes = minutes % 60
-  return restMinutes ? `已等待 ${hours} 小时 ${restMinutes} 分钟` : `已等待 ${hours} 小时`
+  return `${pad2(hours)}:${pad2(restMinutes)}`
 }
 
 function nextSendStale(row) {
-  return nextSendDisplay(row).startsWith('已等待')
+  return /^\d{2}:\d{2}$/.test(nextSendDisplay(row))
+}
+
+function failedUploadCount(row) {
+  return Number(row?.failedUploadCount || 0)
 }
 
 function phoneAccountField(platform) {
@@ -480,7 +483,9 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               </span>
               <span data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span data-label="失败任务">{{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}</span>
+              <span :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
+                {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
+              </span>
               <span class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
                 <input
