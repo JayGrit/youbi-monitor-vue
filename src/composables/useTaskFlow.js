@@ -295,6 +295,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const chunkRows = tableRows(translator, 'translator-chunk')
     const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
     return [...chunkRows]
+      .filter(row => {
+        const role = row.row_role || (row.is_reference ? 'reference' : 'normal')
+        return !Boolean(Number(row.is_reference || 0)) && role === 'normal'
+      })
       .sort((left, right) => {
         const leftChunk = Number(left.chunk_index ?? 0)
         const rightChunk = Number(right.chunk_index ?? 0)
@@ -305,44 +309,38 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       .map(row => {
         const itemIndex = Number(row.item_index)
         const segment = speakerByIndex[itemIndex] || {}
-        const role = row.row_role || (row.is_reference ? 'reference' : 'normal')
-        const isReference = Boolean(Number(row.is_reference || 0)) || role !== 'normal'
         return {
           row_key: `translator-chunk:${row.chunk_index}:${row.row_order}:${itemIndex}`,
           speech_view: 'translator-chunk',
-          segment_id: isReference ? '' : segment.id || '',
+          segment_id: segment.id || '',
           item_index: itemIndex,
           start_time: row.start_time,
           end_time: row.end_time,
           asr_text: row.text || '',
           src_text: segment.src_text || row.text || '',
           source_text: row.text || segment.src_text || '',
-          dst_text: isReference ? '' : segment.dst_text || '',
+          dst_text: segment.dst_text || '',
           speaker: segment.speaker || '',
-          status: isReference ? role : segment.status || '',
-          attempt_count: isReference ? '' : segment.attempt_count ?? '',
-          speed_ratio: isReference ? '' : formatRatio(segment.speed_ratio),
-          actual_start_time: isReference ? '' : segment.actual_start_time ?? '',
-          actual_end_time: isReference ? '' : segment.actual_end_time ?? '',
-          src_lang: isReference ? '' : segment.src_lang || '',
-          dst_lang: isReference ? '' : segment.dst_lang || '',
-          reference_wav_url: isReference ? '' : segment.reference_wav_url || '',
-          tts_wav_url: isReference ? '' : segment.tts_wav_url || '',
-          error_message: isReference ? '' : segment.error_message || '',
+          status: segment.status || '',
+          attempt_count: segment.attempt_count ?? '',
+          speed_ratio: formatRatio(segment.speed_ratio),
+          actual_start_time: segment.actual_start_time ?? '',
+          actual_end_time: segment.actual_end_time ?? '',
+          src_lang: segment.src_lang || '',
+          dst_lang: segment.dst_lang || '',
+          reference_wav_url: segment.reference_wav_url || '',
+          tts_wav_url: segment.tts_wav_url || '',
+          error_message: segment.error_message || '',
           chunk_index: row.chunk_index,
           row_order: row.row_order,
-          row_role: role,
-          is_reference: isReference,
+          row_role: 'normal',
+          is_reference: false,
           normal_text_len: row.normal_text_len,
-          reference_text_len: row.reference_text_len,
-          total_text_len: row.total_text_len,
           normal_item_count: row.normal_item_count,
           chunk_start_time: row.chunk_start_time,
           chunk_end_time: row.chunk_end_time,
           gap_before_ms: row.gap_before_ms,
           gap_after_ms: row.gap_after_ms,
-          reference_reason: row.reference_reason || '',
-          reference_distance_ms: row.reference_distance_ms ?? '',
         }
       })
   }
@@ -417,15 +415,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     if (row.speech_view === 'translator-chunk') {
       rows.push(
         ['normal_text_len', row.normal_text_len ?? '-'],
-        ['reference_text_len', row.reference_text_len ?? '-'],
-        ['total_text_len', row.total_text_len ?? '-'],
         ['normal_item_count', row.normal_item_count ?? '-'],
         ['chunk_start_time', formatTimeline(row.chunk_start_time)],
         ['chunk_end_time', formatTimeline(row.chunk_end_time)],
         ['gap_before_ms', row.gap_before_ms ?? '-'],
         ['gap_after_ms', row.gap_after_ms ?? '-'],
-        ['reference_reason', row.reference_reason || '-'],
-        ['reference_distance_ms', row.reference_distance_ms === '' ? '-' : row.reference_distance_ms],
       )
     }
     return rows

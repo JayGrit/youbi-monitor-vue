@@ -170,10 +170,7 @@ function rowKey(row) {
 
 function rowTone(row) {
   if (row?.speech_view === 'translator-chunk') {
-    let chunkIndex = Number(row.chunk_index || 0)
-    if (row.row_role === 'reference_before') chunkIndex -= 1
-    if (row.row_role === 'reference_after') chunkIndex += 1
-    return chunkIndex % 2 === 0 ? 'blue' : 'red'
+    return 'red'
   }
   return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
 }
@@ -195,7 +192,7 @@ function hasGapBefore(row) {
 function rowBlockSummary(row) {
   if (row?.speech_view === 'translator-chunk') {
     if (translatorChunkFirstRowKeyByChunk.value[row.chunk_index ?? ''] !== rowKey(row)) return ''
-    return `normal len ${row.normal_text_len ?? 0} / ref len ${row.reference_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
+    return `normal len ${row.normal_text_len ?? 0} / rows ${row.normal_item_count ?? 0}`
   }
   return blockSummaryByKey.value[rowKey(row)] || ''
 }
