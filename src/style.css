@@ -545,8 +545,14 @@ h1 {
 .uploader-phone-select-cell {
   display: grid;
   align-content: center;
+  justify-items: center;
   gap: 6px;
   padding: 6px;
+}
+
+.uploader-phone-select-cell.disabled {
+  border-color: #d7dee8;
+  background: #f1f5f9;
 }
 
 .uploader-phone-edit-line {
@@ -570,10 +576,16 @@ h1 {
 
 .uploader-phone-account-card {
   min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
+  justify-content: center;
+}
+
+.uploader-phone-account-card.no-name {
+  grid-template-columns: 32px;
 }
 
 .uploader-phone-account-avatar {
@@ -601,7 +613,7 @@ h1 {
   min-width: 0;
   display: grid;
   gap: 2px;
-  text-align: left;
+  text-align: center;
 }
 
 .uploader-phone-account-text strong,
@@ -633,19 +645,6 @@ h1 {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.uploader-phone-disabled-tag {
-  justify-self: center;
-  width: fit-content;
-  max-width: 100%;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 2px 7px;
-  font-size: 11px;
-  font-weight: 780;
-  line-height: 1.2;
 }
 
 .uploader-phone-select-cell input:disabled {

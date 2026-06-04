@@ -286,6 +286,14 @@ function selectedPhoneAccount(phone, platform) {
   return phoneAccountOptions(platform).find(account => String(account.id) === accountId) || null
 }
 
+function phoneAccountName(account) {
+  const remark = String(account?.remark || '').trim()
+  if (remark) return remark
+  const displayName = String(account?.displayName || '').trim()
+  const accountKey = String(account?.accountKey || '').trim()
+  return displayName && displayName !== accountKey ? displayName : ''
+}
+
 function phoneAccountOptions(platform) {
   return phonePlatformAccounts.value.get(platform) || []
 }
@@ -604,7 +612,12 @@ async function togglePhoneDisabled(phone, platform) {
           <span class="uploader-phone-platform-cell">
             <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
           </span>
-          <span v-for="phone in phoneRows" :key="`${platform.type}-${phone.id}`" class="uploader-phone-select-cell">
+          <span
+            v-for="phone in phoneRows"
+            :key="`${platform.type}-${phone.id}`"
+            class="uploader-phone-select-cell"
+            :class="{ disabled: !uploaderPhoneEditMode && phoneCellDisabled(phone, platform.type) }"
+          >
             <template v-if="uploaderPhoneEditMode">
               <div class="uploader-phone-edit-line">
                 <input
@@ -636,7 +649,11 @@ async function togglePhoneDisabled(phone, platform) {
               </datalist>
             </template>
             <template v-else>
-              <span v-if="selectedPhoneAccount(phone, platform.type)" class="uploader-phone-account-card">
+              <span
+                v-if="selectedPhoneAccount(phone, platform.type)"
+                class="uploader-phone-account-card"
+                :class="{ 'no-name': !phoneAccountName(selectedPhoneAccount(phone, platform.type)) }"
+              >
                 <span class="uploader-phone-account-avatar">
                   <img
                     v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
@@ -648,12 +665,13 @@ async function togglePhoneDisabled(phone, platform) {
                   <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
                 </span>
                 <span class="uploader-phone-account-text">
-                  <strong>{{ selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey }}</strong>
+                  <strong v-if="phoneAccountName(selectedPhoneAccount(phone, platform.type))">
+                    {{ phoneAccountName(selectedPhoneAccount(phone, platform.type)) }}
+                  </strong>
                 </span>
               </span>
               <span v-else-if="phoneNoteValue(phone)" class="uploader-phone-note">{{ phoneNoteValue(phone) }}</span>
-              <span v-else class="uploader-phone-account-empty">-</span>
-              <span v-if="phoneCellDisabled(phone, platform.type)" class="uploader-phone-disabled-tag">禁用</span>
+              <span v-else-if="!phoneCellDisabled(phone, platform.type)" class="uploader-phone-account-empty">-</span>
             </template>
           </span>
         </div>
