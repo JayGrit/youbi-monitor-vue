@@ -170,7 +170,7 @@ function rowKey(row) {
 
 function rowTone(row) {
   if (row?.speech_view === 'translator-chunk') {
-    return 'red'
+    return Number(row.chunk_index || 0) % 2 === 0 ? 'blue' : 'red'
   }
   return splitRowInfoByKey.value[rowKey(row)]?.tone || ''
 }
