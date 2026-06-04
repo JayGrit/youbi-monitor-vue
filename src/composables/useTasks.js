@@ -433,6 +433,12 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     if (progress) {
       parts.push(`任务点 ${progress}`)
     }
+    if (Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0) {
+      for (const platformStatus of node.platformStatuses) {
+        const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
+        parts.push(`${platform}: ${statusText[platformStatus.status] || platformStatus.status}`)
+      }
+    }
     parts.push(`耗时 ${formatDuration(node.elapsedSeconds)}`)
     if (node.errorMessage) {
       parts.push(node.errorMessage)

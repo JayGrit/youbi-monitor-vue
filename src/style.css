@@ -1586,6 +1586,11 @@ h1 {
   box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.12);
 }
 
+.stage-node.with-uploader-platforms {
+  min-height: 78px;
+  padding-block: 7px;
+}
+
 .stage-node-button {
   cursor: pointer;
   font-family: inherit;
@@ -1625,6 +1630,54 @@ h1 {
   font-weight: 720;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+}
+
+.uploader-platform-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-height: 18px;
+}
+
+.uploader-platform-icon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.88);
+}
+
+.uploader-platform-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uploader-platform-icon::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.uploader-platform-icon.upload-status-ready::after {
+  background: rgb(0 0 0 / 0.48);
+}
+
+.uploader-platform-icon.upload-status-failed::after {
+  background: rgb(220 38 38 / 0.58);
+}
+
+.uploader-platform-icon.upload-status-running {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.92),
+    0 0 0 2px rgb(37 99 235 / 0.95);
 }
 
 .stage-link {

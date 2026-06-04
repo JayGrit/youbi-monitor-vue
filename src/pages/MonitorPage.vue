@@ -1,4 +1,5 @@
 <script setup>
+import { createPlatformIconUrls, uploadPlatformText } from '../domain/constants'
 import { formatDateTime, formatDuration } from '../utils/format'
 
 defineProps({
@@ -68,6 +69,28 @@ const emit = defineEmits([
   'setTaskPage',
   'clearFailure',
 ])
+
+const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
+
+function hasUploaderPlatformStatuses(node) {
+  return node.key === 'uploader' && Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0
+}
+
+function stageNodeStatusClass(node) {
+  if (node.key === 'uploader' && node.status === 'running' && hasUploaderPlatformStatuses(node)) {
+    return 'status-success'
+  }
+  return `status-${node.status}`
+}
+
+function platformIconUrl(platform) {
+  return PLATFORM_ICON_URLS[platform] || ''
+}
+
+function platformTitle(platformStatus) {
+  const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
+  return `${platform} · ${platformStatus.status}`
+}
 </script>
 
 <template>
@@ -249,12 +272,27 @@ const emit = defineEmits([
         <template v-for="(node, index) in task.nodes" :key="node.key">
           <button
             type="button"
-            :class="['stage-node', 'stage-node-button', `status-${node.status}`]"
+            :class="['stage-node', 'stage-node-button', stageNodeStatusClass(node), { 'with-uploader-platforms': hasUploaderPlatformStatuses(node) }]"
             :title="`${nodeTitle(node)}\n点击查看任务流详情`"
             @click="openTaskFlow(task, node.key)"
           >
             <span class="stage-label">{{ stageName(node) }}</span>
             <span v-if="nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
+            <span v-if="hasUploaderPlatformStatuses(node)" class="uploader-platform-icons" aria-label="上传平台状态">
+              <span
+                v-for="platformStatus in node.platformStatuses"
+                :key="platformStatus.platform"
+                :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
+                :title="platformTitle(platformStatus)"
+              >
+                <img
+                  v-if="platformIconUrl(platformStatus.platform)"
+                  :src="platformIconUrl(platformStatus.platform)"
+                  :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
+                  loading="lazy"
+                />
+              </span>
+            </span>
             <span class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
           </button>
           <div
