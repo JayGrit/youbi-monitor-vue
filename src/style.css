@@ -432,6 +432,29 @@ h1 {
   font-weight: 680;
 }
 
+.uploader-phone-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploader-phone-actions button,
+.uploader-phone-disable-button {
+  min-height: 30px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #243044;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.uploader-phone-actions button {
+  padding: 0 12px;
+}
+
 .uploader-phone-table {
   width: 100%;
   display: grid;
@@ -526,6 +549,25 @@ h1 {
   padding: 6px;
 }
 
+.uploader-phone-edit-line {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 6px;
+}
+
+.uploader-phone-disable-button {
+  width: 48px;
+  padding: 0;
+}
+
+.uploader-phone-disable-button.active {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
 .uploader-phone-account-card {
   min-width: 0;
   display: grid;
@@ -577,17 +619,42 @@ h1 {
 }
 
 .uploader-phone-account-text small,
-.uploader-phone-account-empty {
+.uploader-phone-account-empty,
+.uploader-phone-note {
   color: #64748b;
   font-size: 12px;
   font-weight: 680;
 }
 
-.uploader-phone-account-empty {
+.uploader-phone-account-empty,
+.uploader-phone-note {
+  min-width: 0;
+  overflow: hidden;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploader-phone-disabled-tag {
+  justify-self: center;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 780;
+  line-height: 1.2;
 }
 
 .uploader-phone-select-cell input:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.uploader-phone-disable-button:disabled,
+.uploader-phone-actions button:disabled {
   cursor: wait;
   opacity: 0.65;
 }

@@ -251,7 +251,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     }
   }
 
-  async function saveUploaderPhoneAccount(phone, platform, accountId, note = '') {
+  async function saveUploaderPhoneAccount(phone, platform, accountId, note = '', disabled = false) {
     if (!phone?.id || !platform) return
     const normalizedAccountId = Number(accountId || 0)
     const savingKey = `${phone.id}:${platform}`
@@ -262,6 +262,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
         platform,
         Number.isFinite(normalizedAccountId) && normalizedAccountId > 0 ? normalizedAccountId : null,
         String(note || '').trim(),
+        Boolean(disabled),
       )
       mergeUploaderPhone(payload)
       uploaderPhoneError.value = ''

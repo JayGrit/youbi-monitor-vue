@@ -51,6 +51,7 @@ const accountEditMode = ref(false)
 const accountEditBusy = ref(false)
 const accountAvatarCache = ref({})
 const editingNameKeys = ref({})
+const uploaderPhoneEditMode = ref(false)
 
 const phonePlatformAccounts = computed(() => {
   const groups = new Map()
@@ -263,12 +264,20 @@ function phoneAccountField(platform) {
 }
 
 function phoneAccountValue(phone, platform) {
-  const value = phone?.accounts?.[phoneAccountField(platform)]
+  const value = phoneBinding(phone, platform)?.accountId ?? phone?.accounts?.[phoneAccountField(platform)]
   return value == null ? '' : String(value)
 }
 
 function phoneNoteValue(phone) {
   return String(phone?.note || '')
+}
+
+function phoneBinding(phone, platform) {
+  return phone?.bindings?.[phoneAccountField(platform)] || null
+}
+
+function phoneCellDisabled(phone, platform) {
+  return phoneBinding(phone, platform)?.disabled === true
 }
 
 function selectedPhoneAccount(phone, platform) {
@@ -330,7 +339,13 @@ function phoneCellSaving(phone, platform) {
 async function savePhonePlatform(phone, platform, event) {
   const value = String(event?.target?.value || '').trim()
   const account = findPhoneAccountOption(platform, value)
-  await props.saveUploaderPhoneAccount(phone, platform, account?.id || null, account ? '' : value)
+  await props.saveUploaderPhoneAccount(phone, platform, account?.id || null, account ? '' : value, false)
+}
+
+async function togglePhoneDisabled(phone, platform) {
+  const disabled = !phoneCellDisabled(phone, platform)
+  const accountId = phoneAccountValue(phone, platform) || null
+  await props.saveUploaderPhoneAccount(phone, platform, accountId, phoneNoteValue(phone), disabled)
 }
 </script>
 
@@ -562,7 +577,12 @@ async function savePhonePlatform(phone, platform, event) {
     <section class="biliup-panel uploader-phone-panel" aria-label="手机号账号矩阵">
       <div class="uploader-phone-head">
         <strong>手机号账号</strong>
-        <span v-if="uploaderPhoneLoading">加载中</span>
+        <div class="uploader-phone-actions">
+          <span v-if="uploaderPhoneLoading">加载中</span>
+          <button type="button" @click="uploaderPhoneEditMode = !uploaderPhoneEditMode">
+            {{ uploaderPhoneEditMode ? '完成' : '编辑' }}
+          </button>
+        </div>
       </div>
       <div v-if="phoneRows.length" class="uploader-phone-table">
         <div
@@ -571,8 +591,8 @@ async function savePhonePlatform(phone, platform, event) {
         >
           <span class="uploader-phone-platform-cell"></span>
           <span v-for="phone in phoneRows" :key="phone.id" class="uploader-phone-head-cell">
-            <strong>{{ phone.phone }}</strong>
             <small v-if="phone.remark">{{ phone.remark }}</small>
+            <strong>{{ phone.phone }}</strong>
           </span>
         </div>
         <div
@@ -585,23 +605,56 @@ async function savePhonePlatform(phone, platform, event) {
             <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
           </span>
           <span v-for="phone in phoneRows" :key="`${platform.type}-${phone.id}`" class="uploader-phone-select-cell">
-            <input
-              type="text"
-              :value="phoneCellInputValue(phone, platform.type)"
-              :list="phoneCellListId(phone, platform.type)"
-              :disabled="phoneCellSaving(phone, platform.type)"
-              :aria-label="`${platform.label} ${phone.phone}`"
-              @change="savePhonePlatform(phone, platform.type, $event)"
-              @keyup.enter="savePhonePlatform(phone, platform.type, $event)"
-            />
-            <datalist :id="phoneCellListId(phone, platform.type)">
-              <option
-                v-for="account in phoneAccountOptions(platform.type)"
-                :key="account.id"
-                :value="accountOptionText(account)"
-              >
-              </option>
-            </datalist>
+            <template v-if="uploaderPhoneEditMode">
+              <div class="uploader-phone-edit-line">
+                <input
+                  type="text"
+                  :value="phoneCellInputValue(phone, platform.type)"
+                  :list="phoneCellListId(phone, platform.type)"
+                  :disabled="phoneCellSaving(phone, platform.type)"
+                  :aria-label="`${platform.label} ${phone.phone}`"
+                  @change="savePhonePlatform(phone, platform.type, $event)"
+                  @keyup.enter="savePhonePlatform(phone, platform.type, $event)"
+                />
+                <button
+                  type="button"
+                  class="uploader-phone-disable-button"
+                  :class="{ active: phoneCellDisabled(phone, platform.type) }"
+                  :disabled="phoneCellSaving(phone, platform.type)"
+                  @click="togglePhoneDisabled(phone, platform.type)"
+                >
+                  {{ phoneCellDisabled(phone, platform.type) ? '启用' : '禁用' }}
+                </button>
+              </div>
+              <datalist :id="phoneCellListId(phone, platform.type)">
+                <option
+                  v-for="account in phoneAccountOptions(platform.type)"
+                  :key="account.id"
+                  :value="accountOptionText(account)"
+                >
+                </option>
+              </datalist>
+            </template>
+            <template v-else>
+              <span v-if="selectedPhoneAccount(phone, platform.type)" class="uploader-phone-account-card">
+                <span class="uploader-phone-account-avatar">
+                  <img
+                    v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
+                    :src="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
+                    :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
+                </span>
+                <span class="uploader-phone-account-text">
+                  <strong>{{ selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey }}</strong>
+                </span>
+              </span>
+              <span v-else-if="phoneNoteValue(phone)" class="uploader-phone-note">{{ phoneNoteValue(phone) }}</span>
+              <span v-else class="uploader-phone-account-empty">-</span>
+              <span v-if="phoneCellDisabled(phone, platform.type)" class="uploader-phone-disabled-tag">禁用</span>
+            </template>
           </span>
         </div>
       </div>
