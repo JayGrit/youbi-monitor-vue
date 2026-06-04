@@ -501,9 +501,71 @@ h1 {
 }
 
 .uploader-phone-select-cell {
-  display: flex;
-  align-items: center;
+  display: grid;
+  align-content: center;
+  gap: 6px;
   padding: 6px;
+}
+
+.uploader-phone-account-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.uploader-phone-account-avatar {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.uploader-phone-account-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.uploader-phone-account-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.uploader-phone-account-text strong,
+.uploader-phone-account-text small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploader-phone-account-text strong {
+  color: #172033;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.uploader-phone-account-text small,
+.uploader-phone-account-empty {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.uploader-phone-account-empty {
+  text-align: center;
 }
 
 .uploader-phone-select-cell select:disabled {

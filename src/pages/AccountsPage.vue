@@ -267,13 +267,32 @@ function phoneAccountValue(phone, platform) {
   return value == null ? '' : String(value)
 }
 
+function selectedPhoneAccount(phone, platform) {
+  const accountId = phoneAccountValue(phone, platform)
+  if (!accountId) return null
+  return phoneAccountOptions(platform).find(account => String(account.id) === accountId) || null
+}
+
 function phoneAccountOptions(platform) {
   return phonePlatformAccounts.value.get(platform) || []
 }
 
 function accountOptionText(account) {
   const name = account?.displayName || account?.accountKey || ''
-  return name === account?.accountKey ? name : `${name} (${account.accountKey})`
+  const remark = account?.remark || ''
+  const text = name === account?.accountKey ? name : `${name} (${account.accountKey})`
+  return remark ? `${text} - ${remark}` : text
+}
+
+function phoneAccountAvatar(account) {
+  const url = normalizeAccountAvatarUrl(account?.avatarUrl || '')
+  cacheAccountAvatar(url)
+  return accountAvatarCache.value[url] || url
+}
+
+function phoneAccountInitial(account) {
+  const text = account?.displayName || account?.accountKey || ''
+  return text.trim().slice(0, 1).toUpperCase() || 'A'
 }
 
 function phoneCellSaving(phone, platform) {
@@ -536,6 +555,23 @@ async function savePhonePlatform(phone, platform, event) {
             <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
           </span>
           <span v-for="phone in phoneRows" :key="`${platform.type}-${phone.id}`" class="uploader-phone-select-cell">
+            <span v-if="selectedPhoneAccount(phone, platform.type)" class="uploader-phone-account-card">
+              <span class="uploader-phone-account-avatar">
+                <img
+                  v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
+                  :src="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
+                  :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
+              </span>
+              <span class="uploader-phone-account-text">
+                <strong>{{ selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey }}</strong>
+                <small v-if="selectedPhoneAccount(phone, platform.type).remark">{{ selectedPhoneAccount(phone, platform.type).remark }}</small>
+              </span>
+            </span>
+            <span v-else class="uploader-phone-account-empty">-</span>
             <select
               :value="phoneAccountValue(phone, platform.type)"
               :disabled="phoneCellSaving(phone, platform.type)"
