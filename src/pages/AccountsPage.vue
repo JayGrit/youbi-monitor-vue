@@ -511,7 +511,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 <template v-else>-</template>
               </span>
               <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="待执行">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="待执行">{{ item.configured ? accountCountText(item.row.downloaderPendingCount) : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
                 {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
               </span>
