@@ -451,7 +451,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   }
 
   function nodeProgress(node) {
-    if (Number.isFinite(Number(node?.progressPercent))) {
+    if (node?.key === 'downloader' && node.progressPercent !== null && node.progressPercent !== undefined && Number.isFinite(Number(node.progressPercent))) {
       const value = Number(node.progressPercent)
       const text = value.toFixed(1).replace(/\.0$/, '')
       return `${text}%`
