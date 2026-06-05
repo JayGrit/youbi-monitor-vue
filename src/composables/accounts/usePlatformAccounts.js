@@ -235,6 +235,34 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  async function savePlatformQuietTime(platform, row) {
+    if (!row?.accountKey) return
+    const startTime = normalizeTimeInput(row.draftUploadQuietStartTime)
+    const endTime = normalizeTimeInput(row.draftUploadQuietEndTime)
+    if (!startTime || !endTime) {
+      setPlatformError(platform, '禁发时间格式无效')
+      return
+    }
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
+      mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
+  function normalizeTimeInput(value) {
+    const text = String(value ?? '').trim()
+    const match = text.match(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/)
+    if (!match) return ''
+    return `${match[1]}:${match[2]}:${match[3] || '00'}`
+  }
+
   async function savePlatformAccountProfile(platform, row) {
     if (!row?.accountKey) return null
     const displayName = String(row.draftDisplayName || '').trim()
@@ -339,6 +367,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformKey,
     togglePlatformEnabled,
     savePlatformCooldown,
+    savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount,
     savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile,

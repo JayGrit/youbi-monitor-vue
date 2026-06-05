@@ -117,6 +117,7 @@ const {
   clearAccountPolling,
   togglePlatformEnabled,
   savePlatformCooldown,
+  savePlatformQuietTime,
   savePlatformDownloaderMaxStagedCount,
   savePlatformNextUploadAllowedAt,
   savePlatformKey,
@@ -442,6 +443,7 @@ function audioErrorMessage(code) {
       :uploader-phone-error="uploaderPhoneError"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
+      :save-platform-quiet-time="savePlatformQuietTime"
       :save-platform-downloader-max-staged-count="savePlatformDownloaderMaxStagedCount"
       :save-platform-next-upload-allowed-at="savePlatformNextUploadAllowedAt"
       :save-platform-key="savePlatformKey"

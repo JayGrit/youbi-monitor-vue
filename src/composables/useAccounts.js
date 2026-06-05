@@ -121,6 +121,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     saveJinritoutiaoKey: row => platformAccounts.savePlatformKey('jinritoutiao', row),
     togglePlatformEnabled: platformAccounts.togglePlatformEnabled,
     savePlatformCooldown: platformAccounts.savePlatformCooldown,
+    savePlatformQuietTime: platformAccounts.savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount: platformAccounts.savePlatformDownloaderMaxStagedCount,
     savePlatformNextUploadAllowedAt: platformAccounts.savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile: platformAccounts.savePlatformAccountProfile,

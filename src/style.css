@@ -404,7 +404,7 @@ h1 {
 }
 
 .account-group-grid.editing {
-  min-width: 960px;
+  min-width: 1100px;
 }
 
 .account-group-heading {
@@ -448,8 +448,8 @@ h1 {
 
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
-  min-width: 920px;
-  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 78px 74px;
+  min-width: 1060px;
+  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 174px 78px 74px;
 }
 
 .account-backfill-button {
@@ -789,6 +789,10 @@ h1 {
   min-height: 30px;
   padding: 0 6px;
   text-align: center;
+}
+
+.quiet-time-editor input {
+  width: 76px;
 }
 
 .account-key-input {
@@ -3770,7 +3774,7 @@ a.submitter-cell:hover {
   }
 
   .account-group-grid.editing {
-    min-width: 880px;
+    min-width: 1020px;
   }
 
   .account-row {
@@ -3785,8 +3789,8 @@ a.submitter-cell:hover {
 
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
-    min-width: 860px;
-    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 72px 64px;
+    min-width: 1000px;
+    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 166px 72px 64px;
   }
 
   .task-row {

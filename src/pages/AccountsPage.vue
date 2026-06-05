@@ -26,6 +26,7 @@ const props = defineProps({
   uploaderPhoneError: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
+  savePlatformQuietTime: { type: Function, required: true },
   savePlatformDownloaderMaxStagedCount: { type: Function, required: true },
   savePlatformNextUploadAllowedAt: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
@@ -93,6 +94,8 @@ function accountDraft(row, type) {
     key: row.accountKey || '',
     cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
     cooldownMaxMinutes: cooldownDraftMinutes(row.uploadCooldownMaxSeconds, 120),
+    uploadQuietStartTime: timeInputValue(row.uploadQuietStartTime, '01:00'),
+    uploadQuietEndTime: timeInputValue(row.uploadQuietEndTime, '07:00'),
     downloaderMaxStagedCount: String(Number.isFinite(Number(row.downloaderMaxStagedCount)) ? Number(row.downloaderMaxStagedCount) : 5),
     nextUploadAllowedAt: dateTimeLocalValue(row.nextUploadAllowedAt),
   }
@@ -103,12 +106,20 @@ function cooldownDraftMinutes(seconds, fallback) {
   return Number.isFinite(value) ? String(Math.round(value / 60)) : String(fallback)
 }
 
+function timeInputValue(value, fallback) {
+  const text = String(value || '').trim()
+  const match = text.match(/^(\d{2}:\d{2})(?::\d{2})?$/)
+  return match ? match[1] : fallback
+}
+
 function resetAccountDraft(item) {
   const draft = accountDraft(item.row, item.type)
   item.row.draftEnabled = draft.enabled
   item.row.draftKey = draft.key
   item.row.draftCooldownMinMinutes = draft.cooldownMinMinutes
   item.row.draftCooldownMaxMinutes = draft.cooldownMaxMinutes
+  item.row.draftUploadQuietStartTime = draft.uploadQuietStartTime
+  item.row.draftUploadQuietEndTime = draft.uploadQuietEndTime
   item.row.draftDownloaderMaxStagedCount = draft.downloaderMaxStagedCount
   item.row.draftNextUploadAllowedAt = draft.nextUploadAllowedAt
 }
@@ -121,6 +132,9 @@ function accountChanges(item) {
       String(row.draftCooldownMinMinutes ?? '').trim() !== draft.cooldownMinMinutes
       || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
     downloaderMaxStagedCount: String(row.draftDownloaderMaxStagedCount ?? '').trim() !== draft.downloaderMaxStagedCount,
+    quietTime:
+      String(row.draftUploadQuietStartTime ?? '').trim() !== draft.uploadQuietStartTime
+      || String(row.draftUploadQuietEndTime ?? '').trim() !== draft.uploadQuietEndTime,
     enabled: (row.draftEnabled !== false) !== draft.enabled,
     key: Boolean(String(row.draftKey || '').trim()) && String(row.draftKey || '').trim() !== draft.key,
     nextUploadAllowedAt: String(row.draftNextUploadAllowedAt ?? '').trim() !== draft.nextUploadAllowedAt,
@@ -150,6 +164,11 @@ async function saveAccountKeyEdit(item) {
 async function saveAccountCooldownEdit(item) {
   if (!item?.configured || !accountChanges(item).cooldown) return
   await props.savePlatformCooldown(item.type, item.row)
+}
+
+async function saveAccountQuietTimeEdit(item) {
+  if (!item?.configured || !accountChanges(item).quietTime) return
+  await props.savePlatformQuietTime(item.type, item.row)
 }
 
 async function saveAccountDownloaderMaxStagedCountEdit(item) {
@@ -473,6 +492,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
+            <span v-if="accountEditMode">禁发时间</span>
             <span v-if="accountEditMode">最大暂存</span>
             <span v-if="accountEditMode">启用</span>
           </div>
@@ -580,6 +600,26 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     aria-label="最大冷却分钟"
                     :disabled="platformBusyKey(item.type) === item.row.accountKey"
                     @change="saveAccountCooldownEdit(item)"
+                  />
+                </template>
+                <template v-else>-</template>
+              </span>
+              <span v-if="accountEditMode" class="cooldown-editor quiet-time-editor" data-label="禁发时间">
+                <template v-if="item.configured">
+                  <input
+                    v-model="item.row.draftUploadQuietStartTime"
+                    type="time"
+                    aria-label="禁发开始时间"
+                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    @change="saveAccountQuietTimeEdit(item)"
+                  />
+                  <span>-</span>
+                  <input
+                    v-model="item.row.draftUploadQuietEndTime"
+                    type="time"
+                    aria-label="禁发结束时间"
+                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    @change="saveAccountQuietTimeEdit(item)"
                   />
                 </template>
                 <template v-else>-</template>

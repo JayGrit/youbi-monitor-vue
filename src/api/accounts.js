@@ -35,6 +35,10 @@ function platformAccountApi(apiBase, platform) {
       return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt })
     },
 
+    setQuietTime(accountKey, startTime, endTime) {
+      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/quiet-time`, { startTime, endTime })
+    },
+
     setDownloaderMaxStagedCount(accountKey, maxStagedCount) {
       return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/downloader-max-staged-count`, { maxStagedCount })
     },
