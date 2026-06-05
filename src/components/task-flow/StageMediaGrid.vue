@@ -1,18 +1,36 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   media: { type: Array, default: () => [] },
   logAudioEvent: { type: Function, required: true },
 })
+
+const visibleMedia = computed(() => props.media.filter(asset => !isCoverImage(asset)))
+
+function isCoverImage(asset) {
+  if (asset?.kind !== 'image') return false
+  const text = [
+    asset.name,
+    asset.objectName,
+    asset.url,
+    ...(asset.names || []),
+  ].filter(Boolean).join(' ').toLowerCase()
+  return /cover|thumbnail|thumb|封面/.test(text)
+}
 </script>
 
 <template>
   <div class="flow-section">
     <h4>Media Preview</h4>
     <div class="media-grid">
-      <article v-for="asset in media" :key="asset.url" class="media-item">
-        <div class="media-title">
+      <article
+        v-for="asset in visibleMedia"
+        :key="asset.url"
+        :class="['media-item', { 'media-item-video': asset.kind === 'video' }]"
+      >
+        <div v-if="asset.kind !== 'video'" class="media-title">
           <strong>{{ asset.name }}</strong>
-          <a :href="asset.url" target="_blank" rel="noreferrer">打开</a>
         </div>
         <video v-if="asset.kind === 'video'" :src="asset.url" controls preload="metadata"></video>
         <audio
@@ -28,7 +46,7 @@ defineProps({
         ></audio>
         <img v-else-if="asset.kind === 'image'" :src="asset.url" alt="" />
         <div v-else class="media-file-preview">{{ asset.kind || 'file' }}</div>
-        <p v-if="asset.objectName">{{ asset.objectName }}</p>
+        <p v-if="asset.kind !== 'video' && asset.objectName">{{ asset.objectName }}</p>
       </article>
     </div>
   </div>

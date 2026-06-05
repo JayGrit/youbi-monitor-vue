@@ -2185,6 +2185,13 @@ h1 {
   padding: 10px;
 }
 
+.media-item-video {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .media-title {
   display: flex;
   align-items: center;
@@ -2220,6 +2227,11 @@ h1 {
   max-height: 360px;
   border-radius: 8px;
   background: #0f172a;
+}
+
+.media-item-video video {
+  max-height: none;
+  border-radius: 0;
 }
 
 .media-item img {
