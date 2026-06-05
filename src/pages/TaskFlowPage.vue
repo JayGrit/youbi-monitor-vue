@@ -1,13 +1,10 @@
 <script setup>
 import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
-import RawDatabaseTables from '../components/task-flow/RawDatabaseTables.vue'
 import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
-import StageFieldTable from '../components/task-flow/StageFieldTable.vue'
 import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
-import UploaderDiagnostics from '../components/task-flow/UploaderDiagnostics.vue'
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
 import { formatDuration } from '../utils/format'
@@ -42,7 +39,6 @@ defineProps({
   uploadPlatformName: { type: Function, required: true },
   speechColumns: { type: Function, required: true },
   speechRows: { type: Function, required: true },
-  speechTables: { type: Function, required: true },
   showSpeechColumn: { type: Function, required: true },
   speechAudioAsset: { type: Function, required: true },
   logAudioEvent: { type: Function, required: true },
@@ -56,8 +52,6 @@ defineProps({
   tableCellText: { type: Function, required: true },
   tableCellSummary: { type: Function, required: true },
   stageMedia: { type: Function, required: true },
-  fieldRows: { type: Function, required: true },
-  tableColumns: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
@@ -110,14 +104,9 @@ function seekVocalsPlayback(ms) {
           :rows="uploadSubmissionRows(selectedStage)"
           :upload-platform-name="uploadPlatformName"
           :platform-icon-urls="platformIconUrls"
-        />
-
-        <UploaderDiagnostics
-          v-if="selectedStage.key === 'uploader'"
-          :rows="uploaderDiagnostics"
+          :diagnostics="uploaderDiagnostics"
           :loading="uploaderDiagnosticsLoading"
           :error="uploaderDiagnosticsError"
-          :upload-platform-name="uploadPlatformName"
           :load-diagnostics="loadSelectedUploaderDiagnostics"
         />
 
@@ -166,15 +155,6 @@ function seekVocalsPlayback(ms) {
           :processing="whisperProcessing"
         />
 
-        <template v-else-if="selectedStage.key !== 'demucs'">
-          <StageFieldTable :rows="fieldRows(selectedStage)" />
-          <RawDatabaseTables
-            :tables="selectedStage.tables || []"
-            :table-columns="tableColumns"
-            :table-cell-text="tableCellText"
-            :table-cell-summary="tableCellSummary"
-          />
-        </template>
       </section>
     </template>
   </section>

@@ -2139,6 +2139,13 @@ h1 {
   font-size: 14px;
 }
 
+.upload-submission-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .upload-submission-meta {
   margin-top: 8px;
   color: #64748b;
@@ -2154,6 +2161,14 @@ h1 {
 
 .upload-submission-card .flow-stage-error {
   margin: 10px 0 0;
+}
+
+.upload-submission-diagnostics {
+  margin-top: 12px;
+}
+
+.upload-submission-diagnostics .diagnostic-grid {
+  padding-top: 2px;
 }
 
 .media-grid {
@@ -2422,7 +2437,6 @@ h1 {
 
 .diagnostic-load-button {
   min-height: 34px;
-  margin-bottom: 12px;
   border: 1px solid #cfd8e3;
   border-radius: 8px;
   background: #ffffff;
@@ -2460,6 +2474,14 @@ h1 {
 
 .diagnostic-error {
   margin: 0;
+}
+
+.upload-submission-actions .diagnostic-load-button {
+  min-height: 28px;
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .field-table {

@@ -165,7 +165,6 @@ const {
   flowSourceUrl,
   flowCoverUrl,
   flowDurationSeconds,
-  tableColumns,
   tableCellText,
   tableCellSummary,
   speechRows,
@@ -173,7 +172,6 @@ const {
   uploadPlatformName,
   speechColumns,
   showSpeechColumn,
-  speechTables,
   speechMoreRows,
   canEditSpeechDstText,
   isEditingSpeechDstText,
@@ -183,7 +181,6 @@ const {
   speechAudioAsset,
   stageMedia,
   demucsAudioMedia,
-  fieldRows,
 } = useTaskFlow(monitorApi, brokenImageUrls)
 
 const {
@@ -497,7 +494,6 @@ function audioErrorMessage(code) {
       :upload-platform-name="uploadPlatformName"
       :speech-columns="speechColumns"
       :speech-rows="speechRows"
-      :speech-tables="speechTables"
       :show-speech-column="showSpeechColumn"
       :speech-audio-asset="speechAudioAsset"
       :log-audio-event="logAudioEvent"
@@ -511,8 +507,6 @@ function audioErrorMessage(code) {
       :table-cell-text="tableCellText"
       :table-cell-summary="tableCellSummary"
       :stage-media="stageMedia"
-      :field-rows="fieldRows"
-      :table-columns="tableColumns"
     />
   </main>
 </template>
