@@ -344,6 +344,12 @@ h1 {
   gap: 8px;
 }
 
+.account-disk-status {
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .account-edit-actions button {
   min-height: 32px;
   border: 1px solid #cfd8e3;
