@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { statusText } from '../../domain/constants'
 import { formatDateTime } from '../../utils/format'
 
@@ -15,6 +15,9 @@ const props = defineProps({
 
 const requestedKey = ref('')
 const requestedSubmission = ref(null)
+const screenshotObjectUrls = ref({})
+const screenshotLoadingUrls = ref({})
+const screenshotErrors = ref({})
 
 const visibleDiagnostics = computed(() => {
   if (!requestedSubmission.value) return []
@@ -22,7 +25,7 @@ const visibleDiagnostics = computed(() => {
   if (!rows.length) return []
   const latestRunId = latestDiagnosticRunId(rows)
   return rows
-    .filter(row => !latestRunId || row.runId === latestRunId)
+    .filter(row => !latestRunId || diagnosticRunId(row) === latestRunId)
     .sort(compareDiagnostics)
 })
 
@@ -31,6 +34,22 @@ function requestDiagnostics(submission) {
   requestedSubmission.value = submission
   props.loadDiagnostics()
 }
+
+watch(
+  visibleDiagnostics,
+  rows => {
+    for (const row of rows) {
+      downloadScreenshot(row)
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  for (const url of Object.values(screenshotObjectUrls.value)) {
+    URL.revokeObjectURL(url)
+  }
+})
 
 function submissionKey(submission) {
   return `${submission.platform || ''}:${submission.account_key || submission.accountKey || ''}`
@@ -47,11 +66,15 @@ function latestDiagnosticRunId(rows) {
   const latest = rows.reduce((best, row) => {
     const value = Date.parse(row.createdAt || row.created_at || '') || 0
     if (!best || value > best.value) {
-      return { runId: row.runId || row.run_id || '', value }
+      return { runId: diagnosticRunId(row), value }
     }
     return best
   }, null)
   return latest?.runId || ''
+}
+
+function diagnosticRunId(row) {
+  return row.runId || row.run_id || ''
 }
 
 function compareDiagnostics(left, right) {
@@ -71,15 +94,12 @@ function diagnosticCreatedAt(row) {
 }
 
 function diagnosticTitle(row) {
-  return [
-    row.stepIndex ?? row.step_index ? `#${row.stepIndex ?? row.step_index}` : '',
-    row.stepName || row.step_name,
-  ].filter(Boolean).join(' / ') || '诊断截图'
+  return row.stepName || row.step_name || '诊断截图'
 }
 
 function diagnosticMeta(row) {
   return [
-    row.runId || row.run_id,
+    diagnosticRunId(row),
     row.source,
     formatDateTime(row.createdAt || row.created_at),
     (row.screenshotWidth || row.screenshot_width) && (row.screenshotHeight || row.screenshot_height)
@@ -94,6 +114,48 @@ function screenshotUrl(row) {
 
 function diagnosticError(row) {
   return row.errorMessage || row.error_message || ''
+}
+
+function screenshotKey(row) {
+  return String(row.id || screenshotUrl(row))
+}
+
+function renderedScreenshotUrl(row) {
+  return screenshotObjectUrls.value[screenshotKey(row)] || ''
+}
+
+function screenshotLoading(row) {
+  return Boolean(screenshotLoadingUrls.value[screenshotKey(row)])
+}
+
+function screenshotError(row) {
+  return screenshotErrors.value[screenshotKey(row)] || ''
+}
+
+async function downloadScreenshot(row) {
+  const url = screenshotUrl(row)
+  const key = screenshotKey(row)
+  if (!url || screenshotObjectUrls.value[key] || screenshotLoadingUrls.value[key]) return
+  screenshotLoadingUrls.value = { ...screenshotLoadingUrls.value, [key]: true }
+  screenshotErrors.value = { ...screenshotErrors.value, [key]: '' }
+  try {
+    const response = await fetch(url, { mode: 'cors', cache: 'no-store' })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const blob = await response.blob()
+    if (!blob.size) throw new Error('empty image')
+    const oldUrl = screenshotObjectUrls.value[key]
+    if (oldUrl) URL.revokeObjectURL(oldUrl)
+    screenshotObjectUrls.value = { ...screenshotObjectUrls.value, [key]: URL.createObjectURL(blob) }
+  } catch (err) {
+    screenshotErrors.value = {
+      ...screenshotErrors.value,
+      [key]: err instanceof Error ? err.message : String(err),
+    }
+  } finally {
+    const next = { ...screenshotLoadingUrls.value }
+    delete next[key]
+    screenshotLoadingUrls.value = next
+  }
 }
 </script>
 
@@ -147,13 +209,12 @@ function diagnosticError(row) {
               >
                 <div class="media-title">
                   <strong>{{ diagnosticTitle(row) }}</strong>
-                  <span>
-                    <a v-if="screenshotUrl(row)" :href="screenshotUrl(row)" target="_blank" rel="noreferrer">打开</a>
-                  </span>
                 </div>
-                <a v-if="screenshotUrl(row)" :href="screenshotUrl(row)" target="_blank" rel="noreferrer" class="diagnostic-image-link">
-                  <img :src="screenshotUrl(row)" loading="lazy" alt="" />
-                </a>
+                <p v-if="screenshotLoading(row)" class="flow-muted">正在下载图片</p>
+                <div v-else-if="renderedScreenshotUrl(row)" class="diagnostic-image-link">
+                  <img :src="renderedScreenshotUrl(row)" loading="lazy" alt="" />
+                </div>
+                <p v-else-if="screenshotError(row)" class="flow-muted">图片下载失败：{{ screenshotError(row) }}</p>
                 <p>{{ diagnosticMeta(row) }}</p>
                 <pre v-if="diagnosticError(row)" class="flow-stage-error">{{ diagnosticError(row) }}</pre>
               </article>
