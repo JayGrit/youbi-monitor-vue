@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { statusText } from '../../domain/constants'
 import { formatDateTime } from '../../utils/format'
+import { normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -109,7 +110,7 @@ function diagnosticMeta(row) {
 }
 
 function screenshotUrl(row) {
-  return row.screenshotUrl || row.screenshot_url || ''
+  return normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
 }
 
 function diagnosticError(row) {
