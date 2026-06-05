@@ -46,6 +46,7 @@ const props = defineProps({
   accountCountText: { type: Function, required: true },
   nextSendText: { type: Function, required: true },
   platformBusyKey: { type: Function, required: true },
+  platformBusyAction: { type: Function, required: true },
   qrImageUrl: { type: Function, required: true },
   platformErrorText: { type: Function, required: true },
 })
@@ -184,6 +185,14 @@ async function saveAccountNextSendEdit(item) {
 async function saveAccountEnabledEdit(item) {
   if (!item?.configured || !accountChanges(item).enabled) return
   await props.togglePlatformEnabled(item.type, item.row)
+}
+
+function accountRowBusyKey(item) {
+  return String(item?.row?.accountKey || item?.row?.draftKey || '').trim()
+}
+
+function accountRowSaving(item) {
+  return Boolean(item?.configured && props.platformBusyKey(item.type) === accountRowBusyKey(item))
 }
 
 function forEachConfiguredAccount(callback) {
@@ -476,7 +485,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
           <button v-else type="button" @click="enterAccountEditMode">编辑</button>
         </div>
       </div>
-      <div v-if="visibleAccountGroups.length" class="account-key-list" aria-label="按 key 分组账号表">
+      <div v-if="visibleAccountGroups.length" class="account-key-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
         <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
           <span class="account-type-header">Type</span>
           <div class="account-row account-header account-platform-row">
@@ -504,9 +513,9 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <div
               v-for="item in group.visibleRows"
               :key="`${group.key}-${item.type}`"
-              :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item) }]"
+              :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item), saving: accountRowSaving(item) }]"
             >
-              <span class="platform-mark">
+              <span class="platform-mark" :class="{ saving: accountRowSaving(item) }">
                 <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
               </span>
               <span data-label="头像">
@@ -564,7 +573,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   class="account-key-input"
                   aria-label="账号 key"
                   placeholder="账号 key"
-                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  :disabled="accountRowSaving(item)"
                   @change="saveAccountKeyEdit(item)"
                 />
                 <template v-else>-</template>
@@ -574,6 +583,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   v-if="item.configured"
                   type="button"
                   class="account-backfill-button"
+                  :disabled="accountRowSaving(item)"
                   @click="openUploadBackfill(item.type, item.label, item.row.accountKey, group.key)"
                 >
                   补发历史
@@ -588,7 +598,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     min="0"
                     step="1"
                     aria-label="最小冷却分钟"
-                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    :disabled="accountRowSaving(item)"
                     @change="saveAccountCooldownEdit(item)"
                   />
                   <span>-</span>
@@ -598,7 +608,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     min="0"
                     step="1"
                     aria-label="最大冷却分钟"
-                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    :disabled="accountRowSaving(item)"
                     @change="saveAccountCooldownEdit(item)"
                   />
                 </template>
@@ -610,7 +620,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     v-model="item.row.draftUploadQuietStartTime"
                     type="time"
                     aria-label="禁发开始时间"
-                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    :disabled="accountRowSaving(item)"
                     @change="saveAccountQuietTimeEdit(item)"
                   />
                   <span>-</span>
@@ -618,7 +628,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     v-model="item.row.draftUploadQuietEndTime"
                     type="time"
                     aria-label="禁发结束时间"
-                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    :disabled="accountRowSaving(item)"
                     @change="saveAccountQuietTimeEdit(item)"
                   />
                 </template>
@@ -634,7 +644,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   step="1"
                   class="account-small-number-input"
                   aria-label="最大暂存个数"
-                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  :disabled="accountRowSaving(item)"
                   @change="saveAccountDownloaderMaxStagedCountEdit(item)"
                 />
                 <template v-else>-</template>
@@ -644,7 +654,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                   <input
                     v-model="item.row.draftEnabled"
                     type="checkbox"
-                    :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                    :disabled="accountRowSaving(item)"
                     @change="saveAccountEnabledEdit(item)"
                   />
                   {{ item.row.draftEnabled ? '启用' : '禁用' }}

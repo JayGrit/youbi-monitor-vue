@@ -67,7 +67,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     if (!QR_LOGIN_PLATFORM_TYPES.includes(platform)) return null
     try {
       const key = row?.accountKey || '_auto'
-      platformState[platform].busyKey.value = rowKey(row)
+      setPlatformBusy(platform, rowKey(row), 'login')
       const payload = await accountsApi[platform].startQrLogin(key)
       platformState[platform].qrCode.value = payload
       platformState[platform].qrMessage.value = '等待扫码确认'
@@ -75,7 +75,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      platformState[platform].busyKey.value = ''
+      clearPlatformBusy(platform)
     }
   }
 
@@ -110,7 +110,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   async function renewBilibiliAccount(row) {
     if (!row?.accountKey) return
     bilibiliRenewing.value = true
-    platformState.bilibili.busyKey.value = rowKey(row)
+    setPlatformBusy('bilibili', rowKey(row), 'renew')
     try {
       platformState.bilibili.account.value = await accountsApi.bilibili.renew(row.accountKey)
       await loadAccountOverview()
@@ -119,7 +119,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       platformState.bilibili.error.value = err instanceof Error ? err.message : String(err)
     } finally {
       bilibiliRenewing.value = false
-      platformState.bilibili.busyKey.value = ''
+      clearPlatformBusy('bilibili')
     }
   }
 
@@ -139,7 +139,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     if (!row?.accountKey) return null
     const nextKey = (row.draftKey || '').trim()
     if (!nextKey || nextKey === row.accountKey) return null
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'key')
     try {
       const payload = await accountsApi[platform].saveKey(row.accountKey, nextKey)
       mergePlatformRow(platform, payload, row.slot)
@@ -150,7 +150,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       platformState[platform].error.value = err instanceof Error ? err.message : String(err)
       return null
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -159,18 +159,17 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     const nextEnabled = row.draftEnabled !== false
     const previousEnabled = row.enabled
     row.enabled = nextEnabled
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'enabled')
     try {
       const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
       mergePlatformRow(platform, account, row.slot)
-      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       row.enabled = previousEnabled
       row.draftEnabled = previousEnabled !== false
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -182,7 +181,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       setPlatformError(platform, '冷却时间范围无效')
       return
     }
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'cooldown')
     try {
       const account = await accountsApi[platform].setCooldown(
         row.accountKey,
@@ -190,12 +189,11 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
         Math.round(maxMinutes * 60),
       )
       mergePlatformRow(platform, account, row.slot)
-      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -206,32 +204,30 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       setPlatformError(platform, '最大暂存个数范围无效')
       return
     }
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'downloaderMaxStagedCount')
     try {
       const account = await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
       mergePlatformRow(platform, account, row.slot)
-      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
   async function savePlatformNextUploadAllowedAt(platform, row) {
     if (!row?.accountKey) return
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'nextUploadAllowedAt')
     try {
       const account = await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
       mergePlatformRow(platform, account, row.slot)
-      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -243,16 +239,15 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       setPlatformError(platform, '禁发时间格式无效')
       return
     }
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'quietTime')
     try {
       const account = await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
       mergePlatformRow(platform, account, row.slot)
-      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -266,7 +261,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   async function savePlatformAccountProfile(platform, row) {
     if (!row?.accountKey) return null
     const displayName = String(row.draftDisplayName || '').trim()
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'profile')
     try {
       const profile = await accountsApi[platform].updateProfile(row.accountKey, displayName)
       row.displayName = profile?.displayName || ''
@@ -278,13 +273,13 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
       throw err
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
   async function uploadPlatformAccountAvatar(platform, row, file) {
     if (!row?.accountKey || !file) return null
-    setPlatformBusyKey(platform, rowKey(row))
+    setPlatformBusy(platform, rowKey(row), 'avatar')
     try {
       const profile = await accountsApi[platform].uploadAvatar(row.accountKey, file)
       row.avatarUrl = profile?.avatarUrl || ''
@@ -296,7 +291,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
       throw err
     } finally {
-      setPlatformBusyKey(platform, '')
+      clearPlatformBusy(platform)
     }
   }
 
@@ -313,16 +308,16 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     if (index < 0) {
       index = 0
     }
-    rows[index] = {
-      ...account,
-      slot: rows[index]?.slot || index + 1,
-      draftKey: account.accountKey || '',
-    }
+    rows[index] = accountRows([{ ...rows[index], ...account }])[0]
     state.rows.value = accountRows(rows.filter(row => row.accountKey))
   }
 
   function platformBusyKey(platform) {
     return platformState[platform]?.busyKey.value || ''
+  }
+
+  function platformBusyAction(platform) {
+    return platformState[platform]?.busyAction.value || ''
   }
 
   function platformErrorText() {
@@ -342,10 +337,15 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
-  function setPlatformBusyKey(platform, value) {
+  function setPlatformBusy(platform, key, action) {
     if (platformState[platform]) {
-      platformState[platform].busyKey.value = value
+      platformState[platform].busyKey.value = key
+      platformState[platform].busyAction.value = action
     }
+  }
+
+  function clearPlatformBusy(platform) {
+    setPlatformBusy(platform, '', '')
   }
 
   function clearQrTimer(platform) {
@@ -373,6 +373,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,
     platformBusyKey,
+    platformBusyAction,
     platformErrorText,
   }
 }
@@ -386,5 +387,6 @@ function createPlatformState() {
     qrCode: ref(null),
     qrMessage: ref(''),
     busyKey: ref(''),
+    busyAction: ref(''),
   }
 }

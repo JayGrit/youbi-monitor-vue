@@ -136,6 +136,7 @@ const {
   accountCountText,
   nextSendText,
   platformBusyKey,
+  platformBusyAction,
   platformErrorText,
   warmPlatformIcons,
   qrImageUrl,
@@ -463,6 +464,7 @@ function audioErrorMessage(code) {
       :account-count-text="accountCountText"
       :next-send-text="nextSendText"
       :platform-busy-key="platformBusyKey"
+      :platform-busy-action="platformBusyAction"
       :qr-image-url="qrImageUrl"
       :platform-error-text="platformErrorText"
     />

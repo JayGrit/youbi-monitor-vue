@@ -24,6 +24,8 @@ export function accountRows(accounts) {
     draftKey: account.accountKey || '',
     draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
     draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
+    draftUploadQuietStartTime: timeInputValue(account.uploadQuietStartTime, '01:00'),
+    draftUploadQuietEndTime: timeInputValue(account.uploadQuietEndTime, '07:00'),
     draftNextUploadAllowedAt: dateTimeLocalValue(account.nextUploadAllowedAt),
     draftEnabled: account.enabled !== false,
     draftDisplayName: '',
@@ -40,6 +42,12 @@ function dateTimeLocalValue(value) {
 export function cooldownMinutes(seconds, fallback) {
   const value = Number(seconds)
   return Number.isFinite(value) ? String(Math.round(value / 60)) : String(fallback)
+}
+
+export function timeInputValue(value, fallback) {
+  const text = String(value || '').trim()
+  const match = text.match(/^(\d{2}:\d{2})(?::\d{2})?$/)
+  return match ? match[1] : fallback
 }
 
 export function cooldownText(account) {

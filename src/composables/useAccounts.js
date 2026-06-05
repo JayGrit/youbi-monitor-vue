@@ -136,6 +136,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     accountAvatarUrl,
     accountAvatarInitial,
     platformBusyKey: platformAccounts.platformBusyKey,
+    platformBusyAction: platformAccounts.platformBusyAction,
     platformErrorText: platformAccounts.platformErrorText,
     startPlatformLogin: platformAccounts.startPlatformLogin,
     savePlatformKey: platformAccounts.savePlatformKey,
