@@ -248,9 +248,7 @@ function nextSendDisplay(row) {
   const waitingMs = Date.now() - next.getTime()
   if (waitingMs < STALE_READY_MINUTES * 60 * 1000) return text
   const minutes = Math.floor(waitingMs / 60000)
-  const hours = Math.floor(minutes / 60)
-  const restMinutes = minutes % 60
-  return `${pad2(hours)}:${pad2(restMinutes)}`
+  return `超时${minutes}Min`
 }
 
 function runningTaskId(row) {
@@ -268,7 +266,11 @@ function openRunningTask(row) {
 }
 
 function nextSendStale(row) {
-  return /^\d{2}:\d{2}$/.test(nextSendDisplay(row))
+  return nextSendDisplay(row).startsWith('超时')
+}
+
+function nextSendReady(row) {
+  return nextSendDisplay(row) === '可发送'
 }
 
 function failedUploadCount(row) {
@@ -502,7 +504,14 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
               </span>
               <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
-              <span v-if="!accountEditMode" :class="{ 'next-send-stale': item.configured && nextSendStale(item.row) }" data-label="下次可发送">
+              <span
+                v-if="!accountEditMode"
+                :class="{
+                  'next-send-ready': item.configured && nextSendReady(item.row),
+                  'next-send-stale': item.configured && nextSendStale(item.row),
+                }"
+                data-label="下次可发送"
+              >
                 <button
                   v-if="item.configured && nextSendRunning(item.row)"
                   type="button"

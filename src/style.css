@@ -840,6 +840,11 @@ h1 {
   font-weight: 720;
 }
 
+.next-send-ready {
+  color: #166534;
+  font-weight: 760;
+}
+
 .next-send-stale {
   color: #dc2626;
   font-weight: 760;
