@@ -35,6 +35,10 @@ function platformAccountApi(apiBase, platform) {
       return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt })
     },
 
+    setDownloaderMaxStagedCount(accountKey, maxStagedCount) {
+      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/downloader-max-staged-count`, { maxStagedCount })
+    },
+
     updateProfile(accountKey, displayName) {
       return postJson(`${base}/account/${encodeURIComponent(accountKey)}/profile`, { displayName })
     },

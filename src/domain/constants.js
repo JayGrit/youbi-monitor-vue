@@ -34,6 +34,7 @@ export const SUBMITTER_SORT_OPTIONS = [
 
 export const SUBMITTER_UPLOAD_FILTERS = [
   { value: 'unuploaded', label: '未上传' },
+  { value: 'pending', label: '待执行' },
   { value: 'uploaded', label: '已上传' },
   { value: 'rejected', label: '拒稿' },
   { value: 'all', label: '全部' },

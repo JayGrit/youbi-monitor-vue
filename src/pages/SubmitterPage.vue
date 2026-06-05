@@ -248,7 +248,9 @@ const emit = defineEmits([
                     @click="submitVideoToYoubi(item)"
                   >
                     <span v-if="submitterSubmissionStatus(item) === 'uploaded'">已上传</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'pending'">待执行</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'failed'">提交失败</span>
                     <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
                     <span v-else>上传</span>
                   </button>

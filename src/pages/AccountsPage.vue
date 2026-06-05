@@ -26,6 +26,7 @@ const props = defineProps({
   uploaderPhoneError: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
+  savePlatformDownloaderMaxStagedCount: { type: Function, required: true },
   savePlatformNextUploadAllowedAt: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
   savePlatformAccountProfile: { type: Function, required: true },
@@ -92,6 +93,7 @@ function accountDraft(row, type) {
     key: row.accountKey || '',
     cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
     cooldownMaxMinutes: cooldownDraftMinutes(row.uploadCooldownMaxSeconds, 120),
+    downloaderMaxStagedCount: String(Number.isFinite(Number(row.downloaderMaxStagedCount)) ? Number(row.downloaderMaxStagedCount) : 5),
     nextUploadAllowedAt: dateTimeLocalValue(row.nextUploadAllowedAt),
   }
 }
@@ -107,6 +109,7 @@ function resetAccountDraft(item) {
   item.row.draftKey = draft.key
   item.row.draftCooldownMinMinutes = draft.cooldownMinMinutes
   item.row.draftCooldownMaxMinutes = draft.cooldownMaxMinutes
+  item.row.draftDownloaderMaxStagedCount = draft.downloaderMaxStagedCount
   item.row.draftNextUploadAllowedAt = draft.nextUploadAllowedAt
 }
 
@@ -117,6 +120,7 @@ function accountChanges(item) {
     cooldown:
       String(row.draftCooldownMinMinutes ?? '').trim() !== draft.cooldownMinMinutes
       || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
+    downloaderMaxStagedCount: String(row.draftDownloaderMaxStagedCount ?? '').trim() !== draft.downloaderMaxStagedCount,
     enabled: (row.draftEnabled !== false) !== draft.enabled,
     key: Boolean(String(row.draftKey || '').trim()) && String(row.draftKey || '').trim() !== draft.key,
     nextUploadAllowedAt: String(row.draftNextUploadAllowedAt ?? '').trim() !== draft.nextUploadAllowedAt,
@@ -146,6 +150,11 @@ async function saveAccountKeyEdit(item) {
 async function saveAccountCooldownEdit(item) {
   if (!item?.configured || !accountChanges(item).cooldown) return
   await props.savePlatformCooldown(item.type, item.row)
+}
+
+async function saveAccountDownloaderMaxStagedCountEdit(item) {
+  if (!item?.configured || !accountChanges(item).downloaderMaxStagedCount) return
+  await props.savePlatformDownloaderMaxStagedCount(item.type, item.row)
 }
 
 async function saveAccountNextSendEdit(item) {
@@ -456,13 +465,14 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <span>头像</span>
             <span>账号</span>
             <span v-if="!accountEditMode">今日已发</span>
-            <span v-if="!accountEditMode">冷却等待</span>
+            <span v-if="!accountEditMode">待执行</span>
             <span v-if="!accountEditMode">失败任务</span>
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">下次可发送</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
+            <span v-if="accountEditMode">最大暂存</span>
             <span v-if="accountEditMode">启用</span>
           </div>
         </div>
@@ -501,7 +511,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 <template v-else>-</template>
               </span>
               <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="待执行">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
                 {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
               </span>
@@ -570,6 +580,21 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                     @change="saveAccountCooldownEdit(item)"
                   />
                 </template>
+                <template v-else>-</template>
+              </span>
+              <span v-if="accountEditMode" data-label="最大暂存">
+                <input
+                  v-if="item.configured"
+                  v-model="item.row.draftDownloaderMaxStagedCount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  class="account-small-number-input"
+                  aria-label="最大暂存个数"
+                  :disabled="platformBusyKey(item.type) === item.row.accountKey"
+                  @change="saveAccountDownloaderMaxStagedCountEdit(item)"
+                />
                 <template v-else>-</template>
               </span>
               <span v-if="accountEditMode" data-label="启用">

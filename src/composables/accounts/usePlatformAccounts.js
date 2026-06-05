@@ -199,6 +199,26 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  async function savePlatformDownloaderMaxStagedCount(platform, row) {
+    if (!row?.accountKey) return
+    const maxStagedCount = Number(row.draftDownloaderMaxStagedCount)
+    if (!Number.isInteger(maxStagedCount) || maxStagedCount < 0 || maxStagedCount > 100) {
+      setPlatformError(platform, '最大暂存个数范围无效')
+      return
+    }
+    setPlatformBusyKey(platform, rowKey(row))
+    try {
+      const account = await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
+      mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      setPlatformBusyKey(platform, '')
+    }
+  }
+
   async function savePlatformNextUploadAllowedAt(platform, row) {
     if (!row?.accountKey) return
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
@@ -319,6 +339,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformKey,
     togglePlatformEnabled,
     savePlatformCooldown,
+    savePlatformDownloaderMaxStagedCount,
     savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,

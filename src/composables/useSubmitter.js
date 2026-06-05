@@ -219,13 +219,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       )
       Object.assign(item, {
         ydbi_submitted: 1,
-        ydbi_submission_status: 'uploaded',
+        ydbi_submission_status: 'pending',
         ydbi_submission_id: payload.submission_id,
         ydbi_submitted_at: new Date().toISOString(),
         ydbi_rejected_at: null,
       })
       await loadSubmitterVideos(true)
-      submitterMessage.value = `已提交到 YouBi 下载队列，type=${authorConfig.type}。`
+      submitterMessage.value = `已提交到 YouBi 待执行队列，type=${authorConfig.type}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
       await loadSubmitterVideos(true)

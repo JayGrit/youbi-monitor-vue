@@ -448,8 +448,8 @@ h1 {
 
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
-  min-width: 840px;
-  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 74px;
+  min-width: 920px;
+  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 78px 74px;
 }
 
 .account-backfill-button {
@@ -795,6 +795,13 @@ h1 {
   width: 100%;
   min-height: 30px;
   padding: 0 8px;
+}
+
+.account-small-number-input {
+  width: 70px;
+  min-height: 30px;
+  padding: 0 6px;
+  text-align: center;
 }
 
 .next-send-input {
@@ -3778,8 +3785,8 @@ a.submitter-cell:hover {
 
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
-    min-width: 780px;
-    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 64px;
+    min-width: 860px;
+    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 72px 64px;
   }
 
   .task-row {
