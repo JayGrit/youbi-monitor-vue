@@ -1885,8 +1885,7 @@ h1 {
 }
 
 .flow-header {
-  position: sticky;
-  top: var(--navbar-height);
+  position: static;
   z-index: 2;
   display: flex;
   align-items: flex-start;
@@ -1998,7 +1997,7 @@ h1 {
 
 .flow-tabs {
   position: sticky;
-  top: calc(var(--navbar-height) + 64px);
+  top: var(--navbar-height);
   z-index: 1;
   display: flex;
   gap: 8px;
@@ -2087,17 +2086,31 @@ h1 {
 
 .upload-submission-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
 .upload-submission-card {
   min-width: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
   border: 1px solid #d9e2ec;
   border-left-width: 4px;
   border-radius: 8px;
   background: #f8fafc;
   padding: 12px;
+}
+
+.upload-submission-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.upload-submission-body {
+  min-width: 0;
 }
 
 .upload-submission-card.status-success {
@@ -2137,6 +2150,10 @@ h1 {
   color: #334155;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.upload-submission-card .flow-stage-error {
+  margin: 10px 0 0;
 }
 
 .media-grid {
@@ -2388,17 +2405,36 @@ h1 {
 }
 
 .diagnostic-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
   gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .diagnostic-item {
+  flex: 0 0 min(360px, 86vw);
   min-width: 0;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #f8fafc;
   padding: 10px;
+}
+
+.diagnostic-load-button {
+  min-height: 34px;
+  margin-bottom: 12px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagnostic-load-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .diagnostic-image-link {

@@ -5,6 +5,7 @@ import { formatDateTime } from '../../utils/format'
 defineProps({
   rows: { type: Array, default: () => [] },
   uploadPlatformName: { type: Function, required: true },
+  platformIconUrls: { type: Object, default: () => ({}) },
 })
 </script>
 
@@ -17,20 +18,28 @@ defineProps({
         :key="submission.id || `${submission.platform}-${submission.account_key}`"
         :class="['upload-submission-card', `status-${submission.status}`]"
       >
-        <div class="upload-submission-head">
-          <strong>{{ uploadPlatformName(submission.platform) }}</strong>
-          <span :class="['task-badge', `status-${submission.status}`]">
-            {{ statusText[submission.status] || submission.status }}
-          </span>
+        <img
+          v-if="platformIconUrls[submission.platform]"
+          class="upload-submission-icon"
+          :src="platformIconUrls[submission.platform]"
+          alt=""
+        />
+        <div class="upload-submission-body">
+          <div class="upload-submission-head">
+            <strong>{{ uploadPlatformName(submission.platform) }}</strong>
+            <span :class="['task-badge', `status-${submission.status}`]">
+              {{ statusText[submission.status] || submission.status }}
+            </span>
+          </div>
+          <div class="upload-submission-meta">
+            <span>{{ submission.account_key || 'default' }}</span>
+            <span v-if="submission.next_upload_allowed_at">
+              下次 {{ formatDateTime(submission.next_upload_allowed_at) }}
+            </span>
+          </div>
+          <p v-if="submission.title">{{ submission.title }}</p>
+          <pre v-if="submission.error_message" class="flow-stage-error">{{ submission.error_message }}</pre>
         </div>
-        <div class="upload-submission-meta">
-          <span>{{ submission.account_key || 'default' }}</span>
-          <span v-if="submission.next_upload_allowed_at">
-            下次 {{ formatDateTime(submission.next_upload_allowed_at) }}
-          </span>
-        </div>
-        <p v-if="submission.title">{{ submission.title }}</p>
-        <pre v-if="submission.error_message" class="flow-stage-error">{{ submission.error_message }}</pre>
       </article>
     </div>
   </div>

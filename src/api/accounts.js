@@ -55,6 +55,9 @@ export function createAccountsApi(apiBase) {
     overview() {
       return requestJson(`${apiBase}/accounts/overview`)
     },
+    backupperStatus() {
+      return requestJson(`${apiBase}/accounts/backupper-status`)
+    },
     uploadBackfillCandidates(platform, accountKey, type) {
       const params = new URLSearchParams({ platform, accountKey, type })
       return requestJson(`${apiBase}/upload-backfill/candidates?${params.toString()}`)

@@ -26,11 +26,13 @@ defineProps({
   uploaderDiagnostics: { type: Array, default: () => [] },
   uploaderDiagnosticsLoading: { type: Boolean, default: false },
   uploaderDiagnosticsError: { type: String, default: '' },
+  platformIconUrls: { type: Object, default: () => ({}) },
   whisperWordTimestamps: { type: Array, default: () => [] },
   whisperProcessing: { type: Object, default: null },
   flowTaskTitle: { type: Function, required: true },
   flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
+  loadSelectedUploaderDiagnostics: { type: Function, required: true },
   closeTaskFlow: { type: Function, required: true },
   flowCoverUrl: { type: Function, required: true },
   flowSourceUrl: { type: Function, required: true },
@@ -85,18 +87,6 @@ function seekVocalsPlayback(ms) {
     <div v-if="flowError" class="flow-error">Task flow API error: {{ flowError }}</div>
     <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">Loading task flow</div>
     <template v-else-if="selectedTaskFlow">
-      <div v-if="flowCoverUrl(selectedTaskFlow)" class="flow-summary">
-        <a
-          class="source-cover-link"
-          :href="flowSourceUrl(selectedTaskFlow) || flowCoverUrl(selectedTaskFlow)"
-          target="_blank"
-          rel="noreferrer"
-          title="打开原视频"
-        >
-          <img :src="flowCoverUrl(selectedTaskFlow)" alt="" @error="markImageBroken(flowCoverUrl(selectedTaskFlow))" />
-        </a>
-      </div>
-
       <TaskFlowTabs
         :flow-tabs="flowTabs"
         :selected-stage-key="selectedStageKey"
@@ -119,6 +109,7 @@ function seekVocalsPlayback(ms) {
           v-if="selectedStage.key === 'uploader' && uploadSubmissionRows(selectedStage).length"
           :rows="uploadSubmissionRows(selectedStage)"
           :upload-platform-name="uploadPlatformName"
+          :platform-icon-urls="platformIconUrls"
         />
 
         <UploaderDiagnostics
@@ -127,6 +118,7 @@ function seekVocalsPlayback(ms) {
           :loading="uploaderDiagnosticsLoading"
           :error="uploaderDiagnosticsError"
           :upload-platform-name="uploadPlatformName"
+          :load-diagnostics="loadSelectedUploaderDiagnostics"
         />
 
         <DemucsAudioPanel

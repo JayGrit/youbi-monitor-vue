@@ -98,6 +98,7 @@ const {
   xiaohongshuQrCode,
   xiaohongshuQrMessage,
   accountKeyGroups,
+  backupperDiskStatusText,
   uploadBackfillOpen,
   uploadBackfillContext,
   uploadBackfillRows,
@@ -159,6 +160,7 @@ const {
   closeTaskFlow,
   clearFlowPolling,
   refreshTaskFlow,
+  loadSelectedUploaderDiagnostics,
   flowTaskTitle,
   flowSourceUrl,
   flowCoverUrl,
@@ -421,6 +423,7 @@ function audioErrorMessage(code) {
     <AccountsPage
       v-else-if="activePage === 'accounts'"
       :account-key-groups="accountKeyGroups"
+      :backupper-disk-status-text="backupperDiskStatusText"
       :account-platforms="ACCOUNT_PLATFORMS"
       :bilibili-qr-code="bilibiliQrCode"
       :bilibili-qr-message="bilibiliQrMessage"
@@ -478,11 +481,13 @@ function audioErrorMessage(code) {
       :uploader-diagnostics="uploaderDiagnostics"
       :uploader-diagnostics-loading="uploaderDiagnosticsLoading"
       :uploader-diagnostics-error="uploaderDiagnosticsError"
+      :platform-icon-urls="PLATFORM_ICON_URLS"
       :whisper-word-timestamps="whisperWordTimestamps"
       :whisper-processing="whisperProcessing"
       :flow-task-title="flowTaskTitle"
       :flow-duration-seconds="flowDurationSeconds"
       :refresh-task-flow="refreshTaskFlow"
+      :load-selected-uploader-diagnostics="loadSelectedUploaderDiagnostics"
       :close-task-flow="closeTaskFlow"
       :flow-cover-url="flowCoverUrl"
       :flow-source-url="flowSourceUrl"

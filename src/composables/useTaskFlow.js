@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import {
   SPEECH_STAGE_KEY,
   SPEECH_STAGE_KEYS,
@@ -86,15 +86,6 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return taskId ? whisperProcessingByTask.value[taskId] || null : null
   })
 
-  watch(
-    () => [selectedStageKey.value, selectedTaskFlow.value?.task?.id],
-    ([stageKey, taskId]) => {
-      if (stageKey === 'uploader' && taskId) {
-        loadUploaderDiagnostics(taskId)
-      }
-    }
-  )
-
   async function openTaskFlow(task, stageKey = 'downloader') {
     if (!task?.taskId) return
     flowPageOpen.value = true
@@ -162,8 +153,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     }
   }
 
-  async function loadUploaderDiagnostics(taskId) {
-    if (!taskId || uploaderDiagnosticsByTask.value[taskId] || uploaderDiagnosticsLoadingTask.value === taskId) return
+  async function loadUploaderDiagnostics(taskId, force = false) {
+    if (!taskId || (!force && uploaderDiagnosticsByTask.value[taskId]) || uploaderDiagnosticsLoadingTask.value === taskId) return
     uploaderDiagnosticsLoading.value = true
     uploaderDiagnosticsLoadingTask.value = taskId
     uploaderDiagnosticsError.value = ''
@@ -180,6 +171,13 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         uploaderDiagnosticsLoading.value = false
         uploaderDiagnosticsLoadingTask.value = ''
       }
+    }
+  }
+
+  function loadSelectedUploaderDiagnostics() {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (taskId) {
+      loadUploaderDiagnostics(taskId, true)
     }
   }
 
@@ -607,6 +605,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     closeTaskFlow,
     clearFlowPolling,
     refreshTaskFlow,
+    loadSelectedUploaderDiagnostics,
     flowTaskTitle,
     flowSourceUrl,
     flowCoverUrl,

@@ -5,6 +5,7 @@ import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from
 
 const props = defineProps({
   accountKeyGroups: { type: Array, default: () => [] },
+  backupperDiskStatusText: { type: String, default: '' },
   accountPlatforms: { type: Array, default: () => [] },
   bilibiliQrCode: { type: Object, default: null },
   bilibiliQrMessage: { type: String, default: '' },
@@ -440,7 +441,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <div class="account-page-head">
         <div></div>
         <div class="account-edit-actions">
-          <span class="account-disk-status">43.7 / 60G</span>
+          <span v-if="backupperDiskStatusText" class="account-disk-status">{{ backupperDiskStatusText }}</span>
           <template v-if="accountEditMode">
             <button type="button" @click="cancelAccountEditMode">完成</button>
           </template>

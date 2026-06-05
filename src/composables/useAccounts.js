@@ -14,18 +14,26 @@ import { usePlatformAccounts } from './accounts/usePlatformAccounts'
 import { usePlatformIcons } from './accounts/usePlatformIcons'
 import { useUploadBackfill } from './accounts/useUploadBackfill'
 import { useUploaderPhones } from './accounts/useUploaderPhones'
+import { ref } from 'vue'
 
 export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
   let accountTimer = null
 
   const platformAccounts = usePlatformAccounts(accountsApi, accountPlatforms)
   const uploaderPhones = useUploaderPhones(accountsApi)
+  const backupperDiskStatusText = ref('')
 
   async function loadAccountPage() {
     await Promise.allSettled([
       platformAccounts.loadAccountOverview(),
       uploaderPhones.loadUploaderPhones(),
+      loadBackupperStatus(),
     ])
+  }
+
+  async function loadBackupperStatus() {
+    const status = await accountsApi.backupperStatus()
+    backupperDiskStatusText.value = status?.statusText || ''
   }
 
   function startAccountPolling() {
@@ -89,6 +97,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     jinritoutiaoError: platformState.jinritoutiao.error,
     jinritoutiaoBusyKey: platformState.jinritoutiao.busyKey,
     accountKeyGroups: platformAccounts.accountKeyGroups,
+    backupperDiskStatusText,
     ...uploadBackfill,
     ...uploaderPhones,
     loadAccountPage,
