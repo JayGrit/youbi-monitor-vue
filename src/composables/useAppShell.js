@@ -25,9 +25,11 @@ export function useAppShell({
     }
     activePage.value = page
     clearAccountPagePolling()
-    if (page === 'submitter') {
+    if (page === 'submitter' || page === 'submitter-authors') {
       loadSubmitterAuthors()
-      loadSubmitterVideos()
+      if (page === 'submitter') {
+        loadSubmitterVideos()
+      }
     }
     if (page === 'accounts') {
       warmPlatformIcons()

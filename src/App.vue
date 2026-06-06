@@ -16,6 +16,7 @@ import { useTaskFlow } from './composables/useTaskFlow'
 import { useTasks } from './composables/useTasks'
 import AccountsPage from './pages/AccountsPage.vue'
 import MonitorPage from './pages/MonitorPage.vue'
+import SubmitterAuthorsPage from './pages/SubmitterAuthorsPage.vue'
 import SubmitterPage from './pages/SubmitterPage.vue'
 import TaskFlowPage from './pages/TaskFlowPage.vue'
 
@@ -214,7 +215,6 @@ const {
   submitterSubmittingId,
   submitterRejectingId,
   submitterPage,
-  submitterAuthorTypeOpen,
   submitterAuthorTypeRows,
   submitterAuthorTypeSaving,
   submitterAuthorDeleting,
@@ -233,10 +233,8 @@ const {
   submitVideoToYoubi,
   rejectSubmitterVideo,
   submitterSubmissionStatus,
-  openSubmitterAuthorTypes,
   autosaveSubmitterAuthorType,
   deleteSubmitterAuthor,
-  closeSubmitterAuthorTypes,
   setSubmitterPage,
   createSubmitterVideo,
   importSubmitterAuthor,
@@ -265,6 +263,14 @@ const { activePage, openPage } = useAppShell({
   submitterThumbUrls,
   revokeCachedUrls,
 })
+
+function openSubmitterAuthorPage() {
+  openPage('submitter-authors')
+}
+
+function backToSubmitter() {
+  openPage('submitter')
+}
 
 function logAudioEvent(eventName, asset, event) {
   const audio = event?.target
@@ -404,15 +410,10 @@ function audioErrorMessage(code) {
       :submitter-rejecting-id="submitterRejectingId"
       :submitter-json-payload="submitterJsonPayload"
       :submitter-json-title="submitterJsonTitle"
-      :submitter-author-type-open="submitterAuthorTypeOpen"
-      :submitter-author-type-error="submitterAuthorTypeError"
-      :submitter-author-type-rows="submitterAuthorTypeRows"
-      :submitter-author-type-saving="submitterAuthorTypeSaving"
-      :submitter-author-deleting="submitterAuthorDeleting"
       :create-submitter-video="createSubmitterVideo"
       :import-submitter-author="importSubmitterAuthor"
       :apply-submitter-filters="applySubmitterFilters"
-      :open-submitter-author-types="openSubmitterAuthorTypes"
+      :open-submitter-author-types="openSubmitterAuthorPage"
       :reset-submitter-filters="resetSubmitterFilters"
       :clear-submitter-batch-focus="clearSubmitterBatchFocus"
       :submitter-video-thumb="submitterVideoThumb"
@@ -425,9 +426,17 @@ function audioErrorMessage(code) {
       :submitter-submission-status="submitterSubmissionStatus"
       :set-submitter-page="setSubmitterPage"
       :close-submitter-json="closeSubmitterJson"
-      :close-submitter-author-types="closeSubmitterAuthorTypes"
+    />
+
+    <SubmitterAuthorsPage
+      v-else-if="activePage === 'submitter-authors'"
+      :submitter-author-type-error="submitterAuthorTypeError"
+      :submitter-author-type-rows="submitterAuthorTypeRows"
+      :submitter-author-type-saving="submitterAuthorTypeSaving"
+      :submitter-author-deleting="submitterAuthorDeleting"
       :autosave-submitter-author-type="autosaveSubmitterAuthorType"
       :delete-submitter-author="deleteSubmitterAuthor"
+      :back-to-submitter="backToSubmitter"
     />
 
     <AccountsPage

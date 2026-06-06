@@ -30,7 +30,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterRejectingId = ref('')
   const submitterPage = ref(1)
   const submitterTotal = ref(0)
-  const submitterAuthorTypeOpen = ref(false)
   const submitterAuthorTypeRows = ref([])
   const submitterAuthorTypeSaving = ref('')
   const submitterAuthorDeleting = ref('')
@@ -280,13 +279,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
-  async function openSubmitterAuthorTypes() {
-    submitterAuthorTypeOpen.value = true
-    submitterAuthorTypeError.value = ''
-    await loadSubmitterAuthorTypes()
-  }
-
   async function loadSubmitterAuthorTypes() {
+    submitterAuthorTypeError.value = ''
     try {
       const payload = await submitterApi.listAuthorTypes()
       const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
@@ -396,11 +390,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     } finally {
       submitterAuthorDeleting.value = ''
     }
-  }
-
-  function closeSubmitterAuthorTypes() {
-    submitterAuthorTypeOpen.value = false
-    submitterAuthorTypeError.value = ''
   }
 
   async function setSubmitterPage(page) {
@@ -572,7 +561,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterRejectingId,
     submitterPage,
     submitterTotal,
-    submitterAuthorTypeOpen,
     submitterAuthorTypeRows,
     submitterAuthorTypeSaving,
     submitterAuthorDeleting,
@@ -591,10 +579,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitVideoToYoubi,
     rejectSubmitterVideo,
     submitterSubmissionStatus,
-    openSubmitterAuthorTypes,
     autosaveSubmitterAuthorType,
     deleteSubmitterAuthor,
-    closeSubmitterAuthorTypes,
     setSubmitterPage,
     createSubmitterVideo,
     importSubmitterAuthor,

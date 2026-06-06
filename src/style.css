@@ -3647,14 +3647,53 @@ a.submitter-cell:hover {
   line-height: 1.5;
 }
 
-.submitter-author-type-modal {
-  width: min(1060px, calc(100vw - 28px));
+.submitter-author-page {
+  display: grid;
+  gap: 12px;
+}
+
+.submitter-author-page-header,
+.submitter-author-page-panel {
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.submitter-author-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+}
+
+.submitter-author-page-header h1 {
+  margin: 0;
+  color: #1f2a3a;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.submitter-author-page-header button {
+  min-height: 38px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.submitter-author-page-panel {
+  padding: 14px;
 }
 
 .submitter-author-type-body {
-  max-height: calc(100vh - 150px);
   overflow: auto;
-  padding: 14px;
 }
 
 .submitter-author-type-table {
@@ -4531,13 +4570,21 @@ a.submitter-cell:hover {
     padding: 10px;
   }
 
-  .submitter-modal,
-  .submitter-author-type-modal {
+  .submitter-modal {
     width: 100%;
     max-height: calc(100vh - 20px);
   }
 
-  .submitter-author-type-body {
+  .submitter-author-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submitter-author-page-header button {
+    width: 100%;
+  }
+
+  .submitter-author-page-panel {
     padding: 0;
   }
 
