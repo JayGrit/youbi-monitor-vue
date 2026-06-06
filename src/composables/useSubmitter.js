@@ -14,6 +14,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorBusy = ref(false)
   const submitterTypeFilter = ref('')
   const submitterUploader = ref('')
+  const submitterVideoName = ref('')
   const submitterDurationFilter = ref('all')
   const submitterUploadFilter = ref('unuploaded')
   const submitterSort = ref('updated_desc')
@@ -110,6 +111,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         batch: submitterFocusedBatch.value,
         type: submitterTypeFilter.value,
         uploader: submitterUploader.value,
+        videoName: submitterVideoName.value.trim(),
         sort: submitterSort.value,
         limit: SUBMITTER_PAGE_SIZE,
         offset: (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE,
@@ -152,6 +154,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   async function resetSubmitterFilters() {
     submitterTypeFilter.value = ''
     submitterUploader.value = ''
+    submitterVideoName.value = ''
     submitterDurationFilter.value = 'all'
     submitterUploadFilter.value = 'unuploaded'
     submitterSort.value = 'updated_desc'
@@ -556,6 +559,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorBusy,
     submitterTypeFilter,
     submitterUploader,
+    submitterVideoName,
     submitterDurationFilter,
     submitterUploadFilter,
     submitterSort,

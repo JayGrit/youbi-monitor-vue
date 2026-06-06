@@ -9,6 +9,7 @@ export function useAppShell({
   warmPlatformIcons,
   startAccountPolling,
   loadTasks,
+  loadTaskTypes,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -36,6 +37,7 @@ export function useAppShell({
 
   onMounted(() => {
     warmPlatformIcons()
+    loadTaskTypes()
     loadTasks()
     monitorTimer = window.setInterval(loadTasks, 2000)
   })

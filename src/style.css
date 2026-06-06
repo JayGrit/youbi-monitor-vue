@@ -1189,6 +1189,15 @@ h1 {
   margin-bottom: 2px;
 }
 
+.task-id-filter {
+  display: flex;
+  gap: 6px;
+}
+
+.task-id-filter input {
+  min-width: 180px;
+}
+
 .task-filter-button {
   min-height: 34px;
   border: 1px solid #cfd8e3;

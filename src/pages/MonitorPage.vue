@@ -13,6 +13,7 @@ const props = defineProps({
   taskTypeFilters: { type: Array, default: () => [] },
   taskStageFilter: { type: String, default: 'all' },
   taskStageFilters: { type: Array, default: () => [] },
+  taskIdFilter: { type: String, default: '' },
   taskPage: { type: Number, default: 1 },
   taskTotalCount: { type: Number, default: 0 },
   taskPageCount: { type: Number, default: 1 },
@@ -67,6 +68,8 @@ const emit = defineEmits([
   'update:taskStatusFilter',
   'update:taskTypeFilter',
   'update:taskStageFilter',
+  'update:taskIdFilter',
+  'applyTaskIdFilter',
   'setTaskPage',
   'clearFailure',
 ])
@@ -184,6 +187,16 @@ function onlineDeviceNames(service) {
         <option value="all">Type</option>
         <option v-for="type in taskTypeFilters" :key="type" :value="type">{{ type }}</option>
       </select>
+      <form class="task-id-filter" @submit.prevent="emit('applyTaskIdFilter')">
+        <input
+          :value="taskIdFilter"
+          type="search"
+          placeholder="搜索任务 ID"
+          aria-label="按任务 ID 搜索"
+          @input="emit('update:taskIdFilter', $event.target.value)"
+        />
+        <button type="submit">搜索</button>
+      </form>
       <button
         type="button"
         :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsExpanded }]"

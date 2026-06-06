@@ -19,6 +19,7 @@ defineProps({
   submitterAuthorBusy: { type: Boolean, default: false },
   submitterTypeFilter: { type: String, default: '' },
   submitterUploader: { type: String, default: '' },
+  submitterVideoName: { type: String, default: '' },
   submitterAuthors: { type: Array, default: () => [] },
   submitterAuthorTypeFilters: { type: Array, default: () => [] },
   submitterAuthorOptions: { type: Array, default: () => [] },
@@ -65,6 +66,7 @@ const emit = defineEmits([
   'update:submitterPlatform',
   'update:submitterTypeFilter',
   'update:submitterUploader',
+  'update:submitterVideoName',
   'update:submitterDurationFilter',
   'update:submitterSort',
   'update:submitterUploadFilter',
@@ -120,6 +122,16 @@ const emit = defineEmits([
 
     <section class="submitter-controls">
       <div class="submitter-filter-grid">
+        <label>
+          <span>视频名</span>
+          <input
+            :value="submitterVideoName"
+            type="search"
+            placeholder="输入视频名后回车"
+            @input="emit('update:submitterVideoName', $event.target.value)"
+            @keyup.enter="applySubmitterFilters"
+          />
+        </label>
         <label>
           <span>Type</span>
           <select

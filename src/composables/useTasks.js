@@ -27,6 +27,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskStatusFilter = ref('all')
   const taskTypeFilter = ref('all')
   const taskStageFilter = ref('all')
+  const taskIdFilter = ref('')
+  const taskTypeFilters = ref([])
   const taskPage = ref(1)
   const taskTotalCount = ref(0)
   const taskActionsExpanded = ref(false)
@@ -37,11 +39,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const uploadRetryLoading = ref(false)
   const uploadRetryBusy = ref(false)
   const uploadRetrySelectedIds = ref([])
-
-  const taskTypeFilters = computed(() => {
-    return [...new Set(tasks.value.map(task => taskTypeText(task)).filter(type => type !== '-'))]
-      .sort((left, right) => left.localeCompare(right))
-  })
 
   const taskStageFilters = computed(() => {
     const keys = new Set()
@@ -60,12 +57,16 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       if (taskStatusFilter.value !== 'all' && task.status !== taskStatusFilter.value) return false
       if (taskTypeFilter.value !== 'all' && taskTypeText(task) !== taskTypeFilter.value) return false
       if (taskStageFilter.value !== 'all' && String(task.currentStage || '') !== taskStageFilter.value) return false
+      if (taskIdFilter.value && !String(task.taskId || '').includes(taskIdFilter.value.trim())) return false
       return true
     })
   })
 
   const hasTaskFilter = computed(() => {
-    return taskStatusFilter.value !== 'all' || taskTypeFilter.value !== 'all' || taskStageFilter.value !== 'all'
+    return taskStatusFilter.value !== 'all'
+      || taskTypeFilter.value !== 'all'
+      || taskStageFilter.value !== 'all'
+      || Boolean(taskIdFilter.value.trim())
   })
 
   const taskPageCount = computed(() => {
@@ -109,6 +110,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
         status: taskStatusFilter.value,
         type: taskTypeFilter.value,
         stage: taskStageFilter.value,
+        taskId: taskIdFilter.value.trim(),
       })
       tasks.value = payload.tasks || []
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
@@ -121,6 +123,18 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadTaskTypes() {
+    try {
+      const payload = await monitorApi.loadTaskTypes()
+      taskTypeFilters.value = [...new Set((payload?.items || [])
+        .map(type => String(type || '').trim())
+        .filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right))
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
     }
   }
 
@@ -360,6 +374,15 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     loadTasks()
   }
 
+  function setTaskIdFilter(value) {
+    taskIdFilter.value = value
+  }
+
+  function applyTaskIdFilter() {
+    taskPage.value = 1
+    loadTasks()
+  }
+
   function setTaskPage(value) {
     const page = Number(value)
     if (!Number.isFinite(page)) return
@@ -479,6 +502,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     taskStatusFilter,
     taskTypeFilter,
     taskStageFilter,
+    taskIdFilter,
     taskPage,
     taskTotalCount,
     taskActionsExpanded,
@@ -501,6 +525,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadRetrySelectableRows,
     uploadRetryAllSelected,
     loadTasks,
+    loadTaskTypes,
     markTaskReady,
     isTaskReadyBusy,
     setUploadRetryPlatform,
@@ -531,6 +556,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     setTaskTypeFilter,
     setTaskStatusFilter,
     setTaskStageFilter,
+    setTaskIdFilter,
+    applyTaskIdFilter,
     setTaskPage,
     copyText,
     copyTaskId,

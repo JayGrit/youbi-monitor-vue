@@ -36,6 +36,7 @@ const {
   taskStatusFilter,
   taskTypeFilter,
   taskStageFilter,
+  taskIdFilter,
   taskPage,
   taskTotalCount,
   taskActionsExpanded,
@@ -55,6 +56,7 @@ const {
   uploadRetrySelectedSet,
   uploadRetryAllSelected,
   loadTasks,
+  loadTaskTypes,
   markTaskReady,
   isTaskReadyBusy,
   setUploadRetryPlatform,
@@ -81,6 +83,8 @@ const {
   setTaskTypeFilter,
   setTaskStatusFilter,
   setTaskStageFilter,
+  setTaskIdFilter,
+  applyTaskIdFilter,
   setTaskPage,
   copyTaskId,
   onlineDeviceText,
@@ -198,6 +202,7 @@ const {
   submitterAuthorBusy,
   submitterTypeFilter,
   submitterUploader,
+  submitterVideoName,
   submitterDurationFilter,
   submitterUploadFilter,
   submitterSort,
@@ -253,6 +258,7 @@ const { activePage, openPage } = useAppShell({
   warmPlatformIcons,
   startAccountPolling,
   loadTasks,
+  loadTaskTypes,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -311,6 +317,7 @@ function audioErrorMessage(code) {
       :task-type-filters="taskTypeFilters"
       :task-stage-filter="taskStageFilter"
       :task-stage-filters="taskStageFilters"
+      :task-id-filter="taskIdFilter"
       :task-page="taskPage"
       :task-total-count="taskTotalCount"
       :task-page-count="taskPageCount"
@@ -362,6 +369,8 @@ function audioErrorMessage(code) {
       @update:task-status-filter="setTaskStatusFilter"
       @update:task-type-filter="setTaskTypeFilter"
       @update:task-stage-filter="setTaskStageFilter"
+      @update:task-id-filter="setTaskIdFilter"
+      @apply-task-id-filter="applyTaskIdFilter"
       @set-task-page="setTaskPage"
       @clear-failure="openFailureKey = ''"
     />
@@ -373,6 +382,7 @@ function audioErrorMessage(code) {
       v-model:submitter-platform="submitterPlatform"
       v-model:submitter-type-filter="submitterTypeFilter"
       v-model:submitter-uploader="submitterUploader"
+      v-model:submitter-video-name="submitterVideoName"
       v-model:submitter-duration-filter="submitterDurationFilter"
       v-model:submitter-sort="submitterSort"
       v-model:submitter-upload-filter="submitterUploadFilter"
