@@ -37,6 +37,7 @@ jobs:
           cd "${TXY_PATH}"
           git fetch origin && git reset --hard origin/main
           printf 'nameserver 183.60.82.98\nnameserver 183.60.83.19\nnameserver 8.8.8.8\n' > /etc/resolv.conf
+          OLD_IMAGE_ID="$(docker inspect -f '{{.Image}}' monitor-vue 2>/dev/null || true)"
           docker rm -f monitor-vue || true
           docker build -t monitor-vue:latest .
 
@@ -47,4 +48,11 @@ jobs:
             monitor-vue:latest
 
           docker logs monitor-vue --tail 20
+          NEW_IMAGE_ID="$(docker inspect -f '{{.Image}}' monitor-vue)"
+          if [ -n "${OLD_IMAGE_ID}" ] && [ "${OLD_IMAGE_ID}" != "${NEW_IMAGE_ID}" ]; then
+            docker image rm "${OLD_IMAGE_ID}" || true
+          fi
+          docker image prune -f \
+            --filter dangling=true \
+            --filter label=org.youbi.service=monitor-vue
           EOF
