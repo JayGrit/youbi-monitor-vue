@@ -55,4 +55,5 @@ jobs:
           docker image prune -f \
             --filter dangling=true \
             --filter label=org.youbi.service=monitor-vue
+          docker image rm -f "${NEW_IMAGE_ID}" || true
           EOF
