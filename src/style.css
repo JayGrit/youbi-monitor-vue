@@ -519,7 +519,7 @@ h1 {
 }
 
 .uploader-phone-table {
-  width: min(60vw, 100%);
+  width: min(80vw, 100%);
   display: grid;
   gap: 6px;
   margin: 14px auto 0;
