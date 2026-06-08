@@ -47,6 +47,7 @@ defineProps({
   submitterFieldValue: { type: Function, required: true },
   submitVideoToYoubi: { type: Function, required: true },
   rejectSubmitterVideo: { type: Function, required: true },
+  withdrawSubmitterVideo: { type: Function, required: true },
   submitterSubmissionStatus: { type: Function, required: true },
   setSubmitterPage: { type: Function, required: true },
   closeSubmitterJson: { type: Function, required: true },
@@ -248,10 +249,14 @@ const emit = defineEmits([
                   <button
                     type="button"
                     :class="['submitter-upload-button', { submitted: submitterSubmissionStatus(item) === 'uploaded' }]"
-                    :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)"
-                    @click="submitVideoToYoubi(item)"
+                    :disabled="submitterUploadFilter === 'pending'
+                      ? submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)
+                      : submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)"
+                    @click="submitterUploadFilter === 'pending' ? withdrawSubmitterVideo(item) : submitVideoToYoubi(item)"
                   >
-                    <span v-if="submitterSubmissionStatus(item) === 'uploaded'">已上传</span>
+                    <span v-if="submitterUploadFilter === 'pending' && submitterSubmittingId === String(submitterFieldValue(item, 'id'))">撤稿中</span>
+                    <span v-else-if="submitterUploadFilter === 'pending' && submitterSubmissionStatus(item) === 'pending'">撤稿</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'uploaded'">已上传</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'pending'">待执行</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'failed'">提交失败</span>

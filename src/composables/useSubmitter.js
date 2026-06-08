@@ -258,6 +258,30 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
+  async function withdrawSubmitterVideo(item) {
+    const rowId = submitterFieldValue(item, 'id')
+    if (!rowId || submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId.value || submitterRejectingId.value) return
+    submitterSubmittingId.value = String(rowId)
+    submitterError.value = ''
+    try {
+      await submitterApi.withdrawVideo(rowId)
+      Object.assign(item, {
+        ydbi_submitted: 0,
+        ydbi_submission_status: 'unuploaded',
+        ydbi_submission_id: null,
+        ydbi_submitted_at: null,
+        ydbi_rejected_at: null,
+      })
+      await loadSubmitterVideos(true)
+      submitterMessage.value = '已撤稿，恢复为未上传状态。'
+    } catch (err) {
+      submitterError.value = err instanceof Error ? err.message : String(err)
+      await loadSubmitterVideos(true)
+    } finally {
+      submitterSubmittingId.value = ''
+    }
+  }
+
   function submitterAuthorName(item) {
     return String(
       submitterFieldValue(item, 'uploader')
@@ -578,6 +602,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     clearSubmitterBatchFocus,
     submitVideoToYoubi,
     rejectSubmitterVideo,
+    withdrawSubmitterVideo,
     submitterSubmissionStatus,
     autosaveSubmitterAuthorType,
     deleteSubmitterAuthor,

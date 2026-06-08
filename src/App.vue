@@ -232,6 +232,7 @@ const {
   clearSubmitterBatchFocus,
   submitVideoToYoubi,
   rejectSubmitterVideo,
+  withdrawSubmitterVideo,
   submitterSubmissionStatus,
   autosaveSubmitterAuthorType,
   deleteSubmitterAuthor,
@@ -423,6 +424,7 @@ function audioErrorMessage(code) {
       :submitter-field-value="submitterFieldValue"
       :submit-video-to-youbi="submitVideoToYoubi"
       :reject-submitter-video="rejectSubmitterVideo"
+      :withdraw-submitter-video="withdrawSubmitterVideo"
       :submitter-submission-status="submitterSubmissionStatus"
       :set-submitter-page="setSubmitterPage"
       :close-submitter-json="closeSubmitterJson"

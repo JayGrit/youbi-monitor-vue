@@ -36,6 +36,10 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {})
     },
 
+    withdrawVideo(rowId) {
+      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {})
+    },
+
     createVideo(url) {
       return postJson(`${submitterApiBase}/videos`, { url })
     },
