@@ -2592,6 +2592,23 @@ h1 {
   background: #ffffff;
 }
 
+.publisher-diagnostics {
+  margin-top: 14px;
+}
+
+.publisher-diagnostics-head {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.publisher-diagnostics-head h4 {
+  margin: 0;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

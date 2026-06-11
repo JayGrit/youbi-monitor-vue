@@ -118,6 +118,10 @@ function seekVocalsPlayback(ms) {
           :stage="selectedStage"
           :rows="publisherResultRows(selectedStage)"
           :media="stageMedia(selectedStage)"
+          :diagnostics="uploaderDiagnostics"
+          :diagnostics-loading="uploaderDiagnosticsLoading"
+          :diagnostics-error="uploaderDiagnosticsError"
+          :load-diagnostics="loadSelectedUploaderDiagnostics"
         />
 
         <DemucsAudioPanel

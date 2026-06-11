@@ -1,13 +1,20 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { statusText } from '../../domain/constants'
 import { normalizeResourceUrl } from '../../utils/media'
+import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
 
 const props = defineProps({
   stage: { type: Object, default: null },
   rows: { type: Array, default: () => [] },
   media: { type: Array, default: () => [] },
+  diagnostics: { type: Array, default: () => [] },
+  diagnosticsLoading: { type: Boolean, default: false },
+  diagnosticsError: { type: String, default: '' },
+  loadDiagnostics: { type: Function, required: true },
 })
+
+const diagnosticsRequested = ref(false)
 
 const result = computed(() => props.rows[0] || {})
 const resultDetail = computed(() => {
@@ -75,6 +82,40 @@ const publisherTasks = computed(() => {
     },
   ]
 })
+
+const latestDiagnostics = computed(() => {
+  const rows = props.diagnostics.filter(row => row?.platform === 'doubao')
+  if (!rows.length) return []
+  const latestRunId = latestDiagnosticRunId(rows)
+  return rows.filter(row => !latestRunId || diagnosticRunId(row) === latestRunId)
+})
+
+function requestDiagnostics() {
+  diagnosticsRequested.value = true
+  props.loadDiagnostics()
+}
+
+function latestDiagnosticRunId(rows) {
+  const latest = rows.reduce((best, row) => {
+    const value = Date.parse(row.createdAt || row.created_at || '') || 0
+    if (!best || value > best.value) {
+      return { runId: diagnosticRunId(row), value }
+    }
+    return best
+  }, null)
+  return latest?.runId || ''
+}
+
+function diagnosticRunId(row) {
+  return row.runId || row.run_id || ''
+}
+
+function diagnosticTitlePrefix(row) {
+  return [
+    '豆包封面',
+    row.accountKey || row.account_key || '',
+  ].filter(Boolean).join(' / ')
+}
 </script>
 
 <template>
@@ -108,6 +149,21 @@ const publisherTasks = computed(() => {
           </div>
           <img :src="image.url" alt="" loading="lazy" />
         </article>
+      </div>
+      <div class="publisher-diagnostics">
+        <div class="publisher-diagnostics-head">
+          <h4>Publisher 诊断截图</h4>
+          <button type="button" class="diagnostic-load-button" :disabled="diagnosticsLoading" @click="requestDiagnostics">
+            {{ diagnosticsLoading ? '加载中' : '加载诊断截图' }}
+          </button>
+        </div>
+        <div v-if="diagnosticsError" class="flow-error diagnostic-error">诊断截图接口错误：{{ diagnosticsError }}</div>
+        <p v-else-if="diagnosticsRequested && diagnosticsLoading" class="flow-muted">正在加载诊断截图</p>
+        <DiagnosticScreenshotGrid
+          v-else-if="diagnosticsRequested"
+          :rows="latestDiagnostics"
+          :title-prefix="diagnosticTitlePrefix"
+        />
       </div>
     </template>
   </div>

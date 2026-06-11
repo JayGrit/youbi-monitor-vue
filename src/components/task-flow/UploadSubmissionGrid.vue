@@ -1,8 +1,8 @@
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { statusText } from '../../domain/constants'
 import { formatDateTime } from '../../utils/format'
-import { normalizeResourceUrl } from '../../utils/media'
+import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -16,9 +16,6 @@ const props = defineProps({
 
 const requestedKey = ref('')
 const requestedSubmission = ref(null)
-const screenshotObjectUrls = ref({})
-const screenshotLoadingUrls = ref({})
-const screenshotErrors = ref({})
 
 const visibleDiagnostics = computed(() => {
   if (!requestedSubmission.value) return []
@@ -35,22 +32,6 @@ function requestDiagnostics(submission) {
   requestedSubmission.value = submission
   props.loadDiagnostics()
 }
-
-watch(
-  visibleDiagnostics,
-  rows => {
-    for (const row of rows) {
-      downloadScreenshot(row)
-    }
-  },
-  { immediate: true }
-)
-
-onUnmounted(() => {
-  for (const url of Object.values(screenshotObjectUrls.value)) {
-    URL.revokeObjectURL(url)
-  }
-})
 
 function submissionKey(submission) {
   return `${submission.platform || ''}:${submission.account_key || submission.accountKey || ''}`
@@ -94,69 +75,11 @@ function diagnosticCreatedAt(row) {
   return Date.parse(row.createdAt || row.created_at || '') || 0
 }
 
-function diagnosticTitle(row) {
-  return row.stepName || row.step_name || '诊断截图'
-}
-
-function diagnosticMeta(row) {
+function diagnosticTitlePrefix(row) {
   return [
-    diagnosticRunId(row),
-    row.source,
-    formatDateTime(row.createdAt || row.created_at),
-    (row.screenshotWidth || row.screenshot_width) && (row.screenshotHeight || row.screenshot_height)
-      ? `${row.screenshotWidth || row.screenshot_width}x${row.screenshotHeight || row.screenshot_height}`
-      : '',
-  ].filter(Boolean).join(' · ')
-}
-
-function screenshotUrl(row) {
-  return normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
-}
-
-function diagnosticError(row) {
-  return row.errorMessage || row.error_message || ''
-}
-
-function screenshotKey(row) {
-  return String(row.id || screenshotUrl(row))
-}
-
-function renderedScreenshotUrl(row) {
-  return screenshotObjectUrls.value[screenshotKey(row)] || ''
-}
-
-function screenshotLoading(row) {
-  return Boolean(screenshotLoadingUrls.value[screenshotKey(row)])
-}
-
-function screenshotError(row) {
-  return screenshotErrors.value[screenshotKey(row)] || ''
-}
-
-async function downloadScreenshot(row) {
-  const url = screenshotUrl(row)
-  const key = screenshotKey(row)
-  if (!url || screenshotObjectUrls.value[key] || screenshotLoadingUrls.value[key]) return
-  screenshotLoadingUrls.value = { ...screenshotLoadingUrls.value, [key]: true }
-  screenshotErrors.value = { ...screenshotErrors.value, [key]: '' }
-  try {
-    const response = await fetch(url, { mode: 'cors', cache: 'no-store' })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const blob = await response.blob()
-    if (!blob.size) throw new Error('empty image')
-    const oldUrl = screenshotObjectUrls.value[key]
-    if (oldUrl) URL.revokeObjectURL(oldUrl)
-    screenshotObjectUrls.value = { ...screenshotObjectUrls.value, [key]: URL.createObjectURL(blob) }
-  } catch (err) {
-    screenshotErrors.value = {
-      ...screenshotErrors.value,
-      [key]: err instanceof Error ? err.message : String(err),
-    }
-  } finally {
-    const next = { ...screenshotLoadingUrls.value }
-    delete next[key]
-    screenshotLoadingUrls.value = next
-  }
+    props.uploadPlatformName(row.platform),
+    row.accountKey || row.account_key || '',
+  ].filter(Boolean).join(' / ')
 }
 </script>
 
@@ -201,25 +124,7 @@ async function downloadScreenshot(row) {
           <div v-if="requestedKey === submissionKey(submission)" class="upload-submission-diagnostics">
             <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
             <p v-else-if="loading" class="flow-muted">正在加载诊断截图</p>
-            <p v-else-if="!visibleDiagnostics.length" class="flow-muted">没有诊断截图</p>
-            <div v-else class="diagnostic-grid">
-              <article
-                v-for="row in visibleDiagnostics"
-                :key="row.id || `${row.runId || row.run_id}-${row.stepIndex || row.step_index}-${screenshotUrl(row)}`"
-                class="diagnostic-item"
-              >
-                <div class="media-title">
-                  <strong>{{ diagnosticTitle(row) }}</strong>
-                </div>
-                <p v-if="screenshotLoading(row)" class="flow-muted">正在下载图片</p>
-                <div v-else-if="renderedScreenshotUrl(row)" class="diagnostic-image-link">
-                  <img :src="renderedScreenshotUrl(row)" loading="lazy" alt="" />
-                </div>
-                <p v-else-if="screenshotError(row)" class="flow-muted">图片下载失败：{{ screenshotError(row) }}</p>
-                <p>{{ diagnosticMeta(row) }}</p>
-                <pre v-if="diagnosticError(row)" class="flow-stage-error">{{ diagnosticError(row) }}</pre>
-              </article>
-            </div>
+            <DiagnosticScreenshotGrid v-else :rows="visibleDiagnostics" :title-prefix="diagnosticTitlePrefix" />
           </div>
         </div>
       </article>
