@@ -28,6 +28,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskTypeFilter = ref('all')
   const taskStageFilter = ref('all')
   const taskIdFilter = ref('')
+  const taskSort = ref('created_desc')
   const taskTypeFilters = ref([])
   const taskPage = ref(1)
   const taskTotalCount = ref(0)
@@ -111,6 +112,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
         type: taskTypeFilter.value,
         stage: taskStageFilter.value,
         taskId: taskIdFilter.value.trim(),
+        sort: taskSort.value,
       })
       tasks.value = payload.tasks || []
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
@@ -354,6 +356,23 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     return String(task?.taskType || '').trim() || '-'
   }
 
+  function minioStorageText(task) {
+    const bytes = Number(task?.minioStorageBytes)
+    if (!Number.isFinite(bytes) || bytes <= 0) return '-'
+    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+    let value = bytes
+    let index = 0
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024
+      index += 1
+    }
+    const digits = value >= 100 || index === 0 ? 0 : value >= 10 ? 1 : 2
+    const size = `${value.toFixed(digits).replace(/\.0+$/, '')}${units[index]}`
+    const objectCount = Number(task?.minioStorageObjectCount)
+    if (!Number.isFinite(objectCount) || objectCount <= 0) return size
+    return `${size} · ${objectCount} objects`
+  }
+
   function setTaskTypeFilter(value) {
     taskTypeFilter.value = value
     taskPage.value = 1
@@ -379,6 +398,14 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   }
 
   function applyTaskIdFilter() {
+    taskPage.value = 1
+    loadTasks()
+  }
+
+  function setTaskSort(value) {
+    const nextSort = value === 'minio_storage_desc' ? 'minio_storage_desc' : 'created_desc'
+    if (nextSort === taskSort.value) return
+    taskSort.value = nextSort
     taskPage.value = 1
     loadTasks()
   }
@@ -503,6 +530,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     taskTypeFilter,
     taskStageFilter,
     taskIdFilter,
+    taskSort,
     taskPage,
     taskTotalCount,
     taskActionsExpanded,
@@ -553,11 +581,13 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     sourceDurationSeconds,
     uploadAccountText,
     taskTypeText,
+    minioStorageText,
     setTaskTypeFilter,
     setTaskStatusFilter,
     setTaskStageFilter,
     setTaskIdFilter,
     applyTaskIdFilter,
+    setTaskSort,
     setTaskPage,
     copyText,
     copyTaskId,

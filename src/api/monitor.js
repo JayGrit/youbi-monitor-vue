@@ -8,6 +8,7 @@ export function createMonitorApi(apiBase) {
       if (filters.type && filters.type !== 'all') params.set('type', filters.type)
       if (filters.stage && filters.stage !== 'all') params.set('stage', filters.stage)
       if (filters.taskId) params.set('taskId', filters.taskId)
+      if (filters.sort && filters.sort !== 'created_desc') params.set('sort', filters.sort)
       return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`)
     },
 

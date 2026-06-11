@@ -1442,7 +1442,15 @@ h1 {
   padding: 0 10px;
 }
 
-.task-actions-toggle.task-filter-button.active {
+.task-sort-button.task-filter-button {
+  min-height: 34px;
+  border-radius: 8px;
+  line-height: normal;
+  padding: 0 10px;
+}
+
+.task-actions-toggle.task-filter-button.active,
+.task-sort-button.task-filter-button.active {
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
@@ -1623,7 +1631,8 @@ h1 {
 .stop-button:hover:not(:disabled),
 .restart-button:hover:not(:disabled),
 .delete-button:hover:not(:disabled),
-.task-actions-toggle.task-filter-button:hover:not(:disabled) {
+.task-actions-toggle.task-filter-button:hover:not(:disabled),
+.task-sort-button.task-filter-button:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
 }
@@ -1645,7 +1654,8 @@ h1 {
 .stop-button:disabled,
 .restart-button:disabled,
 .delete-button:disabled,
-.task-actions-toggle:disabled {
+.task-actions-toggle:disabled,
+.task-sort-button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -1668,7 +1678,8 @@ h1 {
 }
 
 .upload-account,
-.task-type {
+.task-type,
+.task-minio-storage {
   color: #1f5f3d;
   font-weight: 700;
 }
@@ -4328,6 +4339,7 @@ a.submitter-cell:hover {
   .task-type-filter,
   .task-stage-filter,
   .task-actions-toggle.task-filter-button,
+  .task-sort-button.task-filter-button,
   .upload-retry-platform-select {
     width: 100%;
     margin-left: 0;

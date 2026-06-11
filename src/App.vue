@@ -38,6 +38,7 @@ const {
   taskTypeFilter,
   taskStageFilter,
   taskIdFilter,
+  taskSort,
   taskPage,
   taskTotalCount,
   taskActionsExpanded,
@@ -81,11 +82,13 @@ const {
   markImageBroken,
   sourceDurationSeconds,
   taskTypeText,
+  minioStorageText,
   setTaskTypeFilter,
   setTaskStatusFilter,
   setTaskStageFilter,
   setTaskIdFilter,
   applyTaskIdFilter,
+  setTaskSort,
   setTaskPage,
   copyTaskId,
   onlineDeviceText,
@@ -326,6 +329,7 @@ function audioErrorMessage(code) {
       :task-stage-filter="taskStageFilter"
       :task-stage-filters="taskStageFilters"
       :task-id-filter="taskIdFilter"
+      :task-sort="taskSort"
       :task-page="taskPage"
       :task-total-count="taskTotalCount"
       :task-page-count="taskPageCount"
@@ -355,6 +359,7 @@ function audioErrorMessage(code) {
       :copy-task-id="copyTaskId"
       :source-duration-seconds="sourceDurationSeconds"
       :task-type-text="taskTypeText"
+      :minio-storage-text="minioStorageText"
       :stage-name="stageName"
       :node-progress="nodeProgress"
       :node-title="nodeTitle"
@@ -378,6 +383,7 @@ function audioErrorMessage(code) {
       @update:task-type-filter="setTaskTypeFilter"
       @update:task-stage-filter="setTaskStageFilter"
       @update:task-id-filter="setTaskIdFilter"
+      @update:task-sort="setTaskSort"
       @apply-task-id-filter="applyTaskIdFilter"
       @set-task-page="setTaskPage"
       @clear-failure="openFailureKey = ''"

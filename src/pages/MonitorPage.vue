@@ -14,6 +14,7 @@ const props = defineProps({
   taskStageFilter: { type: String, default: 'all' },
   taskStageFilters: { type: Array, default: () => [] },
   taskIdFilter: { type: String, default: '' },
+  taskSort: { type: String, default: 'created_desc' },
   taskPage: { type: Number, default: 1 },
   taskTotalCount: { type: Number, default: 0 },
   taskPageCount: { type: Number, default: 1 },
@@ -43,6 +44,7 @@ const props = defineProps({
   copyTaskId: { type: Function, required: true },
   sourceDurationSeconds: { type: Function, required: true },
   taskTypeText: { type: Function, required: true },
+  minioStorageText: { type: Function, required: true },
   stageName: { type: Function, required: true },
   nodeProgress: { type: Function, required: true },
   nodeTitle: { type: Function, required: true },
@@ -69,6 +71,7 @@ const emit = defineEmits([
   'update:taskTypeFilter',
   'update:taskStageFilter',
   'update:taskIdFilter',
+  'update:taskSort',
   'applyTaskIdFilter',
   'setTaskPage',
   'clearFailure',
@@ -204,6 +207,14 @@ function onlineDeviceNames(service) {
       >
         {{ taskActionsExpanded ? '收起操作' : '展开操作' }}
       </button>
+      <button
+        type="button"
+        :class="['task-filter-button', 'task-sort-button', { active: taskSort === 'minio_storage_desc' }]"
+        title="按 MinIO 占用体积降序排序"
+        @click="emit('update:taskSort', taskSort === 'minio_storage_desc' ? 'created_desc' : 'minio_storage_desc')"
+      >
+        {{ taskSort === 'minio_storage_desc' ? '体积降序' : '按体积排' }}
+      </button>
       <select
         class="upload-retry-platform-select"
         :value="uploadRetryPlatform"
@@ -315,6 +326,12 @@ function onlineDeviceNames(service) {
           >{{ task.taskId }}</span>
           <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
           <span class="task-type">{{ taskTypeText(task) }}</span>
+          <span
+            class="task-minio-storage"
+            :title="task.minioStorageUpdatedAt ? `更新于 ${formatDateTime(task.minioStorageUpdatedAt)}` : '等待 backuper 扫描'"
+          >
+            MinIO {{ minioStorageText(task) }}
+          </span>
         </div>
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
       </div>
