@@ -8,6 +8,24 @@ defineProps({
   deleteSubmitterAuthor: { type: Function, required: true },
   backToSubmitter: { type: Function, required: true },
 })
+
+function onResetCoverChange(row, autosave) {
+  if (!row.draftResetCover) {
+    row.draftCoverOrientation = ''
+  } else if (!row.draftCoverOrientation) {
+    row.draftCoverOrientation = 'horizontal'
+  }
+  autosave(row)
+}
+
+function onCoverOrientationChange(row, orientation, autosave) {
+  if (!row.draftResetCover) return
+  row.draftCoverOrientation = row.draftCoverOrientation === orientation ? '' : orientation
+  if (!row.draftCoverOrientation) {
+    row.draftCoverOrientation = orientation
+  }
+  autosave(row)
+}
 </script>
 
 <template>
@@ -30,7 +48,9 @@ defineProps({
               <th>字幕</th>
               <th>配音</th>
               <th>分离</th>
-              <th>重置封面</th>
+              <th>重制封面</th>
+              <th>横向封面</th>
+              <th>竖向封面</th>
               <th>原语言</th>
               <th>目标语言</th>
               <th>操作</th>
@@ -38,7 +58,7 @@ defineProps({
           </thead>
           <tbody>
             <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td colspan="9" class="submitter-empty">暂无作者</td>
+              <td colspan="11" class="submitter-empty">暂无作者</td>
             </tr>
             <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
               <td>{{ row.author }}</td>
@@ -91,9 +111,31 @@ defineProps({
                     v-model="row.draftResetCover"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author"
-                    @change="autosaveSubmitterAuthorType(row)"
+                    @change="onResetCoverChange(row, autosaveSubmitterAuthorType)"
                   />
-                  <span>{{ row.draftResetCover ? '重置' : '保留' }}</span>
+                  <span>{{ row.draftResetCover ? '重制' : '保留' }}</span>
+                </label>
+              </td>
+              <td>
+                <label class="submitter-author-type-check">
+                  <input
+                    :checked="row.draftCoverOrientation === 'horizontal'"
+                    type="checkbox"
+                    :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
+                    @change="onCoverOrientationChange(row, 'horizontal', autosaveSubmitterAuthorType)"
+                  />
+                  <span>{{ row.draftCoverOrientation === 'horizontal' ? '选中' : '未选' }}</span>
+                </label>
+              </td>
+              <td>
+                <label class="submitter-author-type-check">
+                  <input
+                    :checked="row.draftCoverOrientation === 'vertical'"
+                    type="checkbox"
+                    :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
+                    @change="onCoverOrientationChange(row, 'vertical', autosaveSubmitterAuthorType)"
+                  />
+                  <span>{{ row.draftCoverOrientation === 'vertical' ? '选中' : '未选' }}</span>
                 </label>
               </td>
               <td>
