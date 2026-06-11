@@ -30,6 +30,7 @@ defineProps({
               <th>字幕</th>
               <th>配音</th>
               <th>分离</th>
+              <th>重置封面</th>
               <th>原语言</th>
               <th>目标语言</th>
               <th>操作</th>
@@ -37,7 +38,7 @@ defineProps({
           </thead>
           <tbody>
             <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td colspan="8" class="submitter-empty">暂无作者</td>
+              <td colspan="9" class="submitter-empty">暂无作者</td>
             </tr>
             <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
               <td>{{ row.author }}</td>
@@ -82,6 +83,17 @@ defineProps({
                     @change="autosaveSubmitterAuthorType(row)"
                   />
                   <span>{{ row.draftNeedSeparation ? '需要' : '跳过' }}</span>
+                </label>
+              </td>
+              <td>
+                <label class="submitter-author-type-check">
+                  <input
+                    v-model="row.draftResetCover"
+                    type="checkbox"
+                    :disabled="submitterAuthorTypeSaving === row.author"
+                    @change="autosaveSubmitterAuthorType(row)"
+                  />
+                  <span>{{ row.draftResetCover ? '重置' : '保留' }}</span>
                 </label>
               </td>
               <td>

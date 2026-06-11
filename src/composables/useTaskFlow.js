@@ -46,6 +46,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const active = failed || running || speechStages[speechStages.length - 1]
     return [
       ...nonSpeechStages.filter(stage => stage.key === 'downloader'),
+      ...nonSpeechStages.filter(stage => stage.key === 'publisher'),
       {
         ...active,
         key: SPEECH_STAGE_KEY,
@@ -358,6 +359,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     ]
   }
 
+  function publisherResultRows(stage) {
+    return tableRows(stage, 'publisher')
+  }
+
   function uploadPlatformName(platform) {
     return uploadPlatformText[platform] || platform || ''
   }
@@ -615,6 +620,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     tableCellSummary,
     speechRows,
     uploadSubmissionRows,
+    publisherResultRows,
     uploadPlatformName,
     speechColumns,
     showSpeechColumn,

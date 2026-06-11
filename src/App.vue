@@ -177,6 +177,7 @@ const {
   tableCellSummary,
   speechRows,
   uploadSubmissionRows,
+  publisherResultRows,
   uploadPlatformName,
   speechColumns,
   showSpeechColumn,
@@ -518,6 +519,7 @@ function audioErrorMessage(code) {
       :mark-image-broken="markImageBroken"
       :stage-name="stageName"
       :upload-submission-rows="uploadSubmissionRows"
+      :publisher-result-rows="publisherResultRows"
       :upload-platform-name="uploadPlatformName"
       :speech-columns="speechColumns"
       :speech-rows="speechRows"

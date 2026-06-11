@@ -2,6 +2,7 @@
 import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
 import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
 import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
+import PublisherPanel from '../components/task-flow/PublisherPanel.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
@@ -36,6 +37,7 @@ defineProps({
   markImageBroken: { type: Function, required: true },
   stageName: { type: Function, required: true },
   uploadSubmissionRows: { type: Function, required: true },
+  publisherResultRows: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
   speechColumns: { type: Function, required: true },
   speechRows: { type: Function, required: true },
@@ -108,6 +110,13 @@ function seekVocalsPlayback(ms) {
           :loading="uploaderDiagnosticsLoading"
           :error="uploaderDiagnosticsError"
           :load-diagnostics="loadSelectedUploaderDiagnostics"
+        />
+
+        <PublisherPanel
+          v-if="selectedStage.key === 'publisher'"
+          :stage="selectedStage"
+          :rows="publisherResultRows(selectedStage)"
+          :media="stageMedia(selectedStage)"
         />
 
         <DemucsAudioPanel

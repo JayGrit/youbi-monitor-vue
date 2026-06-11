@@ -292,7 +292,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   }
 
   async function loadSubmitterAuthorType(author) {
-    if (!author) return { type: '', needSubtitle: true, needDubbing: true, needSeparation: true }
+    if (!author) return { type: '', needSubtitle: true, needDubbing: true, needSeparation: true, resetCover: false }
     const payload = await submitterApi.getAuthorType(author)
     const needSubtitle = payload?.needSubtitle !== false
     return {
@@ -300,6 +300,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       needSubtitle,
       needDubbing: needSubtitle && payload?.needDubbing !== false,
       needSeparation: payload?.needSeparation !== false,
+      resetCover: payload?.resetCover === true,
     }
   }
 
@@ -321,6 +322,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           draftNeedDubbing: item?.needSubtitle !== false && item?.needDubbing !== false,
           needSeparation: item?.needSeparation !== false,
           draftNeedSeparation: item?.needSeparation !== false,
+          resetCover: item?.resetCover === true,
+          draftResetCover: item?.resetCover === true,
           sourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           draftSourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           targetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
@@ -355,6 +358,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       && row.draftNeedSubtitle === row.needSubtitle
       && row.draftNeedDubbing === row.needDubbing
       && row.draftNeedSeparation === row.needSeparation
+      && row.draftResetCover === row.resetCover
       && sourceLanguage === row.sourceLanguage
       && targetLanguage === row.targetLanguage
     ) return
@@ -364,7 +368,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const needSubtitle = row.draftNeedSubtitle !== false
       const needDubbing = needSubtitle && row.draftNeedDubbing !== false
       const needSeparation = row.draftNeedSeparation !== false
-      const payload = await submitterApi.saveAuthorType(row.author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage)
+      const resetCover = row.draftResetCover === true
+      const payload = await submitterApi.saveAuthorType(row.author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover)
       row.type = String(payload?.type || type)
       row.draftType = row.type
       row.needSubtitle = payload?.needSubtitle !== false
@@ -373,6 +378,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       row.draftNeedDubbing = row.needDubbing
       row.needSeparation = payload?.needSeparation !== false
       row.draftNeedSeparation = row.needSeparation
+      row.resetCover = payload?.resetCover === true
+      row.draftResetCover = row.resetCover
       row.sourceLanguage = String(payload?.sourceLanguage || payload?.source_language || sourceLanguage)
       row.draftSourceLanguage = row.sourceLanguage
       row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)

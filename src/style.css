@@ -2228,6 +2228,127 @@ h1 {
   padding-top: 2px;
 }
 
+.publisher-meta {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.publisher-task-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.publisher-task-card {
+  min-width: 0;
+  border: 1px solid #d9e2ec;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.publisher-task-card.status-success {
+  border-left-color: #16a34a;
+}
+
+.publisher-task-card.status-running {
+  border-left-color: #2563eb;
+}
+
+.publisher-task-card.status-failed {
+  border-left-color: #dc2626;
+}
+
+.publisher-task-card.status-skipped {
+  border-left-color: #8b96a6;
+}
+
+.publisher-task-card strong,
+.publisher-task-card span {
+  display: block;
+}
+
+.publisher-task-card strong {
+  color: #172033;
+  font-size: 13px;
+}
+
+.publisher-task-card span {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.publisher-task-card p {
+  margin: 8px 0 0;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.publisher-meta-row {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 8px;
+}
+
+.publisher-meta-row dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.publisher-meta-row dd {
+  min-width: 0;
+  margin: 0;
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.publisher-result-json {
+  max-height: 220px;
+  margin: 12px 0 0;
+  overflow: auto;
+  border-radius: 8px;
+  background: #111827;
+  color: #e5edf6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.publisher-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.publisher-image-card {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.publisher-image-card img {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

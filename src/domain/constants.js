@@ -71,6 +71,7 @@ export const stageNameText = {
   speaker: 'Speaker',
   speech: 'Demucs & Whisper & Translator & Speaker',
   combiner: 'Combiner',
+  publisher: 'Publisher',
   uploader: 'Uploader',
 }
 

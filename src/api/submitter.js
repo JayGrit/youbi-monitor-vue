@@ -65,7 +65,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
-    saveAuthorType(author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage) {
+    saveAuthorType(author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover) {
       return postJson(`${apiBase}/submitter-author-types`, {
         author,
         type,
@@ -74,6 +74,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
         needSeparation,
         sourceLanguage,
         targetLanguage,
+        resetCover,
       })
     },
 
