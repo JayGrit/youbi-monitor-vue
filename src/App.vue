@@ -106,6 +106,7 @@ const {
   xiaohongshuQrCode,
   xiaohongshuQrMessage,
   accountKeyGroups,
+  backupperDiskStatus,
   backupperDiskStatusText,
   uploadBackfillOpen,
   uploadBackfillContext,
@@ -451,6 +452,7 @@ function audioErrorMessage(code) {
     <AccountsPage
       v-else-if="activePage === 'accounts'"
       :account-key-groups="accountKeyGroups"
+      :backupper-disk-status="backupperDiskStatus"
       :backupper-disk-status-text="backupperDiskStatusText"
       :account-platforms="ACCOUNT_PLATFORMS"
       :bilibili-qr-code="bilibiliQrCode"

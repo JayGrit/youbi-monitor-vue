@@ -21,6 +21,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
 
   const platformAccounts = usePlatformAccounts(accountsApi, accountPlatforms)
   const uploaderPhones = useUploaderPhones(accountsApi)
+  const backupperDiskStatus = ref(null)
   const backupperDiskStatusText = ref('')
 
   async function loadAccountPage() {
@@ -33,6 +34,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
 
   async function loadBackupperStatus() {
     const status = await accountsApi.backupperStatus()
+    backupperDiskStatus.value = status || null
     backupperDiskStatusText.value = status?.statusText || ''
   }
 
@@ -97,6 +99,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     jinritoutiaoError: platformState.jinritoutiao.error,
     jinritoutiaoBusyKey: platformState.jinritoutiao.busyKey,
     accountKeyGroups: platformAccounts.accountKeyGroups,
+    backupperDiskStatus,
     backupperDiskStatusText,
     ...uploadBackfill,
     ...uploaderPhones,

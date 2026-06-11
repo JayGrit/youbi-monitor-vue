@@ -5,6 +5,7 @@ import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from
 
 const props = defineProps({
   accountKeyGroups: { type: Array, default: () => [] },
+  backupperDiskStatus: { type: Object, default: null },
   backupperDiskStatusText: { type: String, default: '' },
   accountPlatforms: { type: Array, default: () => [] },
   bilibiliQrCode: { type: Object, default: null },
@@ -56,6 +57,54 @@ const STALE_READY_MINUTES = 10
 const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
+const diskStatusOpen = ref(false)
+
+const DISK_CHART_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#cbd5e1']
+
+const diskUsageItems = computed(() => {
+  const gib = 1024 ** 3
+  const status = props.backupperDiskStatus || {}
+  const usedBytes = Math.max(0, Number(status.usedGb || 0) * gib)
+  const minioBytes = Math.max(0, Number(status.minioBytes || 0))
+  const dockerImageBytes = Math.max(0, Number(status.dockerImageBytes || 0))
+  const danglingBytes = Math.min(dockerImageBytes, Math.max(0, Number(status.dockerDanglingImageBytes || 0)))
+  const buildCacheBytes = Math.max(0, Number(status.dockerBuildCacheBytes || 0))
+  const knownBytes = minioBytes + dockerImageBytes + buildCacheBytes
+  return [
+    { label: 'MinIO', value: minioBytes, color: DISK_CHART_COLORS[0] },
+    { label: 'Docker 镜像', value: Math.max(0, dockerImageBytes - danglingBytes), color: DISK_CHART_COLORS[1] },
+    { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[2] },
+    { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[3] },
+    { label: '其他', value: Math.max(0, usedBytes - knownBytes), color: DISK_CHART_COLORS[4] },
+  ]
+})
+
+const diskUsageTotal = computed(() => diskUsageItems.value.reduce((sum, item) => sum + item.value, 0))
+
+const diskChartStyle = computed(() => {
+  const total = diskUsageTotal.value
+  if (!total) return { background: DISK_CHART_COLORS[4] }
+  let offset = 0
+  const stops = diskUsageItems.value.map(item => {
+    const start = offset
+    offset += item.value / total * 100
+    return `${item.color} ${start}% ${offset}%`
+  })
+  return { background: `conic-gradient(${stops.join(', ')})` }
+})
+
+function formatStorageBytes(value) {
+  const bytes = Math.max(0, Number(value || 0))
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${Math.round(bytes)} B`
+}
+
+function diskUsagePercent(value) {
+  if (!diskUsageTotal.value) return '0.0%'
+  return `${(Number(value || 0) / diskUsageTotal.value * 100).toFixed(1)}%`
+}
 
 const phonePlatformAccounts = computed(() => {
   const groups = new Map()
@@ -482,7 +531,15 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <div class="account-page-head">
         <div></div>
         <div class="account-edit-actions">
-          <span v-if="backupperDiskStatusText" class="account-disk-status">{{ backupperDiskStatusText }}</span>
+          <button
+            v-if="backupperDiskStatusText"
+            type="button"
+            class="account-disk-status"
+            title="查看硬盘空间构成"
+            @click="diskStatusOpen = true"
+          >
+            {{ backupperDiskStatusText }}
+          </button>
           <template v-if="accountEditMode">
             <button type="button" @click="cancelAccountEditMode">完成</button>
           </template>
@@ -891,5 +948,33 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <div v-else class="empty-state">暂无手机号配置</div>
       <p v-if="uploaderPhoneError" class="inline-error">{{ uploaderPhoneError }}</p>
     </section>
+
+    <div v-if="diskStatusOpen" class="disk-status-modal-backdrop" @click.self="diskStatusOpen = false">
+      <section class="disk-status-modal" role="dialog" aria-modal="true" aria-labelledby="disk-status-title">
+        <header>
+          <div>
+            <strong id="disk-status-title">硬盘已用空间构成</strong>
+            <span>{{ backupperDiskStatusText }}</span>
+          </div>
+          <button type="button" @click="diskStatusOpen = false">关闭</button>
+        </header>
+        <div class="disk-status-modal-body">
+          <div class="disk-status-chart" :style="diskChartStyle" aria-hidden="true">
+            <div>
+              <strong>{{ backupperDiskStatus?.usedPercent || 0 }}%</strong>
+              <span>已使用</span>
+            </div>
+          </div>
+          <div class="disk-status-legend">
+            <div v-for="item in diskUsageItems" :key="item.label" class="disk-status-legend-row">
+              <span class="disk-status-color" :style="{ background: item.color }"></span>
+              <span>{{ item.label }}</span>
+              <strong>{{ formatStorageBytes(item.value) }}</strong>
+              <small>{{ diskUsagePercent(item.value) }}</small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </section>
 </template>
