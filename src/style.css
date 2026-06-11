@@ -2141,6 +2141,249 @@ h1 {
   line-height: 1.35;
 }
 
+.downloader-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.downloader-info-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.downloader-cover {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  text-decoration: none;
+}
+
+.downloader-cover img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.downloader-cover-empty {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.downloader-info-main {
+  min-width: 0;
+}
+
+.downloader-info-main h3 {
+  margin: 0 0 12px;
+  color: #172033;
+  font-size: 18px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.downloader-meta-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.downloader-meta-list div {
+  min-width: 0;
+}
+
+.downloader-description {
+  grid-column: 1 / -1;
+}
+
+.downloader-meta-list dt {
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.downloader-meta-list dd {
+  min-width: 0;
+  margin: 0;
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.downloader-link-list,
+.downloader-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.downloader-link-list a {
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.downloader-link-list a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.downloader-tags span {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 24px;
+  align-items: center;
+  border: 1px solid #d9e2ec;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 3px 9px;
+  overflow-wrap: anywhere;
+}
+
+.downloader-task-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.downloader-task {
+  min-width: 0;
+  border: 1px solid #d9e2ec;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.downloader-task.status-success {
+  border-left-color: #16a34a;
+}
+
+.downloader-task.status-running {
+  border-left-color: #2563eb;
+}
+
+.downloader-task.status-failed {
+  border-left-color: #dc2626;
+}
+
+.downloader-task.status-skipped {
+  border-left-color: #8b96a6;
+}
+
+.downloader-task-head,
+.downloader-task-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.downloader-task-head strong {
+  min-width: 0;
+  color: #172033;
+  font-size: 13px;
+}
+
+.downloader-task-head span {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.downloader-progress {
+  height: 8px;
+  overflow: hidden;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.downloader-progress span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.status-success .downloader-progress span,
+.status-skipped .downloader-progress span {
+  background: #16a34a;
+}
+
+.status-failed .downloader-progress span {
+  background: #dc2626;
+}
+
+.downloader-task-meta {
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.downloader-task-error {
+  max-height: 120px;
+  overflow: auto;
+  margin: 8px 0 0;
+  border-radius: 6px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 8px;
+  white-space: pre-wrap;
+}
+
+.downloader-audio {
+  margin-top: 12px;
+  border-top: 1px solid #edf2f7;
+  padding-top: 12px;
+}
+
+.downloader-audio audio,
+.downloader-video video {
+  width: 100%;
+}
+
+.downloader-video video {
+  display: block;
+  max-height: 70vh;
+  background: #0f172a;
+}
+
+.downloader-video a {
+  display: inline-flex;
+  margin-top: 8px;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.downloader-video a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .upload-submission-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -4097,6 +4340,16 @@ a.submitter-cell:hover {
   .upload-retry-error {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  .downloader-info-layout,
+  .downloader-meta-list,
+  .downloader-task-list {
+    grid-template-columns: 1fr;
+  }
+
+  .downloader-info-main h3 {
+    font-size: 16px;
   }
 
   .status-line {

@@ -1,5 +1,6 @@
 <script setup>
 import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
+import DownloaderPanel from '../components/task-flow/DownloaderPanel.vue'
 import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
 import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
 import PublisherPanel from '../components/task-flow/PublisherPanel.vue'
@@ -126,6 +127,15 @@ function seekVocalsPlayback(ms) {
           :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
           @vocals-playback="vocalsPlayback = $event"
+        />
+
+        <DownloaderPanel
+          v-else-if="selectedStage.key === 'downloader'"
+          :flow="selectedTaskFlow"
+          :stage="selectedStage"
+          :media="stageMedia(selectedStage)"
+          :cover-url="flowCoverUrl(selectedTaskFlow)"
+          :log-audio-event="logAudioEvent"
         />
 
         <StageMediaGrid
