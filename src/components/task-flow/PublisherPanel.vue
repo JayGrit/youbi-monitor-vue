@@ -1,13 +1,13 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { statusText } from '../../domain/constants'
+import { computed, ref, watch } from 'vue'
+import { formatDateTime } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
+import { diagnosticRunId } from '../../utils/uploaderDiagnostics'
 import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
 
 const props = defineProps({
-  stage: { type: Object, default: null },
+  flow: { type: Object, default: null },
   rows: { type: Array, default: () => [] },
-  media: { type: Array, default: () => [] },
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
@@ -15,99 +15,134 @@ const props = defineProps({
 })
 
 const diagnosticsRequested = ref(false)
+const selectedRunId = ref('')
+const historyOpen = ref(false)
+const expandedDescriptions = ref(new Set())
 
 const result = computed(() => props.rows[0] || {})
-const resultDetail = computed(() => {
+const videoInfo = computed(() => props.flow?.videoInfo || {})
+
+const comparisonRows = computed(() => [
+  {
+    key: 'title',
+    label: '标题',
+    original: videoInfo.value.title || props.flow?.task?.title || '-',
+    generated: result.value.upload_title || '-',
+  },
+  {
+    key: 'description',
+    label: '简介',
+    original: videoInfo.value.source_description || '-',
+    generated: result.value.upload_description || '-',
+    collapsible: true,
+  },
+  {
+    key: 'tags',
+    label: '标签',
+    original: formatTags(videoInfo.value.source_tags_json),
+    generated: formatTags(result.value.upload_tags),
+  },
+])
+
+const coverImages = computed(() => [
+  normalizeResourceUrl(result.value.source_cover_url || videoInfo.value.source_thumbnail_url || ''),
+  normalizeResourceUrl(result.value.clean_cover_url || ''),
+  normalizeResourceUrl(result.value.final_cover_url || ''),
+])
+
+const matchingDiagnostics = computed(() => {
+  return props.diagnostics.filter(row => row?.platform === 'doubao')
+})
+const runOptions = computed(() => publisherRunOptions(matchingDiagnostics.value))
+const activeRunId = computed(() => {
+  if (!runOptions.value.length) return ''
+  return runOptions.value.some(option => option.runId === selectedRunId.value)
+    ? selectedRunId.value
+    : runOptions.value[0].runId
+})
+const activeRunOption = computed(() => {
+  return runOptions.value.find(option => option.runId === activeRunId.value) || null
+})
+const visibleDiagnostics = computed(() => {
+  const rows = activeRunId.value
+    ? matchingDiagnostics.value.filter(row => diagnosticRunId(row) === activeRunId.value)
+    : matchingDiagnostics.value
+  return [...rows].sort(compareDiagnostics)
+})
+
+watch(runOptions, options => {
+  if (selectedRunId.value && !options.some(option => option.runId === selectedRunId.value)) {
+    selectedRunId.value = ''
+  }
+})
+
+function formatTags(value) {
+  if (Array.isArray(value)) return value.filter(Boolean).join('、') || '-'
+  if (!value) return '-'
   try {
-    const value = result.value.result_json
-    return value ? JSON.parse(value) : {}
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed.filter(Boolean).join('、') || '-' : String(parsed)
   } catch {
-    return {}
+    return String(value)
   }
-})
-const images = computed(() => {
-  const byKey = new Map()
-  function add(name, url) {
-    const normalized = normalizeResourceUrl(url)
-    if (!normalized || byKey.has(normalized)) return
-    byKey.set(normalized, { name, url: normalized })
-  }
-  add('source_cover_url', result.value.source_cover_url)
-  add('clean_cover_url', result.value.clean_cover_url)
-  add('final_cover_url', result.value.final_cover_url)
-  for (const item of props.media || []) {
-    if (item?.kind === 'image') {
-      add(item.name || item.objectName || 'image', item.url)
-    }
-  }
-  return [...byKey.values()]
-})
+}
 
-const metaRows = computed(() => {
-  const row = result.value
-  return [
-    ['status', statusText[row.status] || row.status || '-'],
-    ['upload_title', row.upload_title || '-'],
-    ['upload_description', row.upload_description || '-'],
-    ['upload_tags', row.upload_tags || '-'],
-    ['cover_text', row.cover_text || '-'],
-    ['source_subtitle_txt_url', row.source_subtitle_txt_url || '-'],
-  ]
-})
+function isDescriptionExpanded(side) {
+  return expandedDescriptions.value.has(side)
+}
 
-const publisherTasks = computed(() => {
-  const row = result.value
-  const detail = resultDetail.value
-  const runCover = detail.run_cover === true
-  return [
-    {
-      name: '投稿标题',
-      status: row.upload_title ? 'success' : props.stage?.status || 'pending',
-      detail: row.upload_title || '',
-    },
-    {
-      name: '封面文案',
-      status: row.cover_text ? 'success' : props.stage?.status || 'pending',
-      detail: row.cover_text || '',
-    },
-    {
-      name: '去字封面',
-      status: row.clean_cover_url ? 'success' : (runCover ? props.stage?.status || 'pending' : 'skipped'),
-      detail: row.clean_cover_url || detail.cover_skip_reason || '',
-    },
-    {
-      name: '最终封面',
-      status: row.final_cover_url ? 'success' : (runCover ? props.stage?.status || 'pending' : 'skipped'),
-      detail: row.final_cover_url || detail.cover_skip_reason || '',
-    },
-  ]
-})
-
-const latestDiagnostics = computed(() => {
-  const rows = props.diagnostics.filter(row => row?.platform === 'doubao')
-  if (!rows.length) return []
-  const latestRunId = latestDiagnosticRunId(rows)
-  return rows.filter(row => !latestRunId || diagnosticRunId(row) === latestRunId)
-})
+function toggleDescription(side) {
+  const next = new Set(expandedDescriptions.value)
+  next.has(side) ? next.delete(side) : next.add(side)
+  expandedDescriptions.value = next
+}
 
 function requestDiagnostics() {
   diagnosticsRequested.value = true
   props.loadDiagnostics()
 }
 
-function latestDiagnosticRunId(rows) {
-  const latest = rows.reduce((best, row) => {
-    const value = Date.parse(row.createdAt || row.created_at || '') || 0
-    if (!best || value > best.value) {
-      return { runId: diagnosticRunId(row), value }
+function publisherRunOptions(rows) {
+  const byRunId = new Map()
+  for (const row of rows) {
+    const runId = diagnosticRunId(row)
+    if (!runId) continue
+    const sortTime = diagnosticCreatedAt(row)
+    const current = byRunId.get(runId)
+    if (!current || sortTime > current.sortTime) {
+      byRunId.set(runId, {
+        runId,
+        createdAt: row.createdAt || row.created_at || '',
+        sortTime,
+      })
     }
-    return best
-  }, null)
-  return latest?.runId || ''
+  }
+  const chronological = [...byRunId.values()].sort((left, right) => {
+    return left.sortTime - right.sortTime || left.runId.localeCompare(right.runId)
+  })
+  return chronological
+    .map((option, index) => ({ ...option, attempt: index + 1 }))
+    .reverse()
 }
 
-function diagnosticRunId(row) {
-  return row.runId || row.run_id || ''
+function selectRun(runId) {
+  selectedRunId.value = runId
+  historyOpen.value = false
+}
+
+function compareDiagnostics(left, right) {
+  return diagnosticStep(left) - diagnosticStep(right)
+    || diagnosticCreatedAt(left) - diagnosticCreatedAt(right)
+    || Number(left.id || 0) - Number(right.id || 0)
+}
+
+function diagnosticStep(row) {
+  const step = Number(row.stepIndex ?? row.step_index)
+  return Number.isFinite(step) ? step : Number.MAX_SAFE_INTEGER
+}
+
+function diagnosticCreatedAt(row) {
+  return Date.parse(row.createdAt || row.created_at || '') || 0
 }
 
 function diagnosticTitlePrefix(row) {
@@ -119,52 +154,102 @@ function diagnosticTitlePrefix(row) {
 </script>
 
 <template>
-  <div class="flow-section publisher-panel">
-    <h4>Publisher 结果</h4>
-    <div class="publisher-task-grid">
-      <article
-        v-for="item in publisherTasks"
-        :key="item.name"
-        :class="['publisher-task-card', `status-${item.status}`]"
-      >
-        <strong>{{ item.name }}</strong>
-        <span>{{ statusText[item.status] || item.status || '-' }}</span>
-        <p v-if="item.detail">{{ item.detail }}</p>
-      </article>
-    </div>
-    <div v-if="!rows.length" class="flow-muted">还没有 publisher 结果</div>
-    <template v-else>
-      <dl class="publisher-meta">
-        <div v-for="[name, value] in metaRows" :key="name" class="publisher-meta-row">
-          <dt>{{ name }}</dt>
-          <dd>{{ value }}</dd>
-        </div>
-      </dl>
-      <pre v-if="result.error_message" class="flow-stage-error">{{ result.error_message }}</pre>
-      <pre v-if="result.result_json" class="publisher-result-json">{{ result.result_json }}</pre>
-      <div v-if="images.length" class="publisher-image-grid">
-        <article v-for="image in images" :key="image.url" class="publisher-image-card">
-          <div class="media-title">
-            <strong>{{ image.name }}</strong>
+  <div class="publisher-panel">
+    <section class="flow-section">
+      <h4>投稿信息</h4>
+      <div v-if="!rows.length" class="flow-muted">还没有 publisher 结果</div>
+      <template v-else>
+        <div class="publisher-comparison-table">
+          <div class="publisher-comparison-row publisher-comparison-head">
+            <strong>字段</strong>
+            <strong>原始值</strong>
+            <strong>Publisher 生成值</strong>
           </div>
-          <img :src="image.url" alt="" loading="lazy" />
-        </article>
-      </div>
-      <div class="publisher-diagnostics">
-        <div class="publisher-diagnostics-head">
-          <h4>Publisher 诊断截图</h4>
-          <button type="button" class="diagnostic-load-button" :disabled="diagnosticsLoading" @click="requestDiagnostics">
-            {{ diagnosticsLoading ? '加载中' : '加载诊断截图' }}
-          </button>
+          <div v-for="item in comparisonRows" :key="item.key" class="publisher-comparison-row">
+            <strong class="publisher-field-name">{{ item.label }}</strong>
+            <div>
+              <p :class="{ 'publisher-description-collapsed': item.collapsible && !isDescriptionExpanded(`${item.key}-original`) }">
+                {{ item.original }}
+              </p>
+              <button
+                v-if="item.collapsible && item.original !== '-'"
+                type="button"
+                class="publisher-expand-button"
+                @click="toggleDescription(`${item.key}-original`)"
+              >
+                {{ isDescriptionExpanded(`${item.key}-original`) ? '收起' : '展开' }}
+              </button>
+            </div>
+            <div>
+              <p :class="{ 'publisher-description-collapsed': item.collapsible && !isDescriptionExpanded(`${item.key}-generated`) }">
+                {{ item.generated }}
+              </p>
+              <button
+                v-if="item.collapsible && item.generated !== '-'"
+                type="button"
+                class="publisher-expand-button"
+                @click="toggleDescription(`${item.key}-generated`)"
+              >
+                {{ isDescriptionExpanded(`${item.key}-generated`) ? '收起' : '展开' }}
+              </button>
+            </div>
+          </div>
         </div>
-        <div v-if="diagnosticsError" class="flow-error diagnostic-error">诊断截图接口错误：{{ diagnosticsError }}</div>
-        <p v-else-if="diagnosticsRequested && diagnosticsLoading" class="flow-muted">正在加载诊断截图</p>
+        <pre v-if="result.error_message" class="flow-stage-error">{{ result.error_message }}</pre>
+      </template>
+    </section>
+
+    <section v-if="rows.length" class="flow-section publisher-cover-section">
+      <h4>封面</h4>
+      <p class="publisher-cover-text"><strong>封面文字</strong>{{ result.cover_text || '-' }}</p>
+      <div class="publisher-cover-flow">
+        <template v-for="(image, index) in coverImages" :key="index">
+          <article class="publisher-cover-card">
+            <a v-if="image" :href="image" target="_blank" rel="noreferrer">
+              <img :src="image" alt="" loading="lazy" />
+            </a>
+            <div v-else class="publisher-cover-empty">暂无封面</div>
+          </article>
+          <span v-if="index < coverImages.length - 1" class="publisher-cover-arrow" aria-hidden="true">→</span>
+        </template>
+      </div>
+    </section>
+
+    <section v-if="rows.length" class="flow-section publisher-diagnostics">
+      <div class="publisher-diagnostics-head">
+        <h4>Publisher 诊断截图</h4>
+        <button type="button" class="diagnostic-load-button" :disabled="diagnosticsLoading" @click="requestDiagnostics">
+          {{ diagnosticsLoading ? '加载中' : '加载诊断截图' }}
+        </button>
+      </div>
+      <div v-if="diagnosticsError" class="flow-error diagnostic-error">诊断截图接口错误：{{ diagnosticsError }}</div>
+      <template v-if="diagnosticsRequested">
+        <div v-if="runOptions.length > 1" class="diagnostic-history">
+          <button type="button" class="diagnostic-history-button" @click="historyOpen = !historyOpen">
+            历史版本
+            <span v-if="activeRunOption">第 {{ activeRunOption.attempt }} 版</span>
+          </button>
+          <div v-if="historyOpen" class="diagnostic-history-options">
+            <button
+              v-for="option in runOptions"
+              :key="option.runId"
+              type="button"
+              :class="{ active: option.runId === activeRunId }"
+              @click="selectRun(option.runId)"
+            >
+              <strong>第 {{ option.attempt }} 版</strong>
+              <span>{{ formatDateTime(option.createdAt) }}</span>
+            </button>
+          </div>
+        </div>
+        <p v-if="diagnosticsLoading && !visibleDiagnostics.length" class="flow-muted">正在加载诊断截图</p>
+        <p v-else-if="diagnosticsLoading" class="flow-muted diagnostic-refreshing">正在自动更新诊断截图</p>
         <DiagnosticScreenshotGrid
-          v-else-if="diagnosticsRequested"
-          :rows="latestDiagnostics"
+          v-if="visibleDiagnostics.length || !diagnosticsLoading"
+          :rows="visibleDiagnostics"
           :title-prefix="diagnosticTitlePrefix"
         />
-      </div>
-    </template>
+      </template>
+    </section>
   </div>
 </template>

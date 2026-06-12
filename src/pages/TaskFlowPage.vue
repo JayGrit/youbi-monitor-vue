@@ -115,9 +115,8 @@ function seekVocalsPlayback(ms) {
 
         <PublisherPanel
           v-if="selectedStage.key === 'publisher'"
-          :stage="selectedStage"
+          :flow="selectedTaskFlow"
           :rows="publisherResultRows(selectedStage)"
-          :media="stageMedia(selectedStage)"
           :diagnostics="uploaderDiagnostics"
           :diagnostics-loading="uploaderDiagnosticsLoading"
           :diagnostics-error="uploaderDiagnosticsError"
@@ -143,7 +142,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && selectedStage.key !== 'publisher' && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />

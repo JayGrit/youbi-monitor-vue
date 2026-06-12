@@ -2695,129 +2695,129 @@ h1 {
   text-align: right;
 }
 
-.publisher-meta {
-  display: grid;
-  gap: 8px;
-  margin: 12px 0 0;
+.publisher-comparison-table {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid #dce4ed;
+  border-radius: 9px;
 }
 
-.publisher-task-grid {
+.publisher-comparison-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.publisher-task-card {
+.publisher-comparison-row + .publisher-comparison-row {
+  border-top: 1px solid #e5ebf2;
+}
+
+.publisher-comparison-row > * {
   min-width: 0;
-  border: 1px solid #d9e2ec;
-  border-left-width: 4px;
-  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.publisher-comparison-row > * + * {
+  border-left: 1px solid #e5ebf2;
+}
+
+.publisher-comparison-head {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+}
+
+.publisher-field-name {
   background: #f8fafc;
-  padding: 10px;
-}
-
-.publisher-task-card.status-success {
-  border-left-color: #16a34a;
-}
-
-.publisher-task-card.status-running {
-  border-left-color: #2563eb;
-}
-
-.publisher-task-card.status-failed {
-  border-left-color: #dc2626;
-}
-
-.publisher-task-card.status-skipped {
-  border-left-color: #8b96a6;
-}
-
-.publisher-task-card strong,
-.publisher-task-card span {
-  display: block;
-}
-
-.publisher-task-card strong {
-  color: #172033;
+  color: #334155;
   font-size: 13px;
 }
 
-.publisher-task-card span {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 12px;
-}
-
-.publisher-task-card p {
-  margin: 8px 0 0;
-  color: #334155;
-  font-size: 12px;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.publisher-meta-row {
-  display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
-  gap: 12px;
-  border-bottom: 1px solid #edf2f7;
-  padding-bottom: 8px;
-}
-
-.publisher-meta-row dt {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.publisher-meta-row dd {
-  min-width: 0;
+.publisher-comparison-row p {
   margin: 0;
   color: #172033;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.55;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.publisher-result-json {
-  max-height: 220px;
-  margin: 12px 0 0;
-  overflow: auto;
-  border-radius: 8px;
-  background: #111827;
-  color: #e5edf6;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+.publisher-description-collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.publisher-expand-button {
+  margin-top: 5px;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  padding: 0;
+  cursor: pointer;
   font-size: 12px;
+}
+
+.publisher-cover-text {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 13px;
   line-height: 1.5;
-  padding: 12px;
-  white-space: pre-wrap;
 }
 
-.publisher-image-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+.publisher-cover-text strong {
+  flex: 0 0 auto;
+  color: #172033;
+}
+
+.publisher-cover-flow {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  margin-top: 12px;
 }
 
-.publisher-image-card {
+.publisher-cover-card {
+  flex: 1 1 0;
   min-width: 0;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #f8fafc;
-  padding: 10px;
+  overflow: hidden;
 }
 
-.publisher-image-card img {
+.publisher-cover-card a {
+  display: block;
+}
+
+.publisher-cover-card img,
+.publisher-cover-empty {
   width: 100%;
-  max-height: 360px;
-  border-radius: 6px;
+  aspect-ratio: 16 / 9;
+}
+
+.publisher-cover-card img {
+  display: block;
   object-fit: contain;
   background: #ffffff;
 }
 
+.publisher-cover-empty {
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.publisher-cover-arrow {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 24px;
+}
+
 .publisher-diagnostics {
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .publisher-diagnostics-head {
@@ -4557,6 +4557,25 @@ a.submitter-cell:hover {
 }
 
 @media (max-width: 640px) {
+  .publisher-comparison-table {
+    overflow-x: auto;
+  }
+
+  .publisher-comparison-row {
+    min-width: 680px;
+  }
+
+  .publisher-cover-flow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .publisher-cover-arrow {
+    align-self: center;
+    line-height: 1;
+    transform: rotate(90deg);
+  }
+
   .page-shell {
     width: 100%;
     padding: calc(var(--navbar-height) + max(12px, env(safe-area-inset-top))) 10px 28px;
