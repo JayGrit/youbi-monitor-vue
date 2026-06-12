@@ -59,12 +59,17 @@ const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
 const diskStatusOpen = ref(false)
 
-const DISK_CHART_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#cbd5e1']
+const DISK_CHART_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#94a3b8', '#ffffff']
 
 const diskUsageItems = computed(() => {
   const gib = 1024 ** 3
   const status = props.backupperDiskStatus || {}
   const usedBytes = Math.max(0, Number(status.usedGb || 0) * gib)
+  const availableBytes = Math.max(0, Number(status.availableGb || 0) * gib)
+  const totalBytes = Math.max(
+    Number(status.totalGb || 0) * gib,
+    usedBytes + availableBytes,
+  )
   const minioBytes = Math.max(0, Number(status.minioBytes || 0))
   const dockerImageBytes = Math.max(0, Number(status.dockerImageBytes || 0))
   const danglingBytes = Math.min(dockerImageBytes, Math.max(0, Number(status.dockerDanglingImageBytes || 0)))
@@ -75,7 +80,8 @@ const diskUsageItems = computed(() => {
     { label: 'Docker 镜像', value: Math.max(0, dockerImageBytes - danglingBytes), color: DISK_CHART_COLORS[1] },
     { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[2] },
     { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[3] },
-    { label: '其他', value: Math.max(0, usedBytes - knownBytes), color: DISK_CHART_COLORS[4] },
+    { label: '其他系统占用', value: Math.max(0, totalBytes - availableBytes - knownBytes), color: DISK_CHART_COLORS[4] },
+    { label: '可用空间', value: availableBytes, color: DISK_CHART_COLORS[5] },
   ]
 })
 
@@ -953,7 +959,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <section class="disk-status-modal" role="dialog" aria-modal="true" aria-labelledby="disk-status-title">
         <header>
           <div>
-            <strong id="disk-status-title">硬盘已用空间构成</strong>
+            <strong id="disk-status-title">硬盘空间构成</strong>
             <span>{{ backupperDiskStatusText }}</span>
           </div>
           <button type="button" @click="diskStatusOpen = false">关闭</button>

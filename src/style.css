@@ -420,6 +420,7 @@ h1 {
   display: grid;
   place-items: center;
   border-radius: 50%;
+  box-shadow: 0 0 0 1px #cbd5e1;
 }
 
 .disk-status-chart > div {
@@ -461,6 +462,7 @@ h1 {
   width: 10px;
   height: 10px;
   border-radius: 3px;
+  box-shadow: 0 0 0 1px #cbd5e1;
 }
 
 .disk-status-legend-row strong,
