@@ -40,6 +40,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const uploadRetryLoading = ref(false)
   const uploadRetryBusy = ref(false)
   const uploadRetrySelectedIds = ref([])
+  const downloaderFailuresOpen = ref(false)
+  const downloaderFailureRows = ref([])
+  const downloaderFailureLoading = ref(false)
+  const downloaderFailureBusy = ref(false)
+  const downloaderFailureSelectedIds = ref([])
 
   const taskStageFilters = computed(() => {
     const keys = new Set()
@@ -103,6 +108,13 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const uploadRetryAllSelected = computed(() => {
     const rows = uploadRetrySelectableRows.value
     return rows.length > 0 && rows.every(row => uploadRetrySelectedSet.value.has(row.id))
+  })
+
+  const downloaderFailureSelectedSet = computed(() => new Set(downloaderFailureSelectedIds.value))
+
+  const downloaderFailureAllSelected = computed(() => {
+    const rows = downloaderFailureRows.value
+    return rows.length > 0 && rows.every(row => downloaderFailureSelectedSet.value.has(row.submissionId))
   })
 
   async function loadTasks() {
@@ -211,6 +223,66 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
       uploadRetryBusy.value = false
+    }
+  }
+
+  async function toggleDownloaderFailures() {
+    downloaderFailuresOpen.value = !downloaderFailuresOpen.value
+    if (downloaderFailuresOpen.value) await loadDownloaderFailures()
+  }
+
+  async function loadDownloaderFailures() {
+    if (downloaderFailureLoading.value) return
+    downloaderFailureLoading.value = true
+    try {
+      const payload = await monitorApi.loadDownloaderFailures()
+      downloaderFailureRows.value = payload.rows || []
+      downloaderFailureSelectedIds.value = downloaderFailureSelectedIds.value.filter(id => {
+        return downloaderFailureRows.value.some(row => row.submissionId === id)
+      })
+      error.value = ''
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      downloaderFailureLoading.value = false
+    }
+  }
+
+  function toggleDownloaderFailureRow(row) {
+    const id = row?.submissionId
+    if (!id) return
+    const selected = downloaderFailureSelectedSet.value
+    downloaderFailureSelectedIds.value = selected.has(id)
+      ? downloaderFailureSelectedIds.value.filter(item => item !== id)
+      : [...downloaderFailureSelectedIds.value, id]
+  }
+
+  function toggleDownloaderFailureAll() {
+    downloaderFailureSelectedIds.value = downloaderFailureAllSelected.value
+      ? []
+      : downloaderFailureRows.value.map(row => row.submissionId)
+  }
+
+  async function rollbackSelectedDownloaderFailures() {
+    if (downloaderFailureSelectedIds.value.length === 0 || downloaderFailureBusy.value) return
+    const count = downloaderFailureSelectedIds.value.length
+    const confirmed = window.confirm(
+      `确认稍后执行选中的 ${count} 个任务？\n\n`
+      + '这会删除 downloader 创建的任务数据库记录和 MinIO 文件，'
+      + '并把原 submission 恢复为可拉取。'
+    )
+    if (!confirmed) return
+    const submissionIds = [...downloaderFailureSelectedIds.value]
+    downloaderFailureBusy.value = true
+    try {
+      await monitorApi.rollbackDownloaderFailures(submissionIds)
+      downloaderFailureSelectedIds.value = []
+      await Promise.all([loadTasks(), loadDownloaderFailures()])
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
+      window.alert(`稍后执行失败：${error.value}`)
+    } finally {
+      downloaderFailureBusy.value = false
     }
   }
 
@@ -541,6 +613,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadRetryLoading,
     uploadRetryBusy,
     uploadRetrySelectedIds,
+    downloaderFailuresOpen,
+    downloaderFailureRows,
+    downloaderFailureLoading,
+    downloaderFailureBusy,
+    downloaderFailureSelectedIds,
     taskTypeFilters,
     taskStageFilters,
     filteredTasks,
@@ -552,6 +629,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     uploadRetrySelectedSet,
     uploadRetrySelectableRows,
     uploadRetryAllSelected,
+    downloaderFailureSelectedSet,
+    downloaderFailureAllSelected,
     loadTasks,
     loadTaskTypes,
     markTaskReady,
@@ -561,6 +640,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     toggleUploadRetryRow,
     toggleUploadRetryAll,
     retrySelectedUploadSubmissions,
+    toggleDownloaderFailures,
+    loadDownloaderFailures,
+    toggleDownloaderFailureRow,
+    toggleDownloaderFailureAll,
+    rollbackSelectedDownloaderFailures,
     stopTask,
     isTaskStopBusy,
     restartTask,

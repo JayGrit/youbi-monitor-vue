@@ -48,6 +48,11 @@ const {
   uploadRetryLoading,
   uploadRetryBusy,
   uploadRetrySelectedIds,
+  downloaderFailuresOpen,
+  downloaderFailureRows,
+  downloaderFailureLoading,
+  downloaderFailureBusy,
+  downloaderFailureSelectedIds,
   taskTypeFilters,
   taskStageFilters,
   filteredTasks,
@@ -57,6 +62,8 @@ const {
   uploadRetryPlatformOptions,
   uploadRetrySelectedSet,
   uploadRetryAllSelected,
+  downloaderFailureSelectedSet,
+  downloaderFailureAllSelected,
   loadTasks,
   loadTaskTypes,
   markTaskReady,
@@ -66,6 +73,11 @@ const {
   toggleUploadRetryRow,
   toggleUploadRetryAll,
   retrySelectedUploadSubmissions,
+  toggleDownloaderFailures,
+  loadDownloaderFailures,
+  toggleDownloaderFailureRow,
+  toggleDownloaderFailureAll,
+  rollbackSelectedDownloaderFailures,
   stopTask,
   isTaskStopBusy,
   restartTask,
@@ -347,6 +359,13 @@ function audioErrorMessage(code) {
       :upload-retry-selected-ids="uploadRetrySelectedIds"
       :upload-retry-selected-set="uploadRetrySelectedSet"
       :upload-retry-all-selected="uploadRetryAllSelected"
+      :downloader-failures-open="downloaderFailuresOpen"
+      :downloader-failure-rows="downloaderFailureRows"
+      :downloader-failure-loading="downloaderFailureLoading"
+      :downloader-failure-busy="downloaderFailureBusy"
+      :downloader-failure-selected-ids="downloaderFailureSelectedIds"
+      :downloader-failure-selected-set="downloaderFailureSelectedSet"
+      :downloader-failure-all-selected="downloaderFailureAllSelected"
       :service-online="serviceOnline"
       :online-device-title="onlineDeviceTitle"
       :online-device-text="onlineDeviceText"
@@ -372,6 +391,11 @@ function audioErrorMessage(code) {
       :toggle-upload-retry-row="toggleUploadRetryRow"
       :toggle-upload-retry-all="toggleUploadRetryAll"
       :retry-selected-upload-submissions="retrySelectedUploadSubmissions"
+      :toggle-downloader-failures="toggleDownloaderFailures"
+      :load-downloader-failures="loadDownloaderFailures"
+      :toggle-downloader-failure-row="toggleDownloaderFailureRow"
+      :toggle-downloader-failure-all="toggleDownloaderFailureAll"
+      :rollback-selected-downloader-failures="rollbackSelectedDownloaderFailures"
       :is-task-stop-busy="isTaskStopBusy"
       :stop-task="stopTask"
       :is-task-restart-busy="isTaskRestartBusy"

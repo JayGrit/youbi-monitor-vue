@@ -1609,6 +1609,19 @@ h1 {
   padding: 0 10px;
 }
 
+.downloader-failure-toggle.task-filter-button {
+  min-height: 34px;
+  border-radius: 8px;
+  line-height: normal;
+  padding: 0 10px;
+}
+
+.downloader-failure-toggle.task-filter-button.active {
+  border-color: #b45309;
+  background: #fffbeb;
+  color: #92400e;
+}
+
 .upload-retry-panel {
   margin-bottom: 14px;
   border: 1px solid #d9e2ef;
@@ -4639,6 +4652,7 @@ a.submitter-cell:hover {
   .task-stage-filter,
   .task-actions-toggle.task-filter-button,
   .task-sort-button.task-filter-button,
+  .downloader-failure-toggle.task-filter-button,
   .upload-retry-platform-select {
     width: 100%;
     margin-left: 0;
