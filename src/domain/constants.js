@@ -25,7 +25,7 @@ export const SUBMITTER_NUMERIC_FIELDS = new Set([
 ])
 
 export const SUBMITTER_SORT_OPTIONS = [
-  { value: 'updated_desc', label: '最近更新' },
+  { value: 'published_desc', label: '最近发布' },
   { value: 'view_desc', label: '播放量从高到低' },
   { value: 'view_asc', label: '播放量从低到高' },
   { value: 'like_desc', label: '点赞量从高到低' },
@@ -45,6 +45,12 @@ export const SUBMITTER_DURATION_FILTERS = [
   { value: 'short', label: '短视频（0-120 秒）' },
   { value: 'medium', label: '中视频（121-1200 秒）' },
   { value: 'long', label: '长视频（1201 秒以上）' },
+]
+
+export const SUBMITTER_PUBLISHED_FILTERS = [
+  { value: 'all', label: '全部时间' },
+  { value: 'week', label: '一周内' },
+  { value: 'month', label: '一个月内' },
 ]
 
 export const statusText = {

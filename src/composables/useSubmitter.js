@@ -16,8 +16,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterUploader = ref('')
   const submitterVideoName = ref('')
   const submitterDurationFilter = ref('all')
+  const submitterPublishedFilter = ref('all')
   const submitterUploadFilter = ref('unuploaded')
-  const submitterSort = ref('updated_desc')
+  const submitterSort = ref('published_desc')
   const submitterAuthors = ref([])
   const submitterListDetail = ref(false)
   const submitterActiveBatch = ref('')
@@ -105,6 +106,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (!quiet) submitterLoading.value = true
     try {
       const durationRange = submitterDurationRange()
+      const publishedRange = submitterPublishedRange()
       const payload = await submitterApi.listVideos({
         detail: submitterListDetail.value,
         batch: submitterFocusedBatch.value,
@@ -116,6 +118,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         offset: (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE,
         durationMin: durationRange.min,
         durationMax: durationRange.max,
+        publishedFrom: publishedRange.from,
+        publishedTo: publishedRange.to,
         submissionStatus: submitterUploadFilter.value,
       })
       submitterVideos.value = payload?.items || []
@@ -155,8 +159,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterUploader.value = ''
     submitterVideoName.value = ''
     submitterDurationFilter.value = 'all'
+    submitterPublishedFilter.value = 'all'
     submitterUploadFilter.value = 'unuploaded'
-    submitterSort.value = 'updated_desc'
+    submitterSort.value = 'published_desc'
     submitterFocusedBatch.value = ''
     submitterPage.value = 1
     await loadSubmitterVideos()
@@ -174,6 +179,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (submitterDurationFilter.value === 'medium') return { min: 121, max: 1200 }
     if (submitterDurationFilter.value === 'long') return { min: 1201, max: null }
     return { min: null, max: null }
+  }
+
+  function submitterPublishedRange() {
+    const now = Math.floor(Date.now() / 1000)
+    if (submitterPublishedFilter.value === 'week') return { from: now - 7 * 24 * 60 * 60, to: now }
+    if (submitterPublishedFilter.value === 'month') return { from: now - 30 * 24 * 60 * 60, to: now }
+    return { from: null, to: null }
   }
 
   function submitterSubmissionStatus(item) {
@@ -605,6 +617,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterUploader,
     submitterVideoName,
     submitterDurationFilter,
+    submitterPublishedFilter,
     submitterUploadFilter,
     submitterSort,
     submitterAuthors,

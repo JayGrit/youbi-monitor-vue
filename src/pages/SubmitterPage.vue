@@ -1,6 +1,7 @@
 <script setup>
 import {
   SUBMITTER_DURATION_FILTERS,
+  SUBMITTER_PUBLISHED_FILTERS,
   SUBMITTER_SORT_OPTIONS,
   SUBMITTER_UPLOAD_FILTERS,
 } from '../domain/constants'
@@ -24,7 +25,8 @@ defineProps({
   submitterAuthorTypeFilters: { type: Array, default: () => [] },
   submitterAuthorOptions: { type: Array, default: () => [] },
   submitterDurationFilter: { type: String, default: 'all' },
-  submitterSort: { type: String, default: 'updated_desc' },
+  submitterPublishedFilter: { type: String, default: 'all' },
+  submitterSort: { type: String, default: 'published_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
   submitterFilteredVideos: { type: Array, default: () => [] },
   submitterFilteredTotal: { type: Number, default: 0 },
@@ -61,6 +63,7 @@ const emit = defineEmits([
   'update:submitterUploader',
   'update:submitterVideoName',
   'update:submitterDurationFilter',
+  'update:submitterPublishedFilter',
   'update:submitterSort',
   'update:submitterUploadFilter',
 ])
@@ -152,6 +155,17 @@ const emit = defineEmits([
             @change="emit('update:submitterDurationFilter', $event.target.value); applySubmitterFilters()"
           >
             <option v-for="option in SUBMITTER_DURATION_FILTERS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>发布时间</span>
+          <select
+            :value="submitterPublishedFilter"
+            @change="emit('update:submitterPublishedFilter', $event.target.value); applySubmitterFilters()"
+          >
+            <option v-for="option in SUBMITTER_PUBLISHED_FILTERS" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
           </select>

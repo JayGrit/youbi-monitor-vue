@@ -2,7 +2,21 @@ import { postJson, requestJson } from './http'
 
 export function createSubmitterApi(submitterApiBase, apiBase) {
   return {
-    listVideos({ detail, batch, type, uploader, videoName, sort, limit, offset, durationMin, durationMax, submissionStatus } = {}) {
+    listVideos({
+      detail,
+      batch,
+      type,
+      uploader,
+      videoName,
+      sort,
+      limit,
+      offset,
+      durationMin,
+      durationMax,
+      publishedFrom,
+      publishedTo,
+      submissionStatus,
+    } = {}) {
       const params = new URLSearchParams()
       params.set('limit', String(limit || 50))
       params.set('offset', String(offset || 0))
@@ -14,6 +28,8 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       if (sort) params.set('sort', sort)
       if (durationMin !== undefined && durationMin !== null) params.set('duration_min', String(durationMin))
       if (durationMax !== undefined && durationMax !== null) params.set('duration_max', String(durationMax))
+      if (publishedFrom !== undefined && publishedFrom !== null) params.set('published_from', String(publishedFrom))
+      if (publishedTo !== undefined && publishedTo !== null) params.set('published_to', String(publishedTo))
       if (submissionStatus && submissionStatus !== 'all') params.set('submission_status', submissionStatus)
       const query = params.toString()
       return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`)
