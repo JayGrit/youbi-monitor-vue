@@ -33,12 +33,12 @@ export function createMonitorApi(apiBase) {
       })
     },
 
-    loadDownloaderFailures() {
-      return requestJson(`${apiBase}/downloader-failures`)
+    loadFailedTasks() {
+      return requestJson(`${apiBase}/task-failures`)
     },
 
-    rollbackDownloaderFailures(submissionIds) {
-      return requestJson(`${apiBase}/downloader-failures/rollback`, {
+    rollbackFailedTasks(submissionIds) {
+      return requestJson(`${apiBase}/task-failures/rollback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ submissionIds }),

@@ -38,6 +38,9 @@ const props = defineProps({
   downloaderFailureSelectedIds: { type: Array, default: () => [] },
   downloaderFailureSelectedSet: { type: Object, required: true },
   downloaderFailureAllSelected: { type: Boolean, default: false },
+  downloaderFailureTypeFilter: { type: String, default: 'all' },
+  downloaderFailureTypeOptions: { type: Array, default: () => [] },
+  downloaderFailureTypeSelected: { type: Boolean, default: false },
   serviceOnline: { type: Function, required: true },
   onlineDeviceTitle: { type: Function, required: true },
   onlineDeviceText: { type: Function, required: true },
@@ -67,6 +70,8 @@ const props = defineProps({
   loadDownloaderFailures: { type: Function, required: true },
   toggleDownloaderFailureRow: { type: Function, required: true },
   toggleDownloaderFailureAll: { type: Function, required: true },
+  setDownloaderFailureTypeFilter: { type: Function, required: true },
+  toggleDownloaderFailureType: { type: Function, required: true },
   rollbackSelectedDownloaderFailures: { type: Function, required: true },
   isTaskStopBusy: { type: Function, required: true },
   stopTask: { type: Function, required: true },
@@ -297,9 +302,26 @@ function onlineDeviceNames(service) {
     <div v-if="downloaderFailuresOpen" class="upload-retry-panel downloader-failure-panel">
       <div class="upload-retry-head">
         <strong>
-          {{ downloaderFailureLoading ? '正在加载 downloader 失败任务' : `downloader 失败任务 ${downloaderFailureRows.length} 个` }}
+          {{ downloaderFailureLoading ? '正在加载失败任务' : `失败任务 ${downloaderFailureRows.length} 个` }}
         </strong>
         <div class="upload-retry-actions">
+          <select
+            class="upload-retry-type-select"
+            :value="downloaderFailureTypeFilter"
+            aria-label="按任务 type 批量选择失败任务"
+            :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
+            @change="setDownloaderFailureTypeFilter($event.target.value)"
+          >
+            <option value="all">全部 type</option>
+            <option v-for="type in downloaderFailureTypeOptions" :key="type" :value="type">{{ type }}</option>
+          </select>
+          <button
+            type="button"
+            :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
+            @click="toggleDownloaderFailureType"
+          >
+            {{ downloaderFailureTypeSelected ? '取消该 type' : '选择该 type' }}
+          </button>
           <button
             type="button"
             :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
@@ -325,7 +347,7 @@ function onlineDeviceNames(service) {
         </div>
       </div>
       <div v-if="!downloaderFailureLoading && downloaderFailureRows.length === 0" class="upload-retry-empty">
-        暂无在 downloader 阶段失败的任务
+        暂无失败任务
       </div>
       <div v-else class="upload-retry-list">
         <label

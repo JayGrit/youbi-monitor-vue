@@ -53,6 +53,7 @@ const {
   downloaderFailureLoading,
   downloaderFailureBusy,
   downloaderFailureSelectedIds,
+  downloaderFailureTypeFilter,
   taskTypeFilters,
   taskStageFilters,
   filteredTasks,
@@ -64,6 +65,8 @@ const {
   uploadRetryAllSelected,
   downloaderFailureSelectedSet,
   downloaderFailureAllSelected,
+  downloaderFailureTypeOptions,
+  downloaderFailureTypeSelected,
   loadTasks,
   loadTaskTypes,
   markTaskReady,
@@ -77,6 +80,8 @@ const {
   loadDownloaderFailures,
   toggleDownloaderFailureRow,
   toggleDownloaderFailureAll,
+  setDownloaderFailureTypeFilter,
+  toggleDownloaderFailureType,
   rollbackSelectedDownloaderFailures,
   stopTask,
   isTaskStopBusy,
@@ -367,6 +372,9 @@ function audioErrorMessage(code) {
       :downloader-failure-selected-ids="downloaderFailureSelectedIds"
       :downloader-failure-selected-set="downloaderFailureSelectedSet"
       :downloader-failure-all-selected="downloaderFailureAllSelected"
+      :downloader-failure-type-filter="downloaderFailureTypeFilter"
+      :downloader-failure-type-options="downloaderFailureTypeOptions"
+      :downloader-failure-type-selected="downloaderFailureTypeSelected"
       :service-online="serviceOnline"
       :online-device-title="onlineDeviceTitle"
       :online-device-text="onlineDeviceText"
@@ -396,6 +404,8 @@ function audioErrorMessage(code) {
       :load-downloader-failures="loadDownloaderFailures"
       :toggle-downloader-failure-row="toggleDownloaderFailureRow"
       :toggle-downloader-failure-all="toggleDownloaderFailureAll"
+      :set-downloader-failure-type-filter="setDownloaderFailureTypeFilter"
+      :toggle-downloader-failure-type="toggleDownloaderFailureType"
       :rollback-selected-downloader-failures="rollbackSelectedDownloaderFailures"
       :is-task-stop-busy="isTaskStopBusy"
       :stop-task="stopTask"
