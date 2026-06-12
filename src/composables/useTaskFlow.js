@@ -25,6 +25,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const whisperWordTimestampsByTask = ref({})
   const whisperProcessingByTask = ref({})
   let flowTimer = null
+  let uploaderDiagnosticsTimer = null
 
   const selectedStage = computed(() => {
     const stages = selectedTaskFlow.value?.stages || []
@@ -89,6 +90,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   async function openTaskFlow(task, stageKey = 'downloader') {
     if (!task?.taskId) return
+    clearUploaderDiagnosticsPolling()
     flowPageOpen.value = true
     selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) || stageKey === 'demucs' ? SPEECH_STAGE_KEY : stageKey
     selectedTaskFlow.value = null
@@ -145,6 +147,14 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       window.clearInterval(flowTimer)
       flowTimer = null
     }
+    clearUploaderDiagnosticsPolling()
+  }
+
+  function clearUploaderDiagnosticsPolling() {
+    if (uploaderDiagnosticsTimer) {
+      window.clearInterval(uploaderDiagnosticsTimer)
+      uploaderDiagnosticsTimer = null
+    }
   }
 
   function refreshTaskFlow() {
@@ -179,6 +189,14 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const taskId = selectedTaskFlow.value?.task?.id
     if (taskId) {
       loadUploaderDiagnostics(taskId, true)
+      if (!uploaderDiagnosticsTimer) {
+        uploaderDiagnosticsTimer = window.setInterval(() => {
+          const currentTaskId = selectedTaskFlow.value?.task?.id
+          if (currentTaskId) {
+            loadUploaderDiagnostics(currentTaskId, true)
+          }
+        }, 5000)
+      }
     }
   }
 

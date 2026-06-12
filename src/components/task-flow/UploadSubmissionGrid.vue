@@ -1,7 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { statusText } from '../../domain/constants'
 import { formatDateTime } from '../../utils/format'
+import {
+  diagnosticRunId,
+  diagnosticRunOptions,
+} from '../../utils/uploaderDiagnostics'
 import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
 
 const props = defineProps({
@@ -16,22 +20,46 @@ const props = defineProps({
 
 const requestedKey = ref('')
 const requestedSubmission = ref(null)
+const selectedRunId = ref('')
+const historyOpen = ref(false)
 
-const visibleDiagnostics = computed(() => {
+const matchingDiagnostics = computed(() => {
   if (!requestedSubmission.value) return []
-  const rows = props.diagnostics.filter(row => diagnosticMatches(row, requestedSubmission.value))
-  if (!rows.length) return []
-  const latestRunId = latestDiagnosticRunId(rows)
-  return rows
-    .filter(row => !latestRunId || diagnosticRunId(row) === latestRunId)
-    .sort(compareDiagnostics)
+  return props.diagnostics.filter(row => diagnosticMatches(row, requestedSubmission.value))
+})
+
+const runOptions = computed(() => diagnosticRunOptions(matchingDiagnostics.value))
+const activeRunId = computed(() => {
+  if (!runOptions.value.length) return ''
+  return runOptions.value.some(option => option.runId === selectedRunId.value)
+    ? selectedRunId.value
+    : runOptions.value[0].runId
+})
+const activeRunOption = computed(() => {
+  return runOptions.value.find(option => option.runId === activeRunId.value) || null
+})
+const visibleDiagnostics = computed(() => {
+  const rows = activeRunId.value
+    ? matchingDiagnostics.value.filter(row => diagnosticRunId(row) === activeRunId.value)
+    : matchingDiagnostics.value
+  return [...rows].sort(compareDiagnostics)
 })
 
 function requestDiagnostics(submission) {
+  if (requestedKey.value !== submissionKey(submission)) {
+    selectedRunId.value = ''
+    historyOpen.value = false
+  }
   requestedKey.value = submissionKey(submission)
   requestedSubmission.value = submission
   props.loadDiagnostics()
 }
+
+watch(runOptions, options => {
+  if (selectedRunId.value && !options.some(option => option.runId === selectedRunId.value)) {
+    selectedRunId.value = ''
+  }
+})
 
 function submissionKey(submission) {
   return `${submission.platform || ''}:${submission.account_key || submission.accountKey || ''}`
@@ -44,19 +72,9 @@ function diagnosticMatches(row, submission) {
   return !rowAccount || !submissionAccount || rowAccount === submissionAccount
 }
 
-function latestDiagnosticRunId(rows) {
-  const latest = rows.reduce((best, row) => {
-    const value = Date.parse(row.createdAt || row.created_at || '') || 0
-    if (!best || value > best.value) {
-      return { runId: diagnosticRunId(row), value }
-    }
-    return best
-  }, null)
-  return latest?.runId || ''
-}
-
-function diagnosticRunId(row) {
-  return row.runId || row.run_id || ''
+function selectRun(runId) {
+  selectedRunId.value = runId
+  historyOpen.value = false
 }
 
 function compareDiagnostics(left, right) {
@@ -123,8 +141,35 @@ function diagnosticTitlePrefix(row) {
           <pre v-if="submission.error_message" class="flow-stage-error">{{ submission.error_message }}</pre>
           <div v-if="requestedKey === submissionKey(submission)" class="upload-submission-diagnostics">
             <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
-            <p v-else-if="loading" class="flow-muted">正在加载诊断截图</p>
-            <DiagnosticScreenshotGrid v-else :rows="visibleDiagnostics" :title-prefix="diagnosticTitlePrefix" />
+            <div v-if="runOptions.length > 1" class="diagnostic-history">
+              <button
+                type="button"
+                class="diagnostic-history-button"
+                @click="historyOpen = !historyOpen"
+              >
+                历史上传
+                <span v-if="activeRunOption">第 {{ activeRunOption.attempt }} 次</span>
+              </button>
+              <div v-if="historyOpen" class="diagnostic-history-options">
+                <button
+                  v-for="option in runOptions"
+                  :key="option.runId"
+                  type="button"
+                  :class="{ active: option.runId === activeRunId }"
+                  @click="selectRun(option.runId)"
+                >
+                  <strong>第 {{ option.attempt }} 次</strong>
+                  <span>{{ formatDateTime(option.createdAt) }}</span>
+                </button>
+              </div>
+            </div>
+            <p v-if="loading && !visibleDiagnostics.length" class="flow-muted">正在加载诊断截图</p>
+            <p v-else-if="loading" class="flow-muted diagnostic-refreshing">正在自动更新诊断截图</p>
+            <DiagnosticScreenshotGrid
+              v-if="visibleDiagnostics.length || !loading"
+              :rows="visibleDiagnostics"
+              :title-prefix="diagnosticTitlePrefix"
+            />
           </div>
         </div>
       </article>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { formatDateTime } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
 
@@ -12,6 +12,7 @@ const props = defineProps({
 const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
+const previewRow = ref(null)
 
 const visibleRows = computed(() => [...props.rows].sort(compareDiagnostics))
 
@@ -25,7 +26,12 @@ watch(
   { immediate: true }
 )
 
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
   for (const url of Object.values(screenshotObjectUrls.value)) {
     URL.revokeObjectURL(url)
   }
@@ -97,6 +103,12 @@ function screenshotError(row) {
   return screenshotErrors.value[screenshotKey(row)] || ''
 }
 
+function handleKeydown(event) {
+  if (event.key === 'Escape') {
+    previewRow.value = null
+  }
+}
+
 async function downloadScreenshot(row) {
   const url = screenshotUrl(row)
   const key = screenshotKey(row)
@@ -140,12 +152,31 @@ async function downloadScreenshot(row) {
         </span>
       </div>
       <p v-if="screenshotLoading(row)" class="flow-muted">正在下载图片</p>
-      <div v-else-if="renderedScreenshotUrl(row)" class="diagnostic-image-link">
+      <button
+        v-else-if="renderedScreenshotUrl(row)"
+        type="button"
+        class="diagnostic-image-link"
+        aria-label="查看诊断截图大图"
+        @click="previewRow = row"
+      >
         <img :src="renderedScreenshotUrl(row)" loading="lazy" alt="" />
-      </div>
+      </button>
       <p v-else-if="screenshotError(row)" class="flow-muted">图片下载失败：{{ screenshotError(row) }}</p>
       <p>{{ diagnosticMeta(row) }}</p>
       <pre v-if="diagnosticError(row)" class="flow-stage-error">{{ diagnosticError(row) }}</pre>
     </article>
   </div>
+  <Teleport to="body">
+    <div v-if="previewRow" class="diagnostic-preview-backdrop" @click.self="previewRow = null">
+      <section class="diagnostic-preview-modal" role="dialog" aria-modal="true" aria-label="诊断截图大图">
+        <header>
+          <strong>{{ diagnosticTitle(previewRow) }}</strong>
+          <button type="button" @click="previewRow = null">关闭</button>
+        </header>
+        <div class="diagnostic-preview-body">
+          <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
+        </div>
+      </section>
+    </div>
+  </Teleport>
 </template>
