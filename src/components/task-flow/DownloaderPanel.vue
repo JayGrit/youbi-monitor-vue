@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { formatDuration } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
 
@@ -12,6 +12,25 @@ const props = defineProps({
 })
 
 const videoInfo = computed(() => props.flow?.videoInfo || {})
+const subtitleManifest = ref([])
+
+watch(
+  () => videoInfo.value.source_subtitles_url,
+  async value => {
+    subtitleManifest.value = []
+    const url = normalizeResourceUrl(value || '')
+    if (!url) return
+    try {
+      const response = await fetch(url)
+      if (!response.ok) return
+      const rows = await response.json()
+      subtitleManifest.value = Array.isArray(rows) ? rows : []
+    } catch {
+      // Direct subtitle links remain available when the manifest cannot be loaded.
+    }
+  },
+  { immediate: true },
+)
 
 const detailRows = computed(() => {
   const table = props.stage?.tables?.find(item => item.name === 'downloader_detail')
@@ -48,15 +67,10 @@ const subtitleLinks = computed(() => {
   const links = []
   addSubtitleLink(links, 'SRT', videoInfo.value.source_subtitle_srt_url)
   addSubtitleLink(links, 'TXT', videoInfo.value.source_subtitle_txt_url)
-  try {
-    const rows = JSON.parse(videoInfo.value.source_subtitles_json || '[]')
-    for (const row of Array.isArray(rows) ? rows : []) {
-      const label = [row.kind, row.role, row.language].filter(Boolean).join(' / ') || '字幕'
-      addSubtitleLink(links, `${label} SRT`, row.srt_url)
-      addSubtitleLink(links, `${label} TXT`, row.txt_url)
-    }
-  } catch {
-    // Ignore legacy malformed subtitle manifests; direct subtitle fields still render.
+  for (const row of subtitleManifest.value) {
+    const label = [row.kind, row.role, row.language].filter(Boolean).join(' / ') || '字幕'
+    addSubtitleLink(links, `${label} SRT`, row.srt_url)
+    addSubtitleLink(links, `${label} TXT`, row.txt_url)
   }
   const seen = new Set()
   return links.filter(item => {
