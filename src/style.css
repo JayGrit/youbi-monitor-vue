@@ -174,7 +174,7 @@ h1 {
 
 .service-device-row {
   display: grid;
-  grid-template-columns: repeat(7, minmax(112px, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1578,13 +1578,20 @@ h1 {
 
 .task-actions-toggle.task-filter-button {
   margin-left: auto;
-  min-height: 34px;
-  border-radius: 8px;
-  line-height: normal;
-  padding: 0 10px;
 }
 
-.task-sort-button.task-filter-button {
+.task-actions-toggle.task-filter-button,
+.task-sort-button.task-filter-button,
+.upload-retry-platform-select,
+.downloader-failure-toggle.task-filter-button {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.task-actions-toggle.task-filter-button,
+.task-sort-button.task-filter-button,
+.downloader-failure-toggle.task-filter-button {
   min-height: 34px;
   border-radius: 8px;
   line-height: normal;
@@ -1605,16 +1612,6 @@ h1 {
   border-radius: 8px;
   background: #ffffff;
   color: #334155;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.downloader-failure-toggle.task-filter-button {
-  min-height: 34px;
-  border-radius: 8px;
-  line-height: normal;
   padding: 0 10px;
 }
 
@@ -4740,7 +4737,7 @@ a.submitter-cell:hover {
   }
 
   .service-device-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 8px;
   }
 
