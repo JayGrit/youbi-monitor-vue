@@ -269,9 +269,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const stages = selectedTaskFlow.value?.stages || []
     const whisper = stages.find(stage => stage.key === 'whisper')
     const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
-    const asrSegments = tableRows(whisper, 'yd_asr_segment')
+    const asrSegments = tableRows(whisper, 'asr_segment')
     const asrByIndex = rowsByIndex(asrSegments)
-    const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
+    const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
     const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
       .map(index => Number(index))
       .filter(index => Number.isFinite(index))
@@ -310,7 +310,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const translator = stages.find(stage => stage.key === 'translator')
     const speaker = stages.find(stage => stage.key === 'speaker') || translator
     const chunkRows = tableRows(translator, 'translator-chunk')
-    const speakerByIndex = rowsByIndex(tableRows(speaker, 'yd_speaker_segment'))
+    const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
     return [...chunkRows]
       .filter(row => {
         const role = row.row_role || (row.is_reference ? 'reference' : 'normal')
@@ -378,7 +378,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function publisherResultRows(stage) {
-    return tableRows(stage, 'publisher')
+    return tableRows(stage, 'publisher_result')
   }
 
   function uploadPlatformName(platform) {
