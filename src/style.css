@@ -968,6 +968,38 @@ h1 {
   background: #ffffff;
 }
 
+.uploader-phone-select-cell.actionable {
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.uploader-phone-select-cell.actionable:hover {
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px #cbd5e1;
+}
+
+.uploader-phone-select-cell.unavailable {
+  background: #fee2e2;
+}
+
+.uploader-phone-select-cell.unavailable.actionable:hover {
+  background: #fecaca;
+}
+
+.uploader-phone-select-cell.empty {
+  color: #64748b;
+}
+
+.uploader-phone-select-cell.busy {
+  cursor: wait;
+}
+
+.uploader-phone-running {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 720;
+}
+
 .uploader-phone-platform-cell {
   display: inline-flex;
   align-items: center;

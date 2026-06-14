@@ -1,5 +1,6 @@
 <script setup>
 import { createAccountsApi } from './api/accounts'
+import { createAgentApi } from './api/agent'
 import { createMonitorApi } from './api/monitor'
 import { createSubmitterApi } from './api/submitter'
 import {
@@ -26,6 +27,7 @@ const apiBase = `${import.meta.env.BASE_URL}api`
 const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const monitorApi = createMonitorApi(apiBase)
 const accountsApi = createAccountsApi(apiBase)
+const agentApi = createAgentApi()
 const submitterApi = createSubmitterApi(submitterApiBase, apiBase)
 const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
 const ACCOUNT_PLATFORMS = createAccountPlatforms(PLATFORM_ICON_URLS)
@@ -156,6 +158,7 @@ const {
   uploaderPhoneMatrix,
   uploaderPhoneLoading,
   uploaderPhoneSavingKey,
+  uploaderPhoneAgentBusyKey,
   uploaderPhoneError,
   startAccountPolling,
   clearAccountPagePolling,
@@ -175,6 +178,7 @@ const {
   toggleUploadBackfillAll,
   registerSelectedUploadBackfill,
   saveUploaderPhoneAccount,
+  runUploaderPhoneAccountScript,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -185,7 +189,7 @@ const {
   platformErrorText,
   warmPlatformIcons,
   qrImageUrl,
-} = useAccounts(accountsApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
+} = useAccounts(accountsApi, agentApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
 
 const {
   selectedTaskFlow,
@@ -527,6 +531,7 @@ function audioErrorMessage(code) {
       :uploader-phone-matrix="uploaderPhoneMatrix"
       :uploader-phone-loading="uploaderPhoneLoading"
       :uploader-phone-saving-key="uploaderPhoneSavingKey"
+      :uploader-phone-agent-busy-key="uploaderPhoneAgentBusyKey"
       :uploader-phone-error="uploaderPhoneError"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
@@ -544,6 +549,7 @@ function audioErrorMessage(code) {
       :toggle-upload-backfill-all="toggleUploadBackfillAll"
       :register-selected-upload-backfill="registerSelectedUploadBackfill"
       :save-uploader-phone-account="saveUploaderPhoneAccount"
+      :run-uploader-phone-account-script="runUploaderPhoneAccountScript"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"

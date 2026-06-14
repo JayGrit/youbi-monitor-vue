@@ -1,9 +1,10 @@
 import { ref } from 'vue'
 
-export function useUploaderPhones(accountsApi) {
+export function useUploaderPhones(accountsApi, agentApi) {
   const uploaderPhoneMatrix = ref({ phones: [], platforms: [] })
   const uploaderPhoneLoading = ref(false)
   const uploaderPhoneSavingKey = ref('')
+  const uploaderPhoneAgentBusyKey = ref('')
   const uploaderPhoneError = ref('')
 
   async function loadUploaderPhones() {
@@ -19,6 +20,29 @@ export function useUploaderPhones(accountsApi) {
       uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
     } finally {
       uploaderPhoneLoading.value = false
+    }
+  }
+
+  async function runUploaderPhoneAccountScript(platform, action, accountKey) {
+    const busyKey = `${platform}:${action}:${accountKey}`
+    uploaderPhoneAgentBusyKey.value = busyKey
+    try {
+      const payload = await agentApi.runAccountScript(platform, action, accountKey)
+      uploaderPhoneError.value = ''
+      return payload
+    } catch (err) {
+      if (err instanceof TypeError) {
+        window.alert('agent 没有启动，请先在本地启动 services/agent。')
+      } else {
+        const message = err instanceof Error ? err.message : String(err)
+        uploaderPhoneError.value = message
+        window.alert(message)
+      }
+      return null
+    } finally {
+      if (uploaderPhoneAgentBusyKey.value === busyKey) {
+        uploaderPhoneAgentBusyKey.value = ''
+      }
     }
   }
 
@@ -61,8 +85,10 @@ export function useUploaderPhones(accountsApi) {
     uploaderPhoneMatrix,
     uploaderPhoneLoading,
     uploaderPhoneSavingKey,
+    uploaderPhoneAgentBusyKey,
     uploaderPhoneError,
     loadUploaderPhones,
     saveUploaderPhoneAccount,
+    runUploaderPhoneAccountScript,
   }
 }

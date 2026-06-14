@@ -24,6 +24,7 @@ const props = defineProps({
   uploaderPhoneMatrix: { type: Object, default: () => ({ phones: [], platforms: [] }) },
   uploaderPhoneLoading: { type: Boolean, default: false },
   uploaderPhoneSavingKey: { type: String, default: '' },
+  uploaderPhoneAgentBusyKey: { type: String, default: '' },
   uploaderPhoneError: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
@@ -41,6 +42,7 @@ const props = defineProps({
   toggleUploadBackfillAll: { type: Function, required: true },
   registerSelectedUploadBackfill: { type: Function, required: true },
   saveUploaderPhoneAccount: { type: Function, required: true },
+  runUploaderPhoneAccountScript: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
@@ -488,6 +490,38 @@ function phoneCellSaving(phone, platform) {
   return props.uploaderPhoneSavingKey === `${phone?.id}:${platform}`
 }
 
+function phoneCellUnavailable(phone, platform) {
+  return selectedPhoneAccount(phone, platform)?.isAvailable === false
+}
+
+function phoneCellAgentBusy(phone, platform) {
+  const accountKey = selectedPhoneAccount(phone, platform)?.accountKey || ''
+  return props.uploaderPhoneAgentBusyKey.startsWith(`${platform}:`)
+    && (!accountKey || props.uploaderPhoneAgentBusyKey.endsWith(`:${accountKey}`))
+}
+
+function defaultNewAccountKey(phone, platform) {
+  const phoneDigits = String(phone?.phone || '').replace(/\D/g, '')
+  return `${platform}-${phoneDigits || phone?.id || 'new'}`
+}
+
+async function runPhoneCellAction(phone, platform) {
+  if (uploaderPhoneEditMode.value || phoneCellAgentBusy(phone, platform)) return
+  const account = selectedPhoneAccount(phone, platform)
+  if (account?.accountKey) {
+    const action = account.isAvailable === false ? 'renew' : 'open'
+    await props.runUploaderPhoneAccountScript(platform, action, account.accountKey)
+    return
+  }
+
+  const accountKey = window.prompt('请输入新账号 key', defaultNewAccountKey(phone, platform))
+  if (!accountKey?.trim()) return
+  const normalizedKey = accountKey.trim()
+  if (!window.confirm(`确认新建 ${platform} 账号：${normalizedKey}？`)) return
+  if (!window.confirm(`请再次确认：将执行 new，并使用 key ${normalizedKey}。`)) return
+  await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey)
+}
+
 async function savePhonePlatform(phone, platform, event) {
   const value = String(event?.target?.value || '').trim()
   const account = findPhoneAccountOption(platform, value)
@@ -854,7 +888,18 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             v-for="phone in phoneRows"
             :key="`${platform.type}-${phone.id}`"
             class="uploader-phone-select-cell"
-            :class="{ disabled: phoneCellDisabled(phone, platform.type) }"
+            :class="{
+              disabled: phoneCellDisabled(phone, platform.type),
+              unavailable: phoneCellUnavailable(phone, platform.type),
+              empty: !selectedPhoneAccount(phone, platform.type),
+              actionable: !uploaderPhoneEditMode,
+              busy: phoneCellAgentBusy(phone, platform.type),
+            }"
+            :role="uploaderPhoneEditMode ? undefined : 'button'"
+            :tabindex="uploaderPhoneEditMode ? undefined : 0"
+            @click="runPhoneCellAction(phone, platform.type)"
+            @keyup.enter="runPhoneCellAction(phone, platform.type)"
+            @keyup.space.prevent="runPhoneCellAction(phone, platform.type)"
           >
             <template v-if="uploaderPhoneEditMode">
               <div class="uploader-phone-edit-line">
@@ -919,8 +964,11 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               </div>
             </template>
             <template v-else>
+              <span v-if="phoneCellAgentBusy(phone, platform.type)" class="uploader-phone-running">
+                启动中
+              </span>
               <span
-                v-if="selectedPhoneAccount(phone, platform.type)"
+                v-else-if="selectedPhoneAccount(phone, platform.type)"
                 class="uploader-phone-account-card"
                 :class="{ 'no-name': !phoneAccountName(selectedPhoneAccount(phone, platform.type)) }"
               >
@@ -947,6 +995,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               >
                 {{ phoneNoteValue(phone, platform.type) }}
               </span>
+              <span v-else class="uploader-phone-account-empty">新建账号</span>
             </template>
           </span>
         </div>

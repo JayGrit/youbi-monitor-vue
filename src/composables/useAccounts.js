@@ -16,11 +16,11 @@ import { useUploadBackfill } from './accounts/useUploadBackfill'
 import { useUploaderPhones } from './accounts/useUploaderPhones'
 import { ref } from 'vue'
 
-export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
+export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIconUrls) {
   let accountTimer = null
 
   const platformAccounts = usePlatformAccounts(accountsApi, accountPlatforms)
-  const uploaderPhones = useUploaderPhones(accountsApi)
+  const uploaderPhones = useUploaderPhones(accountsApi, agentApi)
   const backupperDiskStatus = ref(null)
   const backupperDiskStatusText = ref('')
 
@@ -109,6 +109,7 @@ export function useAccounts(accountsApi, accountPlatforms, platformIconUrls) {
     clearAccountPolling,
     loadUploaderPhones: uploaderPhones.loadUploaderPhones,
     saveUploaderPhoneAccount: uploaderPhones.saveUploaderPhoneAccount,
+    runUploaderPhoneAccountScript: uploaderPhones.runUploaderPhoneAccountScript,
     startBilibiliQrLogin: row => platformAccounts.startPlatformLogin('bilibili', row),
     renewBilibiliAccount: platformAccounts.renewBilibiliAccount,
     refreshBilibiliRow: row => platformAccounts.refreshPlatformRow('bilibili', row),
