@@ -10,6 +10,7 @@ export function useAppShell({
   startAccountPolling,
   loadTasks,
   loadTaskTypes,
+  loadFailureLogs,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -34,6 +35,9 @@ export function useAppShell({
     if (page === 'accounts') {
       warmPlatformIcons()
       startAccountPolling()
+    }
+    if (page === 'failure-logs') {
+      loadFailureLogs()
     }
   }
 

@@ -31,6 +31,13 @@ const emit = defineEmits(['openPage'])
       >
         账号
       </button>
+      <button
+        type="button"
+        :class="{ active: activePage === 'failure-logs' && !flowPageOpen }"
+        @click="emit('openPage', 'failure-logs')"
+      >
+        失败日志
+      </button>
     </nav>
   </header>
 </template>

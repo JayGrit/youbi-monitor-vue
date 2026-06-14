@@ -258,6 +258,201 @@ h1 {
   display: none;
 }
 
+.failure-log-page {
+  display: grid;
+  gap: 14px;
+}
+
+.failure-log-header,
+.failure-log-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.failure-log-header {
+  justify-content: space-between;
+}
+
+.failure-log-header p {
+  margin-top: 5px;
+  color: #607086;
+  font-size: 13px;
+}
+
+.failure-log-header button,
+.failure-log-reset {
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.failure-log-header button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.failure-log-filters {
+  flex-wrap: wrap;
+}
+
+.failure-log-filters label {
+  display: grid;
+  gap: 5px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.failure-log-filters select {
+  min-width: 160px;
+  height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 0 32px 0 10px;
+}
+
+.failure-log-reset {
+  align-self: flex-end;
+}
+
+.failure-log-message {
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  padding: 28px;
+  text-align: center;
+}
+
+.failure-log-message.error {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.failure-log-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.failure-log-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.failure-log-table th,
+.failure-log-table td {
+  border-bottom: 1px solid #e8edf3;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.failure-log-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.failure-log-table th:nth-child(1) { width: 160px; }
+.failure-log-table th:nth-child(2) { width: 150px; }
+.failure-log-table th:nth-child(3) { width: 120px; }
+.failure-log-table th:nth-child(4) { width: 150px; }
+.failure-log-table th:nth-child(5) { width: 260px; }
+
+.failure-log-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.failure-log-time {
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.failure-log-stage {
+  display: inline-flex;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.failure-log-task {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.failure-log-task strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure-log-task span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure-log-table pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  color: #991b1b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .top-bar::before {
+    display: none;
+  }
+
+  .page-tabs {
+    width: 100%;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .page-tabs button {
+    font-size: 15px;
+  }
+
+  .failure-log-filters label,
+  .failure-log-filters select {
+    width: 100%;
+  }
+}
+
 .device-online {
   border-color: #b7e4c7;
   background: #f0fdf4;

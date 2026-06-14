@@ -10,11 +10,13 @@ import {
 import PageTabs from './components/PageTabs.vue'
 import { useAccounts } from './composables/useAccounts'
 import { useAppShell } from './composables/useAppShell'
+import { useFailureLogs } from './composables/useFailureLogs'
 import { useImageCache } from './composables/useImageCache'
 import { useSubmitter } from './composables/useSubmitter'
 import { useTaskFlow } from './composables/useTaskFlow'
 import { useTasks } from './composables/useTasks'
 import AccountsPage from './pages/AccountsPage.vue'
+import FailureLogsPage from './pages/FailureLogsPage.vue'
 import MonitorPage from './pages/MonitorPage.vue'
 import SubmitterAuthorsPage from './pages/SubmitterAuthorsPage.vue'
 import SubmitterPage from './pages/SubmitterPage.vue'
@@ -28,6 +30,23 @@ const submitterApi = createSubmitterApi(submitterApiBase, apiBase)
 const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
 const ACCOUNT_PLATFORMS = createAccountPlatforms(PLATFORM_ICON_URLS)
 const { brokenImageUrls, cacheImageUrl, revokeCachedUrls } = useImageCache()
+
+const {
+  rows: failureLogRows,
+  loading: failureLogLoading,
+  error: failureLogError,
+  loadedAt: failureLogLoadedAt,
+  stageFilter: failureLogStageFilter,
+  typeFilter: failureLogTypeFilter,
+  timeFilter: failureLogTimeFilter,
+  accountFilter: failureLogAccountFilter,
+  stageOptions: failureLogStageOptions,
+  typeOptions: failureLogTypeOptions,
+  accountOptions: failureLogAccountOptions,
+  filteredRows: filteredFailureLogRows,
+  loadFailureLogs,
+  resetFilters: resetFailureLogFilters,
+} = useFailureLogs(monitorApi)
 
 const {
   tasks,
@@ -281,6 +300,7 @@ const { activePage, openPage } = useAppShell({
   startAccountPolling,
   loadTasks,
   loadTaskTypes,
+  loadFailureLogs,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -533,6 +553,25 @@ function audioErrorMessage(code) {
       :platform-busy-action="platformBusyAction"
       :qr-image-url="qrImageUrl"
       :platform-error-text="platformErrorText"
+    />
+
+    <FailureLogsPage
+      v-else-if="activePage === 'failure-logs'"
+      v-model:stage-filter="failureLogStageFilter"
+      v-model:type-filter="failureLogTypeFilter"
+      v-model:time-filter="failureLogTimeFilter"
+      v-model:account-filter="failureLogAccountFilter"
+      :rows="failureLogRows"
+      :filtered-rows="filteredFailureLogRows"
+      :loading="failureLogLoading"
+      :error="failureLogError"
+      :loaded-at="failureLogLoadedAt"
+      :stage-options="failureLogStageOptions"
+      :type-options="failureLogTypeOptions"
+      :account-options="failureLogAccountOptions"
+      :load-failure-logs="loadFailureLogs"
+      :reset-filters="resetFailureLogFilters"
+      :open-task-flow="openTaskFlow"
     />
     </template>
 

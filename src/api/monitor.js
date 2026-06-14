@@ -16,6 +16,10 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/accounts/types`)
     },
 
+    loadFailureLogs() {
+      return requestJson(`${apiBase}/failure-logs`)
+    },
+
     markTaskReady(taskId) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/ready`, { method: 'POST' })
     },
