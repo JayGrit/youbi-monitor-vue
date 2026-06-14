@@ -9,23 +9,21 @@ export function useFailureLogs(monitorApi) {
   const stageFilter = ref('all')
   const typeFilter = ref('all')
   const timeFilter = ref('all')
-  const accountFilter = ref('all')
+  const platformFilter = ref([])
 
   const stageOptions = computed(() => uniqueOptions(rows.value.map(row => row.stage)))
   const typeOptions = computed(() => uniqueOptions(rows.value.map(row => row.type)))
-  const accountOptions = computed(() => uniqueOptions(
-    rows.value
-      .filter(row => row.stage === 'uploader')
-      .map(row => row.accountKey),
-  ))
+  const platformOptions = computed(() => uniqueOptions(rows.value.map(row => row.platform)))
 
-  const filteredRows = computed(() => rows.value.filter(row => {
-    if (stageFilter.value !== 'all' && row.stage !== stageFilter.value) return false
-    if (typeFilter.value !== 'all' && row.type !== typeFilter.value) return false
-    if (timeFilter.value !== 'all' && failureTimeGroup(row.failedAt) !== timeFilter.value) return false
-    if (accountFilter.value !== 'all' && row.accountKey !== accountFilter.value) return false
-    return true
-  }))
+  const filteredRows = computed(() => rows.value
+    .filter(row => {
+      if (stageFilter.value !== 'all' && row.stage !== stageFilter.value) return false
+      if (typeFilter.value !== 'all' && row.type !== typeFilter.value) return false
+      if (timeFilter.value !== 'all' && failureTimeGroup(row.failedAt) !== timeFilter.value) return false
+      if (platformFilter.value.length > 0 && !platformFilter.value.includes(row.platform)) return false
+      return true
+    })
+    .sort((left, right) => errorLength(left) - errorLength(right)))
 
   async function loadFailureLogs() {
     loading.value = true
@@ -46,13 +44,13 @@ export function useFailureLogs(monitorApi) {
     stageFilter.value = 'all'
     typeFilter.value = 'all'
     timeFilter.value = 'all'
-    accountFilter.value = 'all'
+    platformFilter.value = []
   }
 
   function normalizeFilters() {
     if (!stageOptions.value.includes(stageFilter.value)) stageFilter.value = 'all'
     if (!typeOptions.value.includes(typeFilter.value)) typeFilter.value = 'all'
-    if (!accountOptions.value.includes(accountFilter.value)) accountFilter.value = 'all'
+    platformFilter.value = platformFilter.value.filter(platform => platformOptions.value.includes(platform))
   }
 
   return {
@@ -63,14 +61,18 @@ export function useFailureLogs(monitorApi) {
     stageFilter,
     typeFilter,
     timeFilter,
-    accountFilter,
+    platformFilter,
     stageOptions,
     typeOptions,
-    accountOptions,
+    platformOptions,
     filteredRows,
     loadFailureLogs,
     resetFilters,
   }
+}
+
+function errorLength(row) {
+  return String(row?.errorMessage || '').length
 }
 
 function uniqueOptions(values) {

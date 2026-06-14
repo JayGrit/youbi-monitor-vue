@@ -39,10 +39,10 @@ const {
   stageFilter: failureLogStageFilter,
   typeFilter: failureLogTypeFilter,
   timeFilter: failureLogTimeFilter,
-  accountFilter: failureLogAccountFilter,
+  platformFilter: failureLogPlatformFilter,
   stageOptions: failureLogStageOptions,
   typeOptions: failureLogTypeOptions,
-  accountOptions: failureLogAccountOptions,
+  platformOptions: failureLogPlatformOptions,
   filteredRows: filteredFailureLogRows,
   loadFailureLogs,
   resetFilters: resetFailureLogFilters,
@@ -560,7 +560,7 @@ function audioErrorMessage(code) {
       v-model:stage-filter="failureLogStageFilter"
       v-model:type-filter="failureLogTypeFilter"
       v-model:time-filter="failureLogTimeFilter"
-      v-model:account-filter="failureLogAccountFilter"
+      v-model:platform-filter="failureLogPlatformFilter"
       :rows="failureLogRows"
       :filtered-rows="filteredFailureLogRows"
       :loading="failureLogLoading"
@@ -568,10 +568,12 @@ function audioErrorMessage(code) {
       :loaded-at="failureLogLoadedAt"
       :stage-options="failureLogStageOptions"
       :type-options="failureLogTypeOptions"
-      :account-options="failureLogAccountOptions"
+      :platform-options="failureLogPlatformOptions"
+      :platform-icon-urls="PLATFORM_ICON_URLS"
       :load-failure-logs="loadFailureLogs"
       :reset-filters="resetFailureLogFilters"
       :open-task-flow="openTaskFlow"
+      :copy-task-id="copyTaskId"
     />
     </template>
 
