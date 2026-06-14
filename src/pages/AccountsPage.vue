@@ -122,7 +122,9 @@ const phonePlatformAccounts = computed(() => {
   return groups
 })
 
-const phoneRows = computed(() => props.uploaderPhoneMatrix?.phones || [])
+const phoneRows = computed(() => (props.uploaderPhoneMatrix?.phones || []).filter(phone => {
+  return String(phone?.remark || '').trim() !== '默认占位'
+}))
 
 const accountRowsByPlatformKey = computed(() => {
   const rows = new Map()

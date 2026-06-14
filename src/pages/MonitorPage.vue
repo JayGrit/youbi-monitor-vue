@@ -423,10 +423,11 @@ function onlineDeviceNames(service) {
           <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
           <span class="task-type">{{ taskTypeText(task) }}</span>
           <span
+            v-if="minioStorageText(task)"
             class="task-minio-storage"
             :title="task.minioStorageUpdatedAt ? `更新于 ${formatDateTime(task.minioStorageUpdatedAt)}` : '等待 backuper 扫描'"
           >
-            MinIO {{ minioStorageText(task) }}
+            {{ minioStorageText(task) }}
           </span>
         </div>
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>

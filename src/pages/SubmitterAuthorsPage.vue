@@ -6,7 +6,6 @@ defineProps({
   submitterAuthorDeleting: { type: String, default: '' },
   autosaveSubmitterAuthorType: { type: Function, required: true },
   deleteSubmitterAuthor: { type: Function, required: true },
-  backToSubmitter: { type: Function, required: true },
 })
 
 function onResetCoverChange(row, autosave) {
@@ -30,15 +29,14 @@ function onCoverOrientationChange(row, orientation, autosave) {
 
 <template>
   <section class="submitter-author-page" aria-label="作者管理">
-    <header class="submitter-author-page-header">
-      <div>
-        <h1>作者管理</h1>
-      </div>
-      <button type="button" @click="backToSubmitter">返回素材</button>
-    </header>
-
     <section class="submitter-author-page-panel">
-      <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
+      <header class="submitter-author-panel-header">
+        <div>
+          <h1>作者管理</h1>
+          <span>共 {{ submitterAuthorTypeRows.length }} 位作者，修改后自动保存</span>
+        </div>
+        <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
+      </header>
       <div class="submitter-author-type-body">
         <table class="submitter-author-type-table">
           <thead>

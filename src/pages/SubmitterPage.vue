@@ -39,7 +39,6 @@ defineProps({
   createSubmitterVideo: { type: Function, required: true },
   importSubmitterAuthor: { type: Function, required: true },
   applySubmitterFilters: { type: Function, required: true },
-  openSubmitterAuthorTypes: { type: Function, required: true },
   resetSubmitterFilters: { type: Function, required: true },
   clearSubmitterBatchFocus: { type: Function, required: true },
   submitterVideoThumb: { type: Function, required: true },
@@ -193,7 +192,6 @@ const emit = defineEmits([
           </select>
         </label>
         <div class="submitter-filter-actions">
-          <button type="button" @click="openSubmitterAuthorTypes">作者管理</button>
           <button type="button" @click="resetSubmitterFilters">重置</button>
           <button v-if="submitterFocusedBatch" type="button" @click="clearSubmitterBatchFocus">查看全部</button>
         </div>

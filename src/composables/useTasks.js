@@ -467,20 +467,14 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   }
 
   function minioStorageText(task) {
-    const bytes = Number(task?.minioStorageBytes)
-    if (!Number.isFinite(bytes) || bytes <= 0) return '-'
-    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
-    let value = bytes
-    let index = 0
-    while (value >= 1024 && index < units.length - 1) {
-      value /= 1024
-      index += 1
-    }
-    const digits = value >= 100 || index === 0 ? 0 : value >= 10 ? 1 : 2
-    const size = `${value.toFixed(digits).replace(/\.0+$/, '')}${units[index]}`
     const objectCount = Number(task?.minioStorageObjectCount)
-    if (!Number.isFinite(objectCount) || objectCount <= 0) return size
-    return `${size} · ${objectCount} objects`
+    if (!Number.isFinite(objectCount) || objectCount <= 1) return ''
+    const bytes = Number(task?.minioStorageBytes)
+    if (!Number.isFinite(bytes) || bytes <= 0) return ''
+    const megabytes = bytes / (1024 ** 2)
+    const digits = megabytes >= 100 ? 0 : megabytes >= 10 ? 1 : 2
+    const size = megabytes.toFixed(digits).replace(/\.0+$/, '')
+    return `${size}MB(${Math.floor(objectCount)})`
   }
 
   function setTaskTypeFilter(value) {

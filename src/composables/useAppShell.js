@@ -17,7 +17,7 @@ export function useAppShell({
   submitterThumbUrls,
   revokeCachedUrls,
 }) {
-  const activePage = ref('monitor')
+  const activePage = ref('accounts')
   let monitorTimer = null
 
   function openPage(page) {
@@ -43,6 +43,7 @@ export function useAppShell({
 
   onMounted(() => {
     warmPlatformIcons()
+    startAccountPolling()
     loadTaskTypes()
     loadTasks()
     monitorTimer = window.setInterval(loadTasks, 2000)

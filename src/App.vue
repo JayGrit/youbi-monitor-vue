@@ -312,14 +312,6 @@ const { activePage, openPage } = useAppShell({
   revokeCachedUrls,
 })
 
-function openSubmitterAuthorPage() {
-  openPage('submitter-authors')
-}
-
-function backToSubmitter() {
-  openPage('submitter')
-}
-
 function logAudioEvent(eventName, asset, event) {
   const audio = event?.target
   const error = audio?.error
@@ -482,7 +474,6 @@ function audioErrorMessage(code) {
       :create-submitter-video="createSubmitterVideo"
       :import-submitter-author="importSubmitterAuthor"
       :apply-submitter-filters="applySubmitterFilters"
-      :open-submitter-author-types="openSubmitterAuthorPage"
       :reset-submitter-filters="resetSubmitterFilters"
       :clear-submitter-batch-focus="clearSubmitterBatchFocus"
       :submitter-video-thumb="submitterVideoThumb"
@@ -506,7 +497,6 @@ function audioErrorMessage(code) {
       :submitter-author-deleting="submitterAuthorDeleting"
       :autosave-submitter-author-type="autosaveSubmitterAuthorType"
       :delete-submitter-author="deleteSubmitterAuthor"
-      :back-to-submitter="backToSubmitter"
     />
 
     <AccountsPage
