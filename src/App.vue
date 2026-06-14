@@ -37,6 +37,8 @@ const {
   rows: failureLogRows,
   loading: failureLogLoading,
   error: failureLogError,
+  actionError: failureLogActionError,
+  actionBusyId: failureLogActionBusyId,
   loadedAt: failureLogLoadedAt,
   stageFilter: failureLogStageFilter,
   typeFilter: failureLogTypeFilter,
@@ -47,6 +49,7 @@ const {
   platformOptions: failureLogPlatformOptions,
   filteredRows: filteredFailureLogRows,
   loadFailureLogs,
+  markActualPublished: markFailureLogActualPublished,
   resetFilters: resetFailureLogFilters,
 } = useFailureLogs(monitorApi)
 
@@ -561,12 +564,15 @@ function audioErrorMessage(code) {
       :filtered-rows="filteredFailureLogRows"
       :loading="failureLogLoading"
       :error="failureLogError"
+      :action-error="failureLogActionError"
+      :action-busy-id="failureLogActionBusyId"
       :loaded-at="failureLogLoadedAt"
       :stage-options="failureLogStageOptions"
       :type-options="failureLogTypeOptions"
       :platform-options="failureLogPlatformOptions"
       :platform-icon-urls="PLATFORM_ICON_URLS"
       :load-failure-logs="loadFailureLogs"
+      :mark-actual-published="markFailureLogActualPublished"
       :reset-filters="resetFailureLogFilters"
       :open-task-flow="openTaskFlow"
       :copy-task-id="copyTaskId"

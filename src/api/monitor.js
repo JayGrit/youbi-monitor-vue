@@ -20,6 +20,12 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/failure-logs`)
     },
 
+    markFailureLogActualPublished(logId) {
+      return requestJson(`${apiBase}/failure-logs/${encodeURIComponent(logId)}/actual-published`, {
+        method: 'POST',
+      })
+    },
+
     markTaskReady(taskId) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/ready`, { method: 'POST' })
     },

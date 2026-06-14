@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { stageNameText } from '../domain/constants'
 import { formatDateTime } from '../utils/format'
 
@@ -7,6 +8,8 @@ const props = defineProps({
   filteredRows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  actionError: { type: String, default: '' },
+  actionBusyId: { type: String, default: '' },
   loadedAt: { type: String, default: '' },
   stageFilter: { type: String, default: 'all' },
   typeFilter: { type: String, default: 'all' },
@@ -17,10 +20,13 @@ const props = defineProps({
   platformOptions: { type: Array, default: () => [] },
   platformIconUrls: { type: Object, default: () => ({}) },
   loadFailureLogs: { type: Function, required: true },
+  markActualPublished: { type: Function, required: true },
   resetFilters: { type: Function, required: true },
   openTaskFlow: { type: Function, required: true },
   copyTaskId: { type: Function, required: true },
 })
+
+const actionsExpanded = ref(false)
 
 const emit = defineEmits([
   'update:stageFilter',
@@ -51,6 +57,10 @@ function togglePlatform(platform) {
 function openTask(row) {
   props.openTaskFlow({ taskId: row.taskId }, row.stage)
 }
+
+function canMarkActualPublished(row) {
+  return row.stage === 'uploader' && Boolean(row.platform)
+}
 </script>
 
 <template>
@@ -63,9 +73,14 @@ function openTask(row) {
           <span v-if="loadedAt"> · 加载于 {{ formatDateTime(loadedAt) }}</span>
         </p>
       </div>
-      <button type="button" :disabled="loading" @click="loadFailureLogs">
-        {{ loading ? '加载中' : '刷新' }}
-      </button>
+      <div class="failure-log-header-actions">
+        <button type="button" @click="actionsExpanded = !actionsExpanded">
+          {{ actionsExpanded ? '收起操作' : '展开操作' }}
+        </button>
+        <button type="button" :disabled="loading" @click="loadFailureLogs">
+          {{ loading ? '加载中' : '刷新' }}
+        </button>
+      </div>
     </div>
 
     <div class="failure-log-filters" aria-label="错误日志筛选">
@@ -114,6 +129,7 @@ function openTask(row) {
     </div>
 
     <div v-if="error" class="failure-log-message error">接口异常：{{ error }}</div>
+    <div v-else-if="actionError" class="failure-log-message error">操作失败：{{ actionError }}</div>
     <div v-else-if="loading && rows.length === 0" class="failure-log-message">正在加载错误日志</div>
     <div v-else-if="filteredRows.length === 0" class="failure-log-message">没有符合条件的错误日志</div>
 
@@ -127,6 +143,7 @@ function openTask(row) {
             <th>任务</th>
             <th>失败时间</th>
             <th>错误日志</th>
+            <th v-if="actionsExpanded" class="failure-log-action-column">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -160,6 +177,18 @@ function openTask(row) {
             </td>
             <td class="failure-log-time">{{ formatDateTime(row.failedAt) }}</td>
             <td><pre>{{ row.errorMessage || '未知错误' }}</pre></td>
+            <td v-if="actionsExpanded" class="failure-log-action-column">
+              <button
+                v-if="canMarkActualPublished(row)"
+                type="button"
+                class="failure-log-published-button"
+                :disabled="actionBusyId === row.id"
+                @click="markActualPublished(row)"
+              >
+                {{ actionBusyId === row.id ? '处理中' : '实际发布' }}
+              </button>
+              <span v-else>-</span>
+            </td>
           </tr>
         </tbody>
       </table>

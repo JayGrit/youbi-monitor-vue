@@ -295,6 +295,11 @@ h1 {
   cursor: pointer;
 }
 
+.failure-log-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .failure-log-header button:disabled {
   cursor: wait;
   opacity: 0.6;
@@ -441,6 +446,10 @@ h1 {
 .failure-log-table th:nth-child(4) { width: 280px; }
 .failure-log-table th:nth-child(5) { width: 160px; }
 
+.failure-log-action-column {
+  width: 110px;
+}
+
 .failure-log-table tbody tr:last-child td {
   border-bottom: 0;
 }
@@ -517,6 +526,22 @@ h1 {
   text-align: center;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.failure-log-published-button {
+  min-height: 32px;
+  border: 1px solid #16a34a;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #ffffff;
+  padding: 0 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.failure-log-published-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 @media (max-width: 720px) {

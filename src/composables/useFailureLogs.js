@@ -5,6 +5,8 @@ export function useFailureLogs(monitorApi) {
   const rows = ref([])
   const loading = ref(false)
   const error = ref('')
+  const actionError = ref('')
+  const actionBusyId = ref('')
   const loadedAt = ref('')
   const stageFilter = ref('all')
   const typeFilter = ref('all')
@@ -40,6 +42,25 @@ export function useFailureLogs(monitorApi) {
     }
   }
 
+  async function markActualPublished(row) {
+    if (!row?.id || row.stage !== 'uploader' || !row.platform) return false
+    if (!window.confirm(`确认 ${row.platform} 已实际发布？此操作会同步修复上传子任务和父任务状态。`)) {
+      return false
+    }
+    actionBusyId.value = row.id
+    actionError.value = ''
+    try {
+      await monitorApi.markFailureLogActualPublished(row.id)
+      await loadFailureLogs()
+      return true
+    } catch (err) {
+      actionError.value = err instanceof Error ? err.message : String(err)
+      return false
+    } finally {
+      actionBusyId.value = ''
+    }
+  }
+
   function resetFilters() {
     stageFilter.value = 'all'
     typeFilter.value = 'all'
@@ -57,6 +78,8 @@ export function useFailureLogs(monitorApi) {
     rows,
     loading,
     error,
+    actionError,
+    actionBusyId,
     loadedAt,
     stageFilter,
     typeFilter,
@@ -67,6 +90,7 @@ export function useFailureLogs(monitorApi) {
     platformOptions,
     filteredRows,
     loadFailureLogs,
+    markActualPublished,
     resetFilters,
   }
 }
