@@ -58,6 +58,44 @@ function platformAccountApi(apiBase, platform) {
   }
 }
 
+function genericPlatformAccountApi(apiBase, platform) {
+  const base = `${apiBase}/accounts/${platform}`
+  return {
+    refresh(accountKey) {
+      return requestJson(`${base}/${encodeURIComponent(accountKey)}`)
+    },
+    saveKey(accountKey, newAccountKey) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/key`, { newAccountKey })
+    },
+    setEnabled(accountKey, enabled) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/enabled`, { enabled })
+    },
+    setCooldown(accountKey, minSeconds, maxSeconds) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds })
+    },
+    setNextUploadAllowedAt(accountKey, nextUploadAllowedAt) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt })
+    },
+    setQuietTime(accountKey, startTime, endTime) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/quiet-time`, { startTime, endTime })
+    },
+    setDownloaderMaxStagedCount(accountKey, maxStagedCount) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/downloader-max-staged-count`, { maxStagedCount })
+    },
+    updateProfile(accountKey, displayName) {
+      return postJson(`${base}/${encodeURIComponent(accountKey)}/profile`, { displayName })
+    },
+    uploadAvatar(accountKey, file) {
+      const form = new FormData()
+      form.append('file', file)
+      return requestJson(`${base}/${encodeURIComponent(accountKey)}/avatar`, {
+        method: 'POST',
+        body: form,
+      })
+    },
+  }
+}
+
 export function createAccountsApi(apiBase) {
   return {
     overview() {
@@ -90,5 +128,7 @@ export function createAccountsApi(apiBase) {
     douyin: platformAccountApi(apiBase, 'douyin'),
     kuaishou: platformAccountApi(apiBase, 'kuaishou'),
     jinritoutiao: platformAccountApi(apiBase, 'jinritoutiao'),
+    x: genericPlatformAccountApi(apiBase, 'x'),
+    youtube: genericPlatformAccountApi(apiBase, 'youtube'),
   }
 }

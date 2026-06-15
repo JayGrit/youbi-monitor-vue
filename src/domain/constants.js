@@ -88,6 +88,8 @@ export const uploadPlatformText = {
   shipinhao: '视频号',
   kuaishou: '快手',
   jinritoutiao: '今日头条',
+  x: 'X',
+  youtube: 'YouTube',
 }
 
 export function createPlatformIconUrls(baseUrl) {
@@ -98,6 +100,8 @@ export function createPlatformIconUrls(baseUrl) {
     shipinhao: `${baseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
     kuaishou: `${baseUrl}platform-icons/kuaishou-official-appstore-512.png`,
     jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
+    x: `${baseUrl}platform-icons/x-official-appstore-512.jpg`,
+    youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.jpg`,
   }
 }
 
@@ -109,5 +113,7 @@ export function createAccountPlatforms(platformIconUrls) {
     { type: 'shipinhao', label: '视频号', iconUrl: platformIconUrls.shipinhao },
     { type: 'kuaishou', label: '快手', iconUrl: platformIconUrls.kuaishou },
     { type: 'jinritoutiao', label: '今日头条', iconUrl: platformIconUrls.jinritoutiao },
+    { type: 'x', label: 'X', iconUrl: platformIconUrls.x },
+    { type: 'youtube', label: 'YouTube', iconUrl: platformIconUrls.youtube },
   ]
 }

@@ -321,14 +321,10 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   function platformErrorText() {
-    return [
-      platformState.douyin.error.value,
-      platformState.xiaohongshu.error.value,
-      platformState.bilibili.error.value,
-      platformState.shipinhao.error.value,
-      platformState.kuaishou.error.value,
-      platformState.jinritoutiao.error.value,
-    ].filter(Boolean).join('；')
+    return ACCOUNT_PLATFORM_TYPES
+      .map(platform => platformState[platform].error.value)
+      .filter(Boolean)
+      .join('；')
   }
 
   function setPlatformError(platform, message) {

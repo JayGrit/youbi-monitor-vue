@@ -13,6 +13,8 @@ export const ACCOUNT_PLATFORM_TYPES = [
   'shipinhao',
   'kuaishou',
   'jinritoutiao',
+  'x',
+  'youtube',
 ]
 
 export const QR_LOGIN_PLATFORM_TYPES = ['bilibili', 'xiaohongshu', 'douyin']
