@@ -9,7 +9,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   actionError: { type: String, default: '' },
-  actionBusyId: { type: String, default: '' },
+  actionBusy: { type: Boolean, default: false },
   loadedAt: { type: String, default: '' },
   stageFilter: { type: String, default: 'all' },
   typeFilter: { type: String, default: 'all' },
@@ -19,14 +19,24 @@ const props = defineProps({
   typeOptions: { type: Array, default: () => [] },
   platformOptions: { type: Array, default: () => [] },
   platformIconUrls: { type: Object, default: () => ({}) },
+  selectedIds: { type: Array, default: () => [] },
+  selectedSet: { type: Object, required: true },
+  allSelected: { type: Boolean, default: false },
+  actualPublishedSelectedRows: { type: Array, default: () => [] },
+  retryUploadSelectedRows: { type: Array, default: () => [] },
   loadFailureLogs: { type: Function, required: true },
-  markActualPublished: { type: Function, required: true },
+  markSelectedActualPublished: { type: Function, required: true },
+  retrySelectedUploads: { type: Function, required: true },
+  toggleRow: { type: Function, required: true },
+  toggleAll: { type: Function, required: true },
+  clearSelection: { type: Function, required: true },
   resetFilters: { type: Function, required: true },
   openTaskFlow: { type: Function, required: true },
   copyTaskId: { type: Function, required: true },
 })
 
 const actionsExpanded = ref(false)
+const actionMode = ref('')
 
 const emit = defineEmits([
   'update:stageFilter',
@@ -61,6 +71,43 @@ function openTask(row) {
 function canMarkActualPublished(row) {
   return row.stage === 'uploader' && Boolean(row.platform)
 }
+
+function canRetryUpload(row) {
+  return canMarkActualPublished(row)
+}
+
+function openActionMode(mode) {
+  actionsExpanded.value = true
+  actionMode.value = mode
+}
+
+function closeActions() {
+  actionsExpanded.value = false
+  actionMode.value = ''
+  props.clearSelection()
+}
+
+function submitSelectedAction() {
+  if (actionMode.value === 'actual-published') {
+    props.markSelectedActualPublished()
+    return
+  }
+  if (actionMode.value === 'retry-upload') {
+    props.retrySelectedUploads()
+  }
+}
+
+function selectedActionCount() {
+  if (actionMode.value === 'actual-published') return props.actualPublishedSelectedRows.length
+  if (actionMode.value === 'retry-upload') return props.retryUploadSelectedRows.length
+  return 0
+}
+
+function actionModeText() {
+  if (actionMode.value === 'actual-published') return '实际发布'
+  if (actionMode.value === 'retry-upload') return '重试上传'
+  return '批量操作'
+}
 </script>
 
 <template>
@@ -74,8 +121,14 @@ function canMarkActualPublished(row) {
         </p>
       </div>
       <div class="failure-log-header-actions">
-        <button type="button" @click="actionsExpanded = !actionsExpanded">
-          {{ actionsExpanded ? '收起操作' : '展开操作' }}
+        <button type="button" :class="{ active: actionMode === 'actual-published' }" @click="openActionMode('actual-published')">
+          实际发布
+        </button>
+        <button type="button" :class="{ active: actionMode === 'retry-upload' }" @click="openActionMode('retry-upload')">
+          重试上传
+        </button>
+        <button v-if="actionsExpanded" type="button" @click="closeActions">
+          收起操作
         </button>
         <button type="button" :disabled="loading" @click="loadFailureLogs">
           {{ loading ? '加载中' : '刷新' }}
@@ -128,6 +181,32 @@ function canMarkActualPublished(row) {
       <button type="button" class="failure-log-reset" @click="resetFilters">重置筛选</button>
     </div>
 
+    <div v-if="actionsExpanded" class="failure-log-bulk-panel">
+      <div>
+        <strong>{{ actionModeText() }}</strong>
+        <p>
+          已选 {{ selectedIds.length }} 条，当前操作可执行 {{ selectedActionCount() }} 条。
+          只支持 Uploader 平台失败子任务。
+        </p>
+      </div>
+      <div class="failure-log-bulk-actions">
+        <button type="button" :disabled="filteredRows.length === 0 || actionBusy" @click="toggleAll">
+          {{ allSelected ? '取消全选' : '全选可操作' }}
+        </button>
+        <button type="button" :disabled="selectedIds.length === 0 || actionBusy" @click="clearSelection">
+          清空
+        </button>
+        <button
+          type="button"
+          class="primary"
+          :disabled="!actionMode || selectedActionCount() === 0 || actionBusy"
+          @click="submitSelectedAction"
+        >
+          {{ actionBusy ? '处理中' : `执行${actionModeText()} ${selectedActionCount()}` }}
+        </button>
+      </div>
+    </div>
+
     <div v-if="error" class="failure-log-message error">接口异常：{{ error }}</div>
     <div v-else-if="actionError" class="failure-log-message error">操作失败：{{ actionError }}</div>
     <div v-else-if="loading && rows.length === 0" class="failure-log-message">正在加载错误日志</div>
@@ -137,17 +216,28 @@ function canMarkActualPublished(row) {
       <table class="failure-log-table">
         <thead>
           <tr>
+            <th v-if="actionsExpanded" class="failure-log-select-column">选择</th>
             <th>阶段</th>
             <th>Type</th>
             <th>平台</th>
             <th>任务</th>
             <th>失败时间</th>
             <th>错误日志</th>
-            <th v-if="actionsExpanded" class="failure-log-action-column">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in filteredRows" :key="row.id">
+            <td v-if="actionsExpanded" class="failure-log-select-column">
+              <input
+                v-if="canMarkActualPublished(row) || canRetryUpload(row)"
+                type="checkbox"
+                :checked="selectedSet.has(row.id)"
+                :disabled="actionBusy"
+                :title="canMarkActualPublished(row) ? '选择上传失败子任务' : ''"
+                @change="toggleRow(row)"
+              >
+              <span v-else>-</span>
+            </td>
             <td><span class="failure-log-stage">{{ stageText(row) }}</span></td>
             <td>{{ row.type || '-' }}</td>
             <td>
@@ -177,18 +267,6 @@ function canMarkActualPublished(row) {
             </td>
             <td class="failure-log-time">{{ formatDateTime(row.failedAt) }}</td>
             <td><pre>{{ row.errorMessage || '未知错误' }}</pre></td>
-            <td v-if="actionsExpanded" class="failure-log-action-column">
-              <button
-                v-if="canMarkActualPublished(row)"
-                type="button"
-                class="failure-log-published-button"
-                :disabled="actionBusyId === row.id"
-                @click="markActualPublished(row)"
-              >
-                {{ actionBusyId === row.id ? '处理中' : '实际发布' }}
-              </button>
-              <span v-else>-</span>
-            </td>
           </tr>
         </tbody>
       </table>

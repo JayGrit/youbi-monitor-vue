@@ -38,7 +38,7 @@ const {
   loading: failureLogLoading,
   error: failureLogError,
   actionError: failureLogActionError,
-  actionBusyId: failureLogActionBusyId,
+  actionBusy: failureLogActionBusy,
   loadedAt: failureLogLoadedAt,
   stageFilter: failureLogStageFilter,
   typeFilter: failureLogTypeFilter,
@@ -48,8 +48,17 @@ const {
   typeOptions: failureLogTypeOptions,
   platformOptions: failureLogPlatformOptions,
   filteredRows: filteredFailureLogRows,
+  selectedIds: failureLogSelectedIds,
+  selectedSet: failureLogSelectedSet,
+  allSelected: failureLogAllSelected,
+  actualPublishedSelectedRows: failureLogActualPublishedSelectedRows,
+  retryUploadSelectedRows: failureLogRetryUploadSelectedRows,
   loadFailureLogs,
-  markActualPublished: markFailureLogActualPublished,
+  markSelectedActualPublished: markSelectedFailureLogActualPublished,
+  retrySelectedUploads: retrySelectedFailureLogUploads,
+  toggleRow: toggleFailureLogRow,
+  toggleAll: toggleFailureLogAll,
+  clearSelection: clearFailureLogSelection,
   resetFilters: resetFailureLogFilters,
 } = useFailureLogs(monitorApi)
 
@@ -565,14 +574,23 @@ function audioErrorMessage(code) {
       :loading="failureLogLoading"
       :error="failureLogError"
       :action-error="failureLogActionError"
-      :action-busy-id="failureLogActionBusyId"
+      :action-busy="failureLogActionBusy"
       :loaded-at="failureLogLoadedAt"
       :stage-options="failureLogStageOptions"
       :type-options="failureLogTypeOptions"
       :platform-options="failureLogPlatformOptions"
       :platform-icon-urls="PLATFORM_ICON_URLS"
+      :selected-ids="failureLogSelectedIds"
+      :selected-set="failureLogSelectedSet"
+      :all-selected="failureLogAllSelected"
+      :actual-published-selected-rows="failureLogActualPublishedSelectedRows"
+      :retry-upload-selected-rows="failureLogRetryUploadSelectedRows"
       :load-failure-logs="loadFailureLogs"
-      :mark-actual-published="markFailureLogActualPublished"
+      :mark-selected-actual-published="markSelectedFailureLogActualPublished"
+      :retry-selected-uploads="retrySelectedFailureLogUploads"
+      :toggle-row="toggleFailureLogRow"
+      :toggle-all="toggleFailureLogAll"
+      :clear-selection="clearFailureLogSelection"
       :reset-filters="resetFailureLogFilters"
       :open-task-flow="openTaskFlow"
       :copy-task-id="copyTaskId"

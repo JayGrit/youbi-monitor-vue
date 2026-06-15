@@ -7,11 +7,13 @@ export function useFailureLogs(monitorApi) {
   const error = ref('')
   const actionError = ref('')
   const actionBusyId = ref('')
+  const actionBusy = ref(false)
   const loadedAt = ref('')
   const stageFilter = ref('all')
   const typeFilter = ref('all')
   const timeFilter = ref('all')
   const platformFilter = ref([])
+  const selectedIds = ref([])
 
   const stageOptions = computed(() => uniqueOptions(rows.value.map(row => row.stage)))
   const typeOptions = computed(() => uniqueOptions(rows.value.map(row => row.type)))
@@ -26,6 +28,18 @@ export function useFailureLogs(monitorApi) {
       return true
     })
     .sort((left, right) => errorLength(left) - errorLength(right)))
+  const selectedSet = computed(() => new Set(selectedIds.value))
+  const selectableRows = computed(() => filteredRows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row)))
+  const allSelected = computed(() => {
+    const rows = selectableRows.value
+    return rows.length > 0 && rows.every(row => selectedSet.value.has(row.id))
+  })
+  const selectedRows = computed(() => {
+    const selected = selectedSet.value
+    return rows.value.filter(row => selected.has(row.id))
+  })
+  const actualPublishedSelectedRows = computed(() => selectedRows.value.filter(canMarkActualPublished))
+  const retryUploadSelectedRows = computed(() => selectedRows.value.filter(canRetryUpload))
 
   async function loadFailureLogs() {
     loading.value = true
@@ -35,6 +49,7 @@ export function useFailureLogs(monitorApi) {
       rows.value = Array.isArray(payload?.rows) ? payload.rows : []
       loadedAt.value = payload?.loadedAt || ''
       normalizeFilters()
+      normalizeSelection()
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
@@ -61,11 +76,82 @@ export function useFailureLogs(monitorApi) {
     }
   }
 
+  async function markSelectedActualPublished() {
+    const targets = actualPublishedSelectedRows.value
+    if (targets.length === 0 || actionBusy.value) return
+    if (!window.confirm(`确认选中的 ${targets.length} 个上传任务已实际发布？此操作会同步修复上传子任务和父任务状态。`)) {
+      return
+    }
+    actionBusy.value = true
+    actionError.value = ''
+    try {
+      for (const row of targets) {
+        actionBusyId.value = row.id
+        await monitorApi.markFailureLogActualPublished(row.id)
+      }
+      selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
+      await loadFailureLogs()
+    } catch (err) {
+      actionError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      actionBusy.value = false
+      actionBusyId.value = ''
+    }
+  }
+
+  async function retrySelectedUploads() {
+    const targets = retryUploadSelectedRows.value
+    if (targets.length === 0 || actionBusy.value) return
+    if (!window.confirm(`确认重试选中的 ${targets.length} 个上传任务？`)) {
+      return
+    }
+    actionBusy.value = true
+    actionError.value = ''
+    try {
+      const groups = new Map()
+      for (const row of targets) {
+        const uploadTarget = parseUploadLogId(row.id)
+        if (!uploadTarget) continue
+        groups.set(uploadTarget.platform, [...(groups.get(uploadTarget.platform) || []), uploadTarget.id])
+      }
+      for (const [platform, ids] of groups.entries()) {
+        await monitorApi.retryUploadSubmissions(platform, ids)
+      }
+      selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
+      await loadFailureLogs()
+    } catch (err) {
+      actionError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      actionBusy.value = false
+    }
+  }
+
+  function toggleRow(row) {
+    if (!row?.id || (!canRetryUpload(row) && !canMarkActualPublished(row))) return
+    const selected = selectedSet.value
+    selectedIds.value = selected.has(row.id)
+      ? selectedIds.value.filter(id => id !== row.id)
+      : [...selectedIds.value, row.id]
+  }
+
+  function toggleAll() {
+    if (allSelected.value) {
+      selectedIds.value = selectedIds.value.filter(id => !selectableRows.value.some(row => row.id === id))
+      return
+    }
+    selectedIds.value = [...new Set([...selectedIds.value, ...selectableRows.value.map(row => row.id)])]
+  }
+
+  function clearSelection() {
+    selectedIds.value = []
+  }
+
   function resetFilters() {
     stageFilter.value = 'all'
     typeFilter.value = 'all'
     timeFilter.value = 'all'
     platformFilter.value = []
+    selectedIds.value = []
   }
 
   function normalizeFilters() {
@@ -74,12 +160,18 @@ export function useFailureLogs(monitorApi) {
     platformFilter.value = platformFilter.value.filter(platform => platformOptions.value.includes(platform))
   }
 
+  function normalizeSelection() {
+    const validIds = new Set(rows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row)).map(row => row.id))
+    selectedIds.value = selectedIds.value.filter(id => validIds.has(id))
+  }
+
   return {
     rows,
     loading,
     error,
     actionError,
     actionBusyId,
+    actionBusy,
     loadedAt,
     stageFilter,
     typeFilter,
@@ -89,10 +181,37 @@ export function useFailureLogs(monitorApi) {
     typeOptions,
     platformOptions,
     filteredRows,
+    selectedIds,
+    selectedSet,
+    selectableRows,
+    allSelected,
+    actualPublishedSelectedRows,
+    retryUploadSelectedRows,
     loadFailureLogs,
     markActualPublished,
+    markSelectedActualPublished,
+    retrySelectedUploads,
+    toggleRow,
+    toggleAll,
+    clearSelection,
     resetFilters,
   }
+}
+
+function canMarkActualPublished(row) {
+  return row?.stage === 'uploader' && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
+}
+
+function canRetryUpload(row) {
+  return canMarkActualPublished(row)
+}
+
+function parseUploadLogId(logId) {
+  const parts = String(logId || '').split(':')
+  if (parts.length !== 3 || parts[0] !== 'uploader' || !parts[1]) return null
+  const id = Number(parts[2])
+  if (!Number.isSafeInteger(id) || id <= 0) return null
+  return { platform: parts[1], id }
 }
 
 function errorLength(row) {
