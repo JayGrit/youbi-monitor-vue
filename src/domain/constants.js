@@ -100,8 +100,8 @@ export function createPlatformIconUrls(baseUrl) {
     shipinhao: `${baseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
     kuaishou: `${baseUrl}platform-icons/kuaishou-official-appstore-512.png`,
     jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
-    x: `${baseUrl}platform-icons/x-official-appstore-512.jpg`,
-    youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.jpg`,
+    x: `${baseUrl}platform-icons/x-official-appstore-512.png`,
+    youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.png`,
   }
 }
 
