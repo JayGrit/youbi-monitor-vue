@@ -81,7 +81,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
-    saveAuthorType(author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation) {
+    saveAuthorType(author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos) {
       return postJson(`${apiBase}/submitter-author-types`, {
         author,
         type,
@@ -92,6 +92,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
         targetLanguage,
         resetCover,
         coverOrientation,
+        fetchNewVideos,
       })
     },
 

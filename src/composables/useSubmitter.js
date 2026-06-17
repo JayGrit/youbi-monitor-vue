@@ -351,6 +351,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           draftResetCover: resetCover,
           coverOrientation,
           draftCoverOrientation: coverOrientation,
+          fetchNewVideos: item?.fetchNewVideos === true,
+          draftFetchNewVideos: item?.fetchNewVideos === true,
           sourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           draftSourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           targetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
@@ -387,6 +389,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       && row.draftNeedSeparation === row.needSeparation
       && row.draftResetCover === row.resetCover
       && row.draftCoverOrientation === row.coverOrientation
+      && row.draftFetchNewVideos === row.fetchNewVideos
       && sourceLanguage === row.sourceLanguage
       && targetLanguage === row.targetLanguage
     ) return
@@ -398,7 +401,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const needSeparation = row.draftNeedSeparation !== false
       const resetCover = row.draftResetCover === true
       const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
-      const payload = await submitterApi.saveAuthorType(row.author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation)
+      const fetchNewVideos = row.draftFetchNewVideos === true
+      const payload = await submitterApi.saveAuthorType(row.author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos)
       row.type = String(payload?.type || type)
       row.draftType = row.type
       row.needSubtitle = payload?.needSubtitle !== false
@@ -411,6 +415,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       row.draftResetCover = row.resetCover
       row.coverOrientation = row.resetCover ? normalizeCoverOrientation(payload?.coverOrientation || payload?.cover_orientation || coverOrientation) : ''
       row.draftCoverOrientation = row.coverOrientation
+      row.fetchNewVideos = payload?.fetchNewVideos === true
+      row.draftFetchNewVideos = row.fetchNewVideos
       row.sourceLanguage = String(payload?.sourceLanguage || payload?.source_language || sourceLanguage)
       row.draftSourceLanguage = row.sourceLanguage
       row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)
