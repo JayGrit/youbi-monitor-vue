@@ -63,6 +63,10 @@ function demucsStage(flow) {
   return flow?.stages?.find(stage => stage.key === 'demucs') || null
 }
 
+function vocalsOnlyMedia(stage) {
+  return demucsAudioMedia(stage).filter(asset => asset.key === 'vocals')
+}
+
 function seekVocalsPlayback(ms) {
   demucsAudioPanel.value?.seekVocals(ms)
 }
@@ -120,11 +124,21 @@ function seekVocalsPlayback(ms) {
         />
 
         <DemucsAudioPanel
-          v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          v-if="selectedStage.key === 'demucs'"
           ref="demucsAudioPanel"
-          :media="demucsAudioMedia(demucsStage(selectedTaskFlow))"
+          :media="demucsAudioMedia(selectedStage)"
           :words="whisperWordTimestamps"
           :log-audio-event="logAudioEvent"
+          @vocals-playback="vocalsPlayback = $event"
+        />
+
+        <DemucsAudioPanel
+          v-else-if="selectedStage.key === 'whisper'"
+          ref="demucsAudioPanel"
+          :media="vocalsOnlyMedia(demucsStage(selectedTaskFlow))"
+          :words="whisperWordTimestamps"
+          :log-audio-event="logAudioEvent"
+          :show-bgm="false"
           @vocals-playback="vocalsPlayback = $event"
         />
 
@@ -169,7 +183,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <WhisperProcessingPanel
-          v-if="selectedStageKey === SPEECH_STAGE_KEY"
+          v-if="selectedStage.key === 'whisper'"
           :processing="whisperProcessing"
         />
 

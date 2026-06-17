@@ -48,6 +48,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return [
       ...nonSpeechStages.filter(stage => stage.key === 'downloader'),
       ...nonSpeechStages.filter(stage => stage.key === 'publisher'),
+      ...nonSpeechStages.filter(stage => stage.key === 'demucs' || stage.key === 'whisper'),
       {
         ...active,
         key: SPEECH_STAGE_KEY,
@@ -92,7 +93,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     if (!task?.taskId) return
     clearUploaderDiagnosticsPolling()
     flowPageOpen.value = true
-    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) || stageKey === 'demucs' ? SPEECH_STAGE_KEY : stageKey
+    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
     selectedTaskFlow.value = null
     cancelSpeechEdit()
     await loadTaskFlow(task.taskId)

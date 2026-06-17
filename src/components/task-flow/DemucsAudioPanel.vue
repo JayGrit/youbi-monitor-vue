@@ -5,6 +5,7 @@ const props = defineProps({
   media: { type: Array, default: () => [] },
   words: { type: Array, default: () => [] },
   logAudioEvent: { type: Function, required: true },
+  showBgm: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['vocals-playback'])
@@ -26,7 +27,7 @@ let animationFrame = 0
 const audioItems = computed(() => [
   { key: 'vocals', title: '人声音频', shortTitle: '人声', asset: findAsset('vocals') },
   { key: 'bgm', title: '背景声音频', shortTitle: '背景声', asset: findAsset('bgm') },
-])
+].filter(item => props.showBgm || item.key !== 'bgm'))
 
 watch(
   () => props.media.map(asset => asset.url).join('|'),
@@ -162,9 +163,11 @@ function drawCanvas(canvas) {
   if (!ctx) return
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
   ctx.clearRect(0, 0, width, height)
-  drawTopWave(ctx, waveformByUrl.value[findAsset('bgm')?.url]?.volumes || [], width, height, '#16a34a', 0.22, 0.9)
+  if (props.showBgm) {
+    drawTopWave(ctx, waveformByUrl.value[findAsset('bgm')?.url]?.volumes || [], width, height, '#16a34a', 0.22, 0.9)
+    drawPlayhead(ctx, playbackByKey.value.bgm, width, height, '#16a34a')
+  }
   drawTopWave(ctx, waveformByUrl.value[findAsset('vocals')?.url]?.volumes || [], width, height, '#111827', 0.18, 0.72)
-  drawPlayhead(ctx, playbackByKey.value.bgm, width, height, '#16a34a')
   drawPlayhead(ctx, playbackByKey.value.vocals, width, height, '#111827')
 }
 
@@ -285,7 +288,7 @@ defineExpose({
     <div class="demucs-audio-head">
       <div class="demucs-waveform-legend">
         <span class="demucs-legend-item vocals">人声</span>
-        <span class="demucs-legend-item bgm">背景声</span>
+        <span v-if="showBgm" class="demucs-legend-item bgm">背景声</span>
       </div>
     </div>
 

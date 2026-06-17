@@ -1,7 +1,7 @@
 export const SUBMITTER_PAGE_SIZE = 50
 export const MONITOR_PAGE_SIZE = 20
 export const SPEECH_STAGE_KEY = 'speech'
-export const SPEECH_STAGE_KEYS = ['whisper', 'translator', 'speaker']
+export const SPEECH_STAGE_KEYS = ['translator', 'speaker']
 
 export const SUBMITTER_FIXED_FIELDS = new Set(['thumbnail', 'title', 'duration', 'view_count'])
 
@@ -75,7 +75,7 @@ export const stageNameText = {
   whisper: 'Whisper',
   translator: 'Translator',
   speaker: 'Speaker',
-  speech: 'Demucs & Whisper & Translator & Speaker',
+  speech: 'Translator & Speaker',
   combiner: 'Combiner',
   publisher: 'Publisher',
   uploader: 'Uploader',
