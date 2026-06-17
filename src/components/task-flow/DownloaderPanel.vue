@@ -13,6 +13,9 @@ const props = defineProps({
 
 const videoInfo = computed(() => props.flow?.videoInfo || {})
 const subtitleManifest = ref([])
+const subtitleModal = ref(null)
+const subtitleModalLoading = ref(false)
+const subtitleModalError = ref('')
 
 watch(
   () => videoInfo.value.source_subtitles_url,
@@ -47,14 +50,6 @@ const taskRows = computed(() => {
   return rows.sort((left, right) => taskOrder(left.kind) - taskOrder(right.kind))
 })
 
-const audioAsset = computed(() => {
-  const url = normalizeResourceUrl(videoInfo.value.audio_source_url || '')
-  if (url) {
-    return { name: 'audio_source_url', kind: 'audio', url }
-  }
-  return props.media.find(item => item.kind === 'audio' && /audio_source|source_audio|audio/i.test(assetText(item))) || null
-})
-
 const videoAsset = computed(() => {
   const url = normalizeResourceUrl(videoInfo.value.video_source_url || '')
   if (url) {
@@ -65,12 +60,14 @@ const videoAsset = computed(() => {
 
 const subtitleLinks = computed(() => {
   const links = []
-  addSubtitleLink(links, 'SRT', videoInfo.value.source_subtitle_srt_url)
-  addSubtitleLink(links, 'TXT', videoInfo.value.source_subtitle_txt_url)
+  addSubtitleLink(links, '源语言', 'srt', videoInfo.value.source_subtitle_srt_url)
+  addSubtitleLink(links, '源语言', 'txt', videoInfo.value.source_subtitle_txt_url)
+  addSubtitleLink(links, '中文', 'srt', videoInfo.value.chinese_subtitle_srt_url || videoInfo.value.zh_hans_subtitle_srt_url)
+  addSubtitleLink(links, '中文', 'txt', videoInfo.value.chinese_subtitle_txt_url || videoInfo.value.zh_hans_subtitle_txt_url)
   for (const row of subtitleManifest.value) {
-    const label = [row.kind, row.role, row.language].filter(Boolean).join(' / ') || '字幕'
-    addSubtitleLink(links, `${label} SRT`, row.srt_url)
-    addSubtitleLink(links, `${label} TXT`, row.txt_url)
+    const group = subtitleGroup(row)
+    addSubtitleLink(links, group, 'srt', row.srt_url)
+    addSubtitleLink(links, group, 'txt', row.txt_url)
   }
   const seen = new Set()
   return links.filter(item => {
@@ -78,6 +75,18 @@ const subtitleLinks = computed(() => {
     seen.add(item.url)
     return true
   })
+})
+
+const subtitleRows = computed(() => {
+  const groups = new Map()
+  for (const item of subtitleLinks.value) {
+    if (!groups.has(item.group)) groups.set(item.group, [])
+    groups.get(item.group).push(item)
+  }
+  const priority = { 源语言: 1, 中文: 2 }
+  return [...groups.entries()]
+    .map(([group, links]) => ({ group, links: links.sort((a, b) => a.format.localeCompare(b.format)) }))
+    .sort((a, b) => (priority[a.group] || 99) - (priority[b.group] || 99) || a.group.localeCompare(b.group))
 })
 
 const tagList = computed(() => {
@@ -89,9 +98,37 @@ const tagList = computed(() => {
   }
 })
 
-function addSubtitleLink(links, label, value) {
+function addSubtitleLink(links, group, format, value) {
   const url = normalizeResourceUrl(value || '')
-  if (url) links.push({ label, url })
+  if (url) links.push({ group, format, label: format, url })
+}
+
+function subtitleGroup(row) {
+  const text = [row?.kind, row?.role, row?.language].filter(Boolean).join(' ').toLowerCase()
+  if (/zh|chinese|中文|hans/.test(text)) return '中文'
+  return '源语言'
+}
+
+async function openSubtitle(item) {
+  subtitleModal.value = { title: `${item.group} ${item.format}`, text: '' }
+  subtitleModalLoading.value = true
+  subtitleModalError.value = ''
+  try {
+    const response = await fetch(item.url)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const text = await response.text()
+    subtitleModal.value = { title: `${item.group} ${item.format}`, text }
+  } catch (error) {
+    subtitleModalError.value = error?.message || '字幕读取失败'
+  } finally {
+    subtitleModalLoading.value = false
+  }
+}
+
+function closeSubtitleModal() {
+  subtitleModal.value = null
+  subtitleModalLoading.value = false
+  subtitleModalError.value = ''
 }
 
 function taskOrder(kind) {
@@ -137,11 +174,19 @@ function assetText(asset) {
   <div class="downloader-panel">
     <section class="flow-section downloader-info">
       <h4>视频信息</h4>
-      <div class="downloader-info-layout">
-        <a v-if="coverUrl" class="downloader-cover" :href="coverUrl" target="_blank" rel="noreferrer">
+        <div class="downloader-info-layout">
+        <video
+          v-if="videoAsset?.url"
+          class="downloader-source-video"
+          :src="videoAsset.url"
+          :poster="coverUrl || undefined"
+          controls
+          preload="metadata"
+        ></video>
+        <div v-else-if="coverUrl" class="downloader-cover">
           <img :src="coverUrl" alt="" />
-        </a>
-        <div v-else class="downloader-cover downloader-cover-empty">无封面</div>
+        </div>
+        <div v-else class="downloader-cover downloader-cover-empty">无视频</div>
 
         <div class="downloader-info-main">
           <h3>{{ videoInfo.title || flow?.task?.title || flow?.task?.id || '-' }}</h3>
@@ -158,10 +203,13 @@ function assetText(asset) {
               <dt>字幕文本</dt>
               <dd>
                 <span v-if="!subtitleLinks.length">-</span>
-                <span v-else class="downloader-link-list">
-                  <a v-for="item in subtitleLinks" :key="item.url" :href="item.url" target="_blank" rel="noreferrer">
-                    {{ item.label }}
-                  </a>
+                <span v-else class="downloader-subtitle-rows">
+                  <span v-for="row in subtitleRows" :key="row.group" class="downloader-subtitle-row">
+                    <span>{{ row.group }}</span>
+                    <button v-for="item in row.links" :key="item.url" type="button" @click="openSubtitle(item)">
+                      {{ item.format }}
+                    </button>
+                  </span>
                 </span>
               </dd>
             </div>
@@ -169,7 +217,7 @@ function assetText(asset) {
               <dt>简介</dt>
               <dd>{{ videoInfo.source_description || '-' }}</dd>
             </div>
-            <div>
+            <div class="downloader-tags-field">
               <dt>Tags</dt>
               <dd>
                 <span v-if="!tagList.length">-</span>
@@ -201,31 +249,18 @@ function assetText(asset) {
           <pre v-if="row.error_message" class="downloader-task-error">{{ row.error_message }}</pre>
         </article>
       </div>
-      <div v-if="audioAsset?.url" class="downloader-audio">
-        <div class="media-title">
-          <strong>源音频</strong>
-          <a :href="audioAsset.url" target="_blank" rel="noreferrer">MinIO</a>
-        </div>
-        <audio
-          :src="audioAsset.url"
-          controls
-          preload="none"
-          @loadstart="event => logAudioEvent('loadstart', audioAsset, event)"
-          @play="event => logAudioEvent('play', audioAsset, event)"
-          @playing="event => logAudioEvent('playing', audioAsset, event)"
-          @waiting="event => logAudioEvent('waiting', audioAsset, event)"
-          @error="event => logAudioEvent('error', audioAsset, event)"
-        ></audio>
-      </div>
     </section>
 
-    <section class="flow-section downloader-video-section">
-      <h4>视频</h4>
-      <article v-if="videoAsset?.url" class="downloader-video">
-        <video :src="videoAsset.url" controls preload="metadata"></video>
-        <a :href="videoAsset.url" target="_blank" rel="noreferrer">MinIO</a>
-      </article>
-      <p v-else class="flow-muted">暂无源视频文件。</p>
-    </section>
+    <div v-if="subtitleModal" class="flow-modal-backdrop" @click.self="closeSubtitleModal">
+      <section class="flow-modal downloader-subtitle-modal">
+        <header>
+          <h4>{{ subtitleModal.title }}</h4>
+          <button type="button" @click="closeSubtitleModal">关闭</button>
+        </header>
+        <p v-if="subtitleModalLoading" class="flow-muted">Loading</p>
+        <p v-else-if="subtitleModalError" class="flow-error">{{ subtitleModalError }}</p>
+        <pre v-else>{{ subtitleModal.text || '-' }}</pre>
+      </section>
+    </div>
   </div>
 </template>

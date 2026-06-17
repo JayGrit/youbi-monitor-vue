@@ -2765,6 +2765,16 @@ h1 {
   object-fit: cover;
 }
 
+.downloader-source-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #0f172a;
+  object-fit: contain;
+}
+
 .downloader-cover-empty {
   display: grid;
   aspect-ratio: 16 / 9;
@@ -2800,6 +2810,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.downloader-tags-field {
+  grid-column: 1 / -1;
+}
+
 .downloader-meta-list dt {
   margin-bottom: 4px;
   color: #64748b;
@@ -2821,6 +2835,45 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.downloader-subtitle-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.downloader-subtitle-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.downloader-subtitle-row > span {
+  width: 44px;
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.downloader-subtitle-row button {
+  min-height: 24px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.downloader-subtitle-row button:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
 }
 
 .downloader-link-list a {
@@ -2976,6 +3029,67 @@ h1 {
 .downloader-video a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.flow-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  background: rgba(15, 23, 42, 0.48);
+  padding: 18px;
+}
+
+.flow-modal {
+  width: min(920px, 100%);
+  max-height: min(760px, calc(100vh - 36px));
+  overflow: hidden;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.24);
+}
+
+.flow-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 14px;
+}
+
+.flow-modal header h4 {
+  margin: 0;
+  color: #172033;
+  font-size: 15px;
+}
+
+.flow-modal header button {
+  min-height: 32px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.downloader-subtitle-modal pre {
+  max-height: calc(min(760px, 100vh - 36px) - 58px);
+  overflow: auto;
+  margin: 0;
+  background: #f8fafc;
+  color: #172033;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 14px;
+  white-space: pre-wrap;
 }
 
 .upload-submission-grid {
