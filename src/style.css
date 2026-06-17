@@ -4800,6 +4800,19 @@ a.submitter-cell:hover {
   font-size: 12px;
 }
 
+.submitter-author-edit {
+  min-height: 34px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  padding: 0 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
 .submitter-author-page-panel {
   overflow: hidden;
 }
@@ -4811,8 +4824,12 @@ a.submitter-cell:hover {
 
 .submitter-author-type-table {
   width: 100%;
-  min-width: 1060px;
+  min-width: 920px;
   border-collapse: collapse;
+}
+
+.submitter-author-type-table.editing {
+  min-width: 1060px;
 }
 
 .submitter-author-type-table th,
@@ -4836,6 +4853,12 @@ a.submitter-cell:hover {
 
 .submitter-author-type-table th:first-child,
 .submitter-author-type-table td:first-child {
+  width: 112px;
+  min-width: 112px;
+}
+
+.submitter-author-type-table th:nth-child(2),
+.submitter-author-type-table td:nth-child(2) {
   min-width: 150px;
   text-align: left;
   font-weight: 680;
@@ -4861,8 +4884,28 @@ a.submitter-cell:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   white-space: nowrap;
+}
+
+.submitter-author-type-badge {
+  min-height: 34px;
+  border-radius: 0;
+}
+
+.submitter-author-bool {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.submitter-author-language-cell {
+  width: 92px;
 }
 
 .submitter-author-type-table button {

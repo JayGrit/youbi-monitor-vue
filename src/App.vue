@@ -615,7 +615,6 @@ function audioErrorMessage(code) {
       :whisper-word-timestamps="whisperWordTimestamps"
       :whisper-processing="whisperProcessing"
       :flow-task-title="flowTaskTitle"
-      :flow-duration-seconds="flowDurationSeconds"
       :refresh-task-flow="refreshTaskFlow"
       :load-selected-uploader-diagnostics="loadSelectedUploaderDiagnostics"
       :close-task-flow="closeTaskFlow"

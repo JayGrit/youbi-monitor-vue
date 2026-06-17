@@ -9,7 +9,6 @@ import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
-import { formatDuration } from '../utils/format'
 import { ref } from 'vue'
 
 defineProps({
@@ -29,7 +28,6 @@ defineProps({
   whisperWordTimestamps: { type: Array, default: () => [] },
   whisperProcessing: { type: Object, default: null },
   flowTaskTitle: { type: Function, required: true },
-  flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
   loadSelectedUploaderDiagnostics: { type: Function, required: true },
   closeTaskFlow: { type: Function, required: true },
@@ -76,7 +74,6 @@ function seekVocalsPlayback(ms) {
       :selected-task-flow="selectedTaskFlow"
       :flow-loading="flowLoading"
       :flow-task-title="flowTaskTitle"
-      :flow-duration-seconds="flowDurationSeconds"
       :refresh-task-flow="refreshTaskFlow"
       :close-task-flow="closeTaskFlow"
     />
@@ -92,14 +89,6 @@ function seekVocalsPlayback(ms) {
       />
 
       <section v-if="selectedStage" class="flow-stage">
-        <div class="flow-stage-head">
-          <div>
-            <p>
-              耗时 {{ formatDuration(selectedStage.elapsedSeconds) }}
-            </p>
-          </div>
-        </div>
-
         <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
 
         <UploadSubmissionGrid

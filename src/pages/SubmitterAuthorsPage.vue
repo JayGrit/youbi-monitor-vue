@@ -1,4 +1,6 @@
 <script setup>
+import { ref } from 'vue'
+
 defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
   submitterAuthorTypeRows: { type: Array, default: () => [] },
@@ -7,6 +9,8 @@ defineProps({
   autosaveSubmitterAuthorType: { type: Function, required: true },
   deleteSubmitterAuthor: { type: Function, required: true },
 })
+
+const editMode = ref(false)
 
 function onResetCoverChange(row, autosave) {
   if (!row.draftResetCover) {
@@ -25,6 +29,10 @@ function onCoverOrientationChange(row, orientation, autosave) {
   }
   autosave(row)
 }
+
+function boolMark(value) {
+  return value ? '✔' : '✘'
+}
 </script>
 
 <template>
@@ -33,35 +41,38 @@ function onCoverOrientationChange(row, orientation, autosave) {
       <header class="submitter-author-panel-header">
         <div>
           <h1>作者管理</h1>
-          <span>共 {{ submitterAuthorTypeRows.length }} 位作者，修改后自动保存</span>
+          <span>共 {{ submitterAuthorTypeRows.length }} 位作者</span>
         </div>
+        <button type="button" class="submitter-author-edit" @click="editMode = !editMode">
+          {{ editMode ? '完成' : '编辑' }}
+        </button>
         <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
       </header>
       <div class="submitter-author-type-body">
-        <table class="submitter-author-type-table">
+        <table class="submitter-author-type-table" :class="{ editing: editMode }">
           <thead>
             <tr>
-              <th>作者</th>
               <th>Type</th>
+              <th>作者</th>
               <th>字幕</th>
               <th>配音</th>
               <th>分离</th>
               <th>重制封面</th>
               <th>横向封面</th>
               <th>竖向封面</th>
-              <th>原语言</th>
-              <th>目标语言</th>
-              <th>操作</th>
+              <th v-if="editMode">原语言</th>
+              <th v-if="editMode">目标语言</th>
+              <th v-if="editMode">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td colspan="11" class="submitter-empty">暂无作者</td>
+              <td :colspan="editMode ? 11 : 8" class="submitter-empty">暂无作者</td>
             </tr>
             <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
-              <td>{{ row.author }}</td>
               <td>
                 <input
+                  v-if="editMode"
                   v-model="row.draftType"
                   type="text"
                   placeholder="投稿 type"
@@ -69,74 +80,76 @@ function onCoverOrientationChange(row, orientation, autosave) {
                   @change="autosaveSubmitterAuthorType(row)"
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
+                <strong v-else class="account-type-cell submitter-author-type-badge">{{ row.draftType || '-' }}</strong>
               </td>
+              <td>{{ row.author }}</td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftNeedSubtitle"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="row.draftNeedDubbing = row.draftNeedSubtitle && row.draftNeedDubbing; autosaveSubmitterAuthorType(row)"
                   />
-                  <span>{{ row.draftNeedSubtitle ? '需要' : '跳过' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedSubtitle) }}</span>
               </td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftNeedDubbing"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author || !row.draftNeedSubtitle"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
-                  <span>{{ row.draftNeedDubbing ? '需要' : '原声' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedDubbing) }}</span>
               </td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftNeedSeparation"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
-                  <span>{{ row.draftNeedSeparation ? '需要' : '跳过' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedSeparation) }}</span>
               </td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftResetCover"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="onResetCoverChange(row, autosaveSubmitterAuthorType)"
                   />
-                  <span>{{ row.draftResetCover ? '重制' : '保留' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftResetCover) }}</span>
               </td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     :checked="row.draftCoverOrientation === 'horizontal'"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
                     @change="onCoverOrientationChange(row, 'horizontal', autosaveSubmitterAuthorType)"
                   />
-                  <span>{{ row.draftCoverOrientation === 'horizontal' ? '选中' : '未选' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftCoverOrientation === 'horizontal') }}</span>
               </td>
               <td>
-                <label class="submitter-author-type-check">
+                <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     :checked="row.draftCoverOrientation === 'vertical'"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
                     @change="onCoverOrientationChange(row, 'vertical', autosaveSubmitterAuthorType)"
                   />
-                  <span>{{ row.draftCoverOrientation === 'vertical' ? '选中' : '未选' }}</span>
                 </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftCoverOrientation === 'vertical') }}</span>
               </td>
-              <td>
+              <td v-if="editMode" class="submitter-author-language-cell">
                 <input
                   v-model="row.draftSourceLanguage"
                   type="text"
@@ -146,7 +159,7 @@ function onCoverOrientationChange(row, orientation, autosave) {
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
               </td>
-              <td>
+              <td v-if="editMode" class="submitter-author-language-cell">
                 <input
                   v-model="row.draftTargetLanguage"
                   type="text"
@@ -156,7 +169,7 @@ function onCoverOrientationChange(row, orientation, autosave) {
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
               </td>
-              <td>
+              <td v-if="editMode">
                 <button
                   type="button"
                   class="submitter-author-delete"

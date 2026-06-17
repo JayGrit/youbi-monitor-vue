@@ -1,12 +1,10 @@
 <script setup>
 import { statusText } from '../../domain/constants'
-import { formatDuration } from '../../utils/format'
 
 defineProps({
   selectedTaskFlow: { type: Object, default: null },
   flowLoading: { type: Boolean, default: false },
   flowTaskTitle: { type: Function, required: true },
-  flowDurationSeconds: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
   closeTaskFlow: { type: Function, required: true },
 })
@@ -23,9 +21,6 @@ defineProps({
         </template>
         <template v-if="selectedTaskFlow?.task?.current_stage">
           · current {{ selectedTaskFlow.task.current_stage }}
-        </template>
-        <template v-if="flowDurationSeconds(selectedTaskFlow) !== null">
-          · {{ formatDuration(flowDurationSeconds(selectedTaskFlow)) }}
         </template>
       </p>
     </div>
