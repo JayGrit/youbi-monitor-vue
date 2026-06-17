@@ -91,6 +91,13 @@ function seekVocalsPlayback(ms) {
       <section v-if="selectedStage" class="flow-stage">
         <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
 
+        <StageMediaGrid
+          v-if="selectedStage.key === 'uploader' && stageMedia(selectedStage).length"
+          :media="stageMedia(selectedStage)"
+          :log-audio-event="logAudioEvent"
+          compact
+        />
+
         <UploadSubmissionGrid
           v-if="selectedStage.key === 'uploader' && uploadSubmissionRows(selectedStage).length"
           :rows="uploadSubmissionRows(selectedStage)"
@@ -131,7 +138,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && selectedStage.key !== 'publisher' && stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />

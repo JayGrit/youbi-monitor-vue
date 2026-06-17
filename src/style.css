@@ -3396,6 +3396,26 @@ h1 {
   gap: 12px;
 }
 
+.media-preview-compact {
+  max-width: 520px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.media-preview-compact .media-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.media-preview-compact .media-item-video {
+  grid-column: auto;
+}
+
+.media-preview-compact .media-item video,
+.media-preview-compact .media-item img {
+  max-height: 220px;
+  border-radius: 8px;
+}
+
 .media-item {
   min-width: 0;
   border: 1px solid #e2e8f0;

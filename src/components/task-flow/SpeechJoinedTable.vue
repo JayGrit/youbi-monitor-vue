@@ -400,17 +400,6 @@ onBeforeUnmount(() => {
           Translator 分块
         </button>
       </div>
-      <label>
-        间隔线阈值
-        <input
-          v-model="gapThresholdText"
-          type="text"
-          inputmode="decimal"
-          placeholder="0.5s"
-          aria-label="行间时间戳间隔阈值"
-        />
-      </label>
-      <span class="speech-gap-count">{{ gapLineCount }} 条线</span>
     </div>
     <div class="raw-table-scroll">
       <table class="speech-table">

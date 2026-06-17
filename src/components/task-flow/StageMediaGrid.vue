@@ -4,6 +4,7 @@ import { computed } from 'vue'
 const props = defineProps({
   media: { type: Array, default: () => [] },
   logAudioEvent: { type: Function, required: true },
+  compact: { type: Boolean, default: false },
 })
 
 const visibleMedia = computed(() => props.media.filter(asset => !isCoverImage(asset)))
@@ -21,7 +22,7 @@ function isCoverImage(asset) {
 </script>
 
 <template>
-  <div class="flow-section">
+  <div :class="['flow-section', { 'media-preview-compact': compact }]">
     <h4>Media Preview</h4>
     <div class="media-grid">
       <article

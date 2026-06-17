@@ -287,10 +287,6 @@ defineExpose({
         <span class="demucs-legend-item vocals">人声</span>
         <span class="demucs-legend-item bgm">背景声</span>
       </div>
-      <div class="demucs-audio-links">
-        <a v-if="findAsset('vocals')" :href="findAsset('vocals').url" target="_blank" rel="noreferrer">打开人声</a>
-        <a v-if="findAsset('bgm')" :href="findAsset('bgm').url" target="_blank" rel="noreferrer">打开背景声</a>
-      </div>
     </div>
 
     <canvas class="demucs-waveform" :ref="setCanvasRef"></canvas>

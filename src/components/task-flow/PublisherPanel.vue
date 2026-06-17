@@ -49,6 +49,10 @@ const coverImages = computed(() => [
   normalizeResourceUrl(result.value.clean_cover_url || ''),
   normalizeResourceUrl(result.value.final_cover_url || ''),
 ])
+const showCoverSection = computed(() => {
+  return boolValue(videoInfo.value.reset_cover ?? result.value.reset_cover)
+    || Boolean(result.value.clean_cover_url || result.value.final_cover_url)
+})
 
 const matchingDiagnostics = computed(() => {
   return props.diagnostics.filter(row => row?.platform === 'doubao')
@@ -85,6 +89,13 @@ function formatTags(value) {
   } catch {
     return String(value)
   }
+}
+
+function boolValue(value) {
+  if (value === true) return true
+  if (value === false || value == null) return false
+  if (typeof value === 'number') return value !== 0
+  return !['', '0', 'false', 'no', 'off'].includes(String(value).trim().toLowerCase())
 }
 
 function isDescriptionExpanded(side) {
@@ -199,7 +210,7 @@ function diagnosticTitlePrefix(row) {
       </template>
     </section>
 
-    <section v-if="rows.length" class="flow-section publisher-cover-section">
+    <section v-if="rows.length && showCoverSection" class="flow-section publisher-cover-section">
       <h4>封面</h4>
       <p class="publisher-cover-text"><strong>封面文字</strong>{{ result.cover_text || '-' }}</p>
       <div class="publisher-cover-flow">
