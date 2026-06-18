@@ -33,6 +33,14 @@ function onCoverOrientationChange(row, orientation, autosave) {
 function boolMark(value) {
   return value ? '✔' : '✘'
 }
+
+function taskTypeLabel(value) {
+  return {
+    repost: '搬运',
+    subtitle: '熟肉',
+    dubbing: '中配',
+  }[value] || value || '-'
+}
 </script>
 
 <template>
@@ -94,7 +102,7 @@ function boolMark(value) {
                   <option value="subtitle">熟肉</option>
                   <option value="dubbing">中配</option>
                 </select>
-                <span v-else>{{ row.draftTaskType }}</span>
+                <span v-else>{{ taskTypeLabel(row.draftTaskType) }}</span>
               </td>
               <td>
                 <label v-if="editMode" class="submitter-author-type-check">
