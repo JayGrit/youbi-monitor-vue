@@ -227,9 +227,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const payload = await submitterApi.submitVideo(
         rowId,
         authorConfig.type,
-        authorConfig.needSubtitle,
-        authorConfig.needDubbing,
-        authorConfig.needSeparation,
       )
       Object.assign(item, {
         ydbi_submitted: 1,
@@ -307,21 +304,18 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (!author) {
       return {
         type: '',
-        needSubtitle: true,
-        needDubbing: true,
-        needSeparation: true,
+        taskType: '',
+        hasBackgroundAudio: true,
         resetCover: false,
         coverOrientation: '',
       }
     }
     const payload = await submitterApi.getAuthorType(author)
-    const needSubtitle = payload?.needSubtitle !== false
     const resetCover = payload?.resetCover === true
     return {
       type: String(payload?.type || '').trim(),
-      needSubtitle,
-      needDubbing: needSubtitle && payload?.needDubbing !== false,
-      needSeparation: payload?.needSeparation !== false,
+      taskType: String(payload?.taskType || payload?.task_type || '').trim(),
+      hasBackgroundAudio: payload?.hasBackgroundAudio !== false,
       resetCover,
       coverOrientation: resetCover ? normalizeCoverOrientation(payload?.coverOrientation || payload?.cover_orientation) : '',
     }
@@ -341,12 +335,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           author,
           type: String(item?.type || ''),
           draftType: String(item?.type || ''),
-          needSubtitle: item?.needSubtitle !== false,
-          draftNeedSubtitle: item?.needSubtitle !== false,
-          needDubbing: item?.needSubtitle !== false && item?.needDubbing !== false,
-          draftNeedDubbing: item?.needSubtitle !== false && item?.needDubbing !== false,
-          needSeparation: item?.needSeparation !== false,
-          draftNeedSeparation: item?.needSeparation !== false,
+          taskType: String(item?.taskType || item?.task_type || ''),
+          draftTaskType: String(item?.taskType || item?.task_type || ''),
+          hasBackgroundAudio: item?.hasBackgroundAudio !== false,
+          draftHasBackgroundAudio: item?.hasBackgroundAudio !== false,
           resetCover,
           draftResetCover: resetCover,
           coverOrientation,
@@ -384,9 +376,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (!row?.author || !type) return
     if (
       type === row.type
-      && row.draftNeedSubtitle === row.needSubtitle
-      && row.draftNeedDubbing === row.needDubbing
-      && row.draftNeedSeparation === row.needSeparation
+      && row.draftTaskType === row.taskType
+      && row.draftHasBackgroundAudio === row.hasBackgroundAudio
       && row.draftResetCover === row.resetCover
       && row.draftCoverOrientation === row.coverOrientation
       && row.draftFetchNewVideos === row.fetchNewVideos
@@ -396,21 +387,19 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorTypeSaving.value = row.author
     submitterAuthorTypeError.value = ''
     try {
-      const needSubtitle = row.draftNeedSubtitle !== false
-      const needDubbing = needSubtitle && row.draftNeedDubbing !== false
-      const needSeparation = row.draftNeedSeparation !== false
+      const taskType = String(row.draftTaskType || '').trim()
+      if (!taskType) return
+      const hasBackgroundAudio = row.draftHasBackgroundAudio !== false
       const resetCover = row.draftResetCover === true
       const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
       const fetchNewVideos = row.draftFetchNewVideos === true
-      const payload = await submitterApi.saveAuthorType(row.author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos)
+      const payload = await submitterApi.saveAuthorType(row.author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos)
       row.type = String(payload?.type || type)
       row.draftType = row.type
-      row.needSubtitle = payload?.needSubtitle !== false
-      row.draftNeedSubtitle = row.needSubtitle
-      row.needDubbing = row.needSubtitle && payload?.needDubbing !== false
-      row.draftNeedDubbing = row.needDubbing
-      row.needSeparation = payload?.needSeparation !== false
-      row.draftNeedSeparation = row.needSeparation
+      row.taskType = String(payload?.taskType || payload?.task_type || taskType)
+      row.draftTaskType = row.taskType
+      row.hasBackgroundAudio = payload?.hasBackgroundAudio !== false
+      row.draftHasBackgroundAudio = row.hasBackgroundAudio
       row.resetCover = payload?.resetCover === true
       row.draftResetCover = row.resetCover
       row.coverOrientation = row.resetCover ? normalizeCoverOrientation(payload?.coverOrientation || payload?.cover_orientation || coverOrientation) : ''

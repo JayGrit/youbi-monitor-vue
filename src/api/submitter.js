@@ -39,12 +39,9 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${submitterApiBase}/authors`)
     },
 
-    submitVideo(rowId, type, needSubtitle, needDubbing, needSeparation) {
+    submitVideo(rowId, type) {
       return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, {
         type,
-        need_subtitle: needSubtitle,
-        need_dubbing: needDubbing,
-        need_separation: needSeparation,
       })
     },
 
@@ -81,13 +78,12 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
-    saveAuthorType(author, type, needSubtitle, needDubbing, needSeparation, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos) {
+    saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos) {
       return postJson(`${apiBase}/submitter-author-types`, {
         author,
         type,
-        needSubtitle,
-        needDubbing,
-        needSeparation,
+        taskType,
+        hasBackgroundAudio,
         sourceLanguage,
         targetLanguage,
         resetCover,

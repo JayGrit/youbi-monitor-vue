@@ -54,9 +54,8 @@ function boolMark(value) {
             <tr>
               <th>Type</th>
               <th>作者</th>
-              <th>字幕</th>
-              <th>配音</th>
-              <th>分离</th>
+              <th>任务类型</th>
+              <th>有背景音</th>
               <th>重制封面</th>
               <th>横向封面</th>
               <th>竖向封面</th>
@@ -68,7 +67,7 @@ function boolMark(value) {
           </thead>
           <tbody>
             <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td :colspan="editMode ? 12 : 9" class="submitter-empty">暂无作者</td>
+              <td :colspan="editMode ? 11 : 8" class="submitter-empty">暂无作者</td>
             </tr>
             <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
               <td>
@@ -85,37 +84,28 @@ function boolMark(value) {
               </td>
               <td>{{ row.author }}</td>
               <td>
-                <label v-if="editMode" class="submitter-author-type-check">
-                  <input
-                    v-model="row.draftNeedSubtitle"
-                    type="checkbox"
-                    :disabled="submitterAuthorTypeSaving === row.author"
-                    @change="row.draftNeedDubbing = row.draftNeedSubtitle && row.draftNeedDubbing; autosaveSubmitterAuthorType(row)"
-                  />
-                </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedSubtitle) }}</span>
+                <select
+                  v-if="editMode"
+                  v-model="row.draftTaskType"
+                  :disabled="submitterAuthorTypeSaving === row.author"
+                  @change="autosaveSubmitterAuthorType(row)"
+                >
+                  <option value="repost">搬运</option>
+                  <option value="subtitle">熟肉</option>
+                  <option value="dubbing">中配</option>
+                </select>
+                <span v-else>{{ row.draftTaskType }}</span>
               </td>
               <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
-                    v-model="row.draftNeedDubbing"
-                    type="checkbox"
-                    :disabled="submitterAuthorTypeSaving === row.author || !row.draftNeedSubtitle"
-                    @change="autosaveSubmitterAuthorType(row)"
-                  />
-                </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedDubbing) }}</span>
-              </td>
-              <td>
-                <label v-if="editMode" class="submitter-author-type-check">
-                  <input
-                    v-model="row.draftNeedSeparation"
+                    v-model="row.draftHasBackgroundAudio"
                     type="checkbox"
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftNeedSeparation) }}</span>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftHasBackgroundAudio) }}</span>
               </td>
               <td>
                 <label v-if="editMode" class="submitter-author-type-check">
