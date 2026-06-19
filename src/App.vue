@@ -279,6 +279,7 @@ const {
   submitterRejectingId,
   submitterPage,
   submitterAuthorTypeRows,
+  submitterTaskTypes,
   submitterAuthorTypeSaving,
   submitterAuthorDeleting,
   submitterAuthorTypeError,
@@ -510,6 +511,7 @@ function audioErrorMessage(code) {
       v-else-if="activePage === 'submitter-authors'"
       :submitter-author-type-error="submitterAuthorTypeError"
       :submitter-author-type-rows="submitterAuthorTypeRows"
+      :submitter-task-types="submitterTaskTypes"
       :submitter-author-type-saving="submitterAuthorTypeSaving"
       :submitter-author-deleting="submitterAuthorDeleting"
       :autosave-submitter-author-type="autosaveSubmitterAuthorType"

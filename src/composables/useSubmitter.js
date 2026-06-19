@@ -32,6 +32,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterPage = ref(1)
   const submitterTotal = ref(0)
   const submitterAuthorTypeRows = ref([])
+  const submitterTaskTypes = ref([])
   const submitterAuthorTypeSaving = ref('')
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
@@ -148,7 +149,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     try {
       const authorsPayload = await submitterApi.listAuthors()
       submitterAuthors.value = authorsPayload?.items || []
-      await loadSubmitterAuthorTypes()
+      await Promise.all([
+        loadSubmitterAuthorTypes(),
+        loadSubmitterTaskTypes(),
+      ])
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
@@ -351,6 +355,22 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           draftTargetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
         }
       }))
+    } catch (err) {
+      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadSubmitterTaskTypes() {
+    submitterAuthorTypeError.value = ''
+    try {
+      const payload = await submitterApi.listTaskTypes()
+      submitterTaskTypes.value = (payload || [])
+        .map(item => ({
+          taskType: String(item?.taskType || item?.task_type || '').trim(),
+          name: String(item?.name || '').trim(),
+          description: String(item?.description || '').trim(),
+        }))
+        .filter(item => item.taskType)
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     }
@@ -625,6 +645,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterPage,
     submitterTotal,
     submitterAuthorTypeRows,
+    submitterTaskTypes,
     submitterAuthorTypeSaving,
     submitterAuthorDeleting,
     submitterAuthorTypeError,

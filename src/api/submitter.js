@@ -78,6 +78,10 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
+    listTaskTypes() {
+      return requestJson(`${apiBase}/submitter-author-types/task-types`)
+    },
+
     saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos) {
       return postJson(`${apiBase}/submitter-author-types`, {
         author,

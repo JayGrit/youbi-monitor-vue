@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
   submitterAuthorTypeRows: { type: Array, default: () => [] },
+  submitterTaskTypes: { type: Array, default: () => [] },
   submitterAuthorTypeSaving: { type: String, default: '' },
   submitterAuthorDeleting: { type: String, default: '' },
   autosaveSubmitterAuthorType: { type: Function, required: true },
@@ -53,11 +54,8 @@ function boolMark(value) {
 }
 
 function taskTypeLabel(value) {
-  return {
-    repost: '搬运',
-    subtitle: '熟肉',
-    dubbing: '中配',
-  }[value] || value || '-'
+  const option = props.submitterTaskTypes.find(item => item.taskType === value)
+  return option?.name || value || '-'
 }
 </script>
 
@@ -116,9 +114,13 @@ function taskTypeLabel(value) {
                   :disabled="submitterAuthorTypeSaving === row.author"
                   @change="autosaveSubmitterAuthorType(row)"
                 >
-                  <option value="repost">搬运</option>
-                  <option value="subtitle">熟肉</option>
-                  <option value="dubbing">中配</option>
+                  <option
+                    v-for="taskType in submitterTaskTypes"
+                    :key="taskType.taskType"
+                    :value="taskType.taskType"
+                  >
+                    {{ taskType.name || taskType.taskType }}
+                  </option>
                 </select>
                 <span v-else>{{ taskTypeLabel(row.draftTaskType) }}</span>
               </td>
