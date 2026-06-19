@@ -8,6 +8,7 @@ import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
+import AsseterPanel from '../components/task-flow/AsseterPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
 import { ref } from 'vue'
 
@@ -37,6 +38,7 @@ defineProps({
   stageName: { type: Function, required: true },
   uploadSubmissionRows: { type: Function, required: true },
   publisherResultRows: { type: Function, required: true },
+  stageTableRows: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
   speechColumns: { type: Function, required: true },
   speechRows: { type: Function, required: true },
@@ -117,10 +119,20 @@ function seekVocalsPlayback(ms) {
           v-if="selectedStage.key === 'publisher'"
           :flow="selectedTaskFlow"
           :rows="publisherResultRows(selectedStage)"
+          :jobs="stageTableRows(selectedStage, 'publisher_jobs')"
+          :narrations="stageTableRows(selectedStage, 'product_narration')"
+          :sentences="stageTableRows(selectedStage, 'product_narration_sentence')"
           :diagnostics="uploaderDiagnostics"
           :diagnostics-loading="uploaderDiagnosticsLoading"
           :diagnostics-error="uploaderDiagnosticsError"
           :load-diagnostics="loadSelectedUploaderDiagnostics"
+        />
+
+        <AsseterPanel
+          v-if="selectedStage.key === 'asseter'"
+          :jobs="stageTableRows(selectedStage, 'asseter_jobs')"
+          :media="stageMedia(selectedStage)"
+          :log-audio-event="logAudioEvent"
         />
 
         <DemucsAudioPanel
@@ -152,7 +164,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />

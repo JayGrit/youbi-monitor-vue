@@ -234,6 +234,7 @@ const {
   speechRows,
   uploadSubmissionRows,
   publisherResultRows,
+  stageTableRows,
   uploadPlatformName,
   speechColumns,
   showSpeechColumn,
@@ -624,6 +625,7 @@ function audioErrorMessage(code) {
       :stage-name="stageName"
       :upload-submission-rows="uploadSubmissionRows"
       :publisher-result-rows="publisherResultRows"
+      :stage-table-rows="stageTableRows"
       :upload-platform-name="uploadPlatformName"
       :speech-columns="speechColumns"
       :speech-rows="speechRows"

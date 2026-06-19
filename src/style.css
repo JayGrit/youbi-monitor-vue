@@ -2465,11 +2465,133 @@ h1 {
 }
 
 .stage-link {
-  width: 28px;
+  flex: 0 0 3px;
+  width: 3px;
   height: 3px;
   margin: 0 8px;
   background: #c9d3df;
   border-radius: 999px;
+}
+
+.stage-job-list {
+  display: grid;
+  gap: 10px;
+}
+
+.stage-job-card {
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.stage-job-card header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.stage-job-card header time {
+  margin-left: auto;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.stage-job-order {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.stage-job-status {
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.stage-job-card details,
+.narration-section details {
+  margin-top: 8px;
+}
+
+.stage-job-card summary,
+.narration-section summary {
+  cursor: pointer;
+  color: #2563eb;
+  font-size: 13px;
+}
+
+.stage-job-card pre {
+  margin: 8px 0 0;
+  max-height: 300px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.narration-status-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.narration-text {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+.narration-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.narration-image-grid figure {
+  margin: 0;
+}
+
+.narration-image-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.narration-image-grid figcaption {
+  margin-top: 5px;
+  color: #64748b;
+  text-align: center;
+  font-size: 12px;
+}
+
+.narration-sentence-list {
+  max-height: 420px;
+  overflow: auto;
+  padding-left: 28px;
+}
+
+.narration-sentence-list li {
+  margin: 7px 0;
+  line-height: 1.6;
+}
+
+.narration-sentence-list span {
+  display: inline-block;
+  margin-right: 8px;
+  color: #64748b;
+  font-size: 11px;
 }
 
 .status-success {

@@ -45,7 +45,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const failed = speechStages.find(stage => stage.status === 'failed')
     const running = speechStages.find(stage => stage.status === 'running')
     const active = failed || running || speechStages[speechStages.length - 1]
-    return [
+    const ordered = [
       ...nonSpeechStages.filter(stage => stage.key === 'downloader'),
       ...nonSpeechStages.filter(stage => stage.key === 'publisher'),
       ...nonSpeechStages.filter(stage => stage.key === 'demucs' || stage.key === 'whisper'),
@@ -56,8 +56,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         children: speechStages,
         elapsedSeconds: speechStages.reduce((sum, stage) => sum + Number(stage.elapsedSeconds || 0), 0),
       },
-      ...nonSpeechStages.filter(stage => stage.key === 'combiner' || stage.key === 'uploader'),
+      ...nonSpeechStages.filter(stage => stage.key === 'asseter' || stage.key === 'combiner' || stage.key === 'uploader'),
     ]
+    return ordered
   })
 
   const speechStage = computed(() => {
@@ -379,7 +380,25 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function publisherResultRows(stage) {
-    return tableRows(stage, 'publisher_result')
+    return tableRows(stage, 'publisher_result').map(row => ({
+      ...row,
+      ...parseJsonObject(row.result_json),
+    }))
+  }
+
+  function parseJsonObject(value) {
+    if (!value) return {}
+    if (typeof value === 'object' && !Array.isArray(value)) return value
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+
+  function stageTableRows(stage, tableName) {
+    return tableRows(stage, tableName)
   }
 
   function uploadPlatformName(platform) {
@@ -640,6 +659,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     speechRows,
     uploadSubmissionRows,
     publisherResultRows,
+    stageTableRows,
     uploadPlatformName,
     speechColumns,
     showSpeechColumn,

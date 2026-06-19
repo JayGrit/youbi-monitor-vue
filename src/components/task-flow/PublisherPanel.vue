@@ -4,10 +4,14 @@ import { formatDateTime } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
 import { diagnosticRunId } from '../../utils/uploaderDiagnostics'
 import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
+import StageJobsPanel from './StageJobsPanel.vue'
 
 const props = defineProps({
   flow: { type: Object, default: null },
   rows: { type: Array, default: () => [] },
+  jobs: { type: Array, default: () => [] },
+  narrations: { type: Array, default: () => [] },
+  sentences: { type: Array, default: () => [] },
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
@@ -20,6 +24,8 @@ const historyOpen = ref(false)
 const expandedDescriptions = ref(new Set())
 
 const result = computed(() => props.rows[0] || {})
+const narration = computed(() => props.narrations[0] || {})
+const isNarration = computed(() => props.narrations.length > 0)
 const videoInfo = computed(() => props.flow?.videoInfo || {})
 
 const comparisonRows = computed(() => [
@@ -53,6 +59,17 @@ const showCoverSection = computed(() => {
   return boolValue(videoInfo.value.reset_cover ?? result.value.reset_cover)
     || Boolean(result.value.clean_cover_url || result.value.final_cover_url)
 })
+
+const narrationImages = computed(() => [
+  ['封面图', narration.value.cover_image_url],
+  ['背景图', narration.value.background_image_url],
+  ['牛皮纸背景', narration.value.kraft_background_image_url],
+  ['标题文字', narration.value.title_text_image_url],
+].map(([label, url]) => ({ label, url: normalizeResourceUrl(url || '') })).filter(item => item.url))
+
+const orderedSentences = computed(() => [...props.sentences].sort((left, right) => {
+  return Number(left.line_index ?? left.id ?? 0) - Number(right.line_index ?? right.id ?? 0)
+}))
 
 const matchingDiagnostics = computed(() => {
   return props.diagnostics.filter(row => row?.platform === 'doubao')
@@ -166,6 +183,33 @@ function diagnosticTitlePrefix(row) {
 
 <template>
   <div class="publisher-panel">
+    <section v-if="isNarration" class="flow-section narration-section">
+      <h4>Narration 主流程</h4>
+      <div class="narration-status-line">
+        <span :class="['stage-job-status', `status-${narration.status || 'pending'}`]">{{ narration.status || 'pending' }}</span>
+        <span>{{ orderedSentences.length }} 句</span>
+        <span v-if="narration.operator">{{ narration.operator }}</span>
+      </div>
+      <p class="narration-text">{{ narration.text || '暂无旁白文本' }}</p>
+      <div v-if="narrationImages.length" class="narration-image-grid">
+        <figure v-for="item in narrationImages" :key="item.label">
+          <a :href="item.url" target="_blank" rel="noreferrer"><img :src="item.url" :alt="item.label" loading="lazy" /></a>
+          <figcaption>{{ item.label }}</figcaption>
+        </figure>
+      </div>
+      <details v-if="narration.cover_prompt"><summary>封面提示词</summary><p>{{ narration.cover_prompt }}</p></details>
+      <details v-if="narration.background_prompt"><summary>背景提示词</summary><p>{{ narration.background_prompt }}</p></details>
+      <details v-if="orderedSentences.length">
+        <summary>旁白分句（{{ orderedSentences.length }}）</summary>
+        <ol class="narration-sentence-list">
+          <li v-for="row in orderedSentences" :key="row.id">
+            <span>片段 {{ row.segment_index ?? '-' }}</span>{{ row.sentence_text }}
+          </li>
+        </ol>
+      </details>
+      <pre v-if="narration.error_message" class="flow-stage-error">{{ narration.error_message }}</pre>
+    </section>
+
     <section class="flow-section">
       <h4>投稿信息</h4>
       <div v-if="!rows.length" class="flow-muted">还没有 publisher 结果</div>
@@ -209,6 +253,8 @@ function diagnosticTitlePrefix(row) {
         <pre v-if="result.error_message" class="flow-stage-error">{{ result.error_message }}</pre>
       </template>
     </section>
+
+    <StageJobsPanel v-if="jobs.length" title="Publisher 执行步骤" :rows="jobs" />
 
     <section v-if="rows.length && showCoverSection" class="flow-section publisher-cover-section">
       <h4>封面</h4>
