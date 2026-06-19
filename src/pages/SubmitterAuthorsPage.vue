@@ -11,6 +11,24 @@ defineProps({
 })
 
 const editMode = ref(false)
+const typeAutosaveTimers = new Map()
+
+function scheduleTypeAutosave(row, autosave) {
+  const author = String(row?.author || '')
+  if (!author) return
+  window.clearTimeout(typeAutosaveTimers.get(author))
+  typeAutosaveTimers.set(author, window.setTimeout(() => {
+    typeAutosaveTimers.delete(author)
+    autosave(row)
+  }, 500))
+}
+
+function flushTypeAutosave(row, autosave) {
+  const author = String(row?.author || '')
+  window.clearTimeout(typeAutosaveTimers.get(author))
+  typeAutosaveTimers.delete(author)
+  autosave(row)
+}
 
 function onResetCoverChange(row, autosave) {
   if (!row.draftResetCover) {
@@ -85,8 +103,8 @@ function taskTypeLabel(value) {
                   type="text"
                   placeholder="投稿 type"
                   :disabled="submitterAuthorTypeSaving === row.author"
-                  @change="autosaveSubmitterAuthorType(row)"
-                  @blur="autosaveSubmitterAuthorType(row)"
+                  @input="scheduleTypeAutosave(row, autosaveSubmitterAuthorType)"
+                  @change="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
                 />
                 <strong v-else class="account-type-cell submitter-author-type-badge">{{ row.draftType || '-' }}</strong>
               </td>

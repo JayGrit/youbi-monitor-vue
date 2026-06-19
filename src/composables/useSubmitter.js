@@ -335,8 +335,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           author,
           type: String(item?.type || ''),
           draftType: String(item?.type || ''),
-          taskType: String(item?.taskType || item?.task_type || ''),
-          draftTaskType: String(item?.taskType || item?.task_type || ''),
+          taskType: String(item?.taskType || item?.task_type || 'dubbing'),
+          draftTaskType: String(item?.taskType || item?.task_type || 'dubbing'),
           hasBackgroundAudio: item?.hasBackgroundAudio !== false,
           draftHasBackgroundAudio: item?.hasBackgroundAudio !== false,
           resetCover,
@@ -387,8 +387,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorTypeSaving.value = row.author
     submitterAuthorTypeError.value = ''
     try {
-      const taskType = String(row.draftTaskType || '').trim()
-      if (!taskType) return
+      const taskType = String(row.draftTaskType || row.taskType || 'dubbing').trim()
+      row.draftTaskType = taskType
       const hasBackgroundAudio = row.draftHasBackgroundAudio !== false
       const resetCover = row.draftResetCover === true
       const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
