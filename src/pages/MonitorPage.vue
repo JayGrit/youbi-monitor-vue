@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { createPlatformIconUrls, MONITOR_PAGE_SIZE, uploadPlatformText } from '../domain/constants'
 import { formatDateTime, formatDuration } from '../utils/format'
 
@@ -95,6 +96,17 @@ const emit = defineEmits([
 ])
 
 const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
+const LEGACY_STAGE_KEYS = new Set([
+  'downloader',
+  'publisher',
+  'demucs',
+  'whisper',
+  'translator',
+  'speaker',
+  'combiner',
+  'uploader',
+])
+const stageDisplayMode = ref('task')
 
 function hasUploaderPlatformStatuses(node) {
   return node.key === 'uploader' && Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0
@@ -118,6 +130,18 @@ function platformTitle(platformStatus) {
 
 function displayTaskCount() {
   return props.taskTotalCount || props.filteredTasks.length
+}
+
+function taskStageNodes(task) {
+  const nodes = Array.isArray(task?.nodes) ? task.nodes : []
+  if (stageDisplayMode.value === 'all') {
+    return nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
+  }
+
+  const nodesByKey = new Map(nodes.map(node => [node.key, node]))
+  const configuredStages = Array.isArray(task?.distributorStages) ? task.distributorStages : []
+  const routedNodes = configuredStages.map(key => nodesByKey.get(key)).filter(Boolean)
+  return routedNodes.length > 0 ? routedNodes : nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
 }
 
 function showStageTime(node) {
@@ -217,6 +241,26 @@ function onlineDeviceNames(service) {
         />
         <button type="submit">搜索</button>
       </form>
+      <div class="stage-display-tabs" role="tablist" aria-label="阶段显示方案">
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="stageDisplayMode === 'task'"
+          :class="{ active: stageDisplayMode === 'task' }"
+          @click="stageDisplayMode = 'task'"
+        >
+          任务阶段
+        </button>
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="stageDisplayMode === 'all'"
+          :class="{ active: stageDisplayMode === 'all' }"
+          @click="stageDisplayMode = 'all'"
+        >
+          全部阶段
+        </button>
+      </div>
       <button
         type="button"
         :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsExpanded }]"
@@ -434,7 +478,7 @@ function onlineDeviceNames(service) {
       </div>
 
       <div class="stage-chain" aria-label="阶段链路">
-        <template v-for="(node, index) in task.nodes" :key="node.key">
+        <template v-for="(node, index) in taskStageNodes(task)" :key="node.key">
           <button
             type="button"
             :class="['stage-node', 'stage-node-button', stageNodeStatusClass(node), { 'with-uploader-platforms': hasUploaderPlatformStatuses(node) }]"
@@ -461,7 +505,7 @@ function onlineDeviceNames(service) {
             <span v-if="showStageTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
           </button>
           <div
-            v-if="index < task.nodes.length - 1"
+            v-if="index < taskStageNodes(task).length - 1"
             :class="['stage-link', `status-${node.status}`]"
             aria-hidden="true"
           ></div>

@@ -1761,6 +1761,34 @@ h1 {
   min-width: 180px;
 }
 
+.stage-display-tabs {
+  display: inline-flex;
+  min-height: 34px;
+  overflow: hidden;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.stage-display-tabs button {
+  border: 0;
+  border-right: 1px solid #cfd8e3;
+  background: transparent;
+  color: #536277;
+  cursor: pointer;
+  padding: 0 10px;
+  font-family: inherit;
+}
+
+.stage-display-tabs button:last-child {
+  border-right: 0;
+}
+
+.stage-display-tabs button.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
 .task-filter-button {
   min-height: 34px;
   border: 1px solid #cfd8e3;
