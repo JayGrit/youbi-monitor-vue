@@ -26,6 +26,9 @@ const props = defineProps({
   uploaderPhoneSavingKey: { type: String, default: '' },
   uploaderPhoneAgentBusyKey: { type: String, default: '' },
   uploaderPhoneError: { type: String, default: '' },
+  standaloneAccounts: { type: Array, default: () => [] },
+  standaloneAccountLoading: { type: Boolean, default: false },
+  standaloneAccountBusyKey: { type: String, default: '' },
   togglePlatformEnabled: { type: Function, required: true },
   savePlatformCooldown: { type: Function, required: true },
   savePlatformQuietTime: { type: Function, required: true },
@@ -43,6 +46,7 @@ const props = defineProps({
   registerSelectedUploadBackfill: { type: Function, required: true },
   saveUploaderPhoneAccount: { type: Function, required: true },
   runUploaderPhoneAccountScript: { type: Function, required: true },
+  runStandaloneAccount: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
@@ -60,6 +64,12 @@ const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
 const diskStatusOpen = ref(false)
+
+const standaloneLabels = {
+  notebooklm: 'NotebookLM',
+  doubao: '豆包',
+  chatgpt: 'ChatGPT',
+}
 
 const DISK_CHART_COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#94a3b8', '#ffffff']
 
@@ -1004,6 +1014,28 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       </div>
       <div v-else class="empty-state">暂无手机号配置</div>
       <p v-if="uploaderPhoneError" class="inline-error">{{ uploaderPhoneError }}</p>
+    </section>
+
+    <section class="biliup-panel standalone-account-panel" aria-label="独立账号入口">
+      <div class="uploader-phone-head">
+        <strong>独立账号</strong>
+        <span v-if="standaloneAccountLoading">加载中</span>
+      </div>
+      <div class="standalone-account-actions">
+        <button
+          v-for="account in standaloneAccounts"
+          :key="account.platform"
+          type="button"
+          :disabled="Boolean(standaloneAccountBusyKey)"
+          @click="runStandaloneAccount(account)"
+        >
+          <strong>{{ standaloneLabels[account.platform] || account.platform }}</strong>
+          <span>{{ standaloneAccountBusyKey === account.platform ? '启动中' : (account.exists ? 'Open' : 'New') }}</span>
+        </button>
+      </div>
+      <div v-if="!standaloneAccountLoading && !standaloneAccounts.length" class="empty-state">
+        请先启动本地 agent
+      </div>
     </section>
 
     <div v-if="diskStatusOpen" class="disk-status-modal-backdrop" @click.self="diskStatusOpen = false">

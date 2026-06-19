@@ -6,6 +6,9 @@ export function useUploaderPhones(accountsApi, agentApi) {
   const uploaderPhoneSavingKey = ref('')
   const uploaderPhoneAgentBusyKey = ref('')
   const uploaderPhoneError = ref('')
+  const standaloneAccounts = ref([])
+  const standaloneAccountLoading = ref(false)
+  const standaloneAccountBusyKey = ref('')
 
   async function loadUploaderPhones() {
     uploaderPhoneLoading.value = true
@@ -20,6 +23,32 @@ export function useUploaderPhones(accountsApi, agentApi) {
       uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
     } finally {
       uploaderPhoneLoading.value = false
+    }
+  }
+
+  async function loadStandaloneAccounts() {
+    standaloneAccountLoading.value = true
+    try {
+      const payload = await agentApi.standaloneAccounts()
+      standaloneAccounts.value = payload?.accounts || []
+    } catch (err) {
+      if (!(err instanceof TypeError)) {
+        uploaderPhoneError.value = err instanceof Error ? err.message : String(err)
+      }
+    } finally {
+      standaloneAccountLoading.value = false
+    }
+  }
+
+  async function runStandaloneAccount(row) {
+    if (!row?.platform || standaloneAccountBusyKey.value) return
+    const action = row.exists ? 'open' : 'new'
+    const accountKey = row.accountKey || (row.platform === 'chatgpt' ? 'default' : 'server-profile')
+    standaloneAccountBusyKey.value = row.platform
+    try {
+      await runUploaderPhoneAccountScript(row.platform, action, accountKey)
+    } finally {
+      standaloneAccountBusyKey.value = ''
     }
   }
 
@@ -87,8 +116,13 @@ export function useUploaderPhones(accountsApi, agentApi) {
     uploaderPhoneSavingKey,
     uploaderPhoneAgentBusyKey,
     uploaderPhoneError,
+    standaloneAccounts,
+    standaloneAccountLoading,
+    standaloneAccountBusyKey,
     loadUploaderPhones,
     saveUploaderPhoneAccount,
     runUploaderPhoneAccountScript,
+    loadStandaloneAccounts,
+    runStandaloneAccount,
   }
 }

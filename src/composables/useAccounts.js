@@ -28,6 +28,7 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
     await Promise.allSettled([
       platformAccounts.loadAccountOverview(),
       uploaderPhones.loadUploaderPhones(),
+      uploaderPhones.loadStandaloneAccounts(),
       loadBackupperStatus(),
     ])
   }

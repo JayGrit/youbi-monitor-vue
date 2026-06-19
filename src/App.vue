@@ -172,6 +172,9 @@ const {
   uploaderPhoneSavingKey,
   uploaderPhoneAgentBusyKey,
   uploaderPhoneError,
+  standaloneAccounts,
+  standaloneAccountLoading,
+  standaloneAccountBusyKey,
   startAccountPolling,
   clearAccountPagePolling,
   clearAccountPolling,
@@ -191,6 +194,7 @@ const {
   registerSelectedUploadBackfill,
   saveUploaderPhoneAccount,
   runUploaderPhoneAccountScript,
+  runStandaloneAccount,
   accountDisplay,
   accountAvatarUrl,
   accountAvatarInitial,
@@ -536,6 +540,9 @@ function audioErrorMessage(code) {
       :uploader-phone-saving-key="uploaderPhoneSavingKey"
       :uploader-phone-agent-busy-key="uploaderPhoneAgentBusyKey"
       :uploader-phone-error="uploaderPhoneError"
+      :standalone-accounts="standaloneAccounts"
+      :standalone-account-loading="standaloneAccountLoading"
+      :standalone-account-busy-key="standaloneAccountBusyKey"
       :toggle-platform-enabled="togglePlatformEnabled"
       :save-platform-cooldown="savePlatformCooldown"
       :save-platform-quiet-time="savePlatformQuietTime"
@@ -553,6 +560,7 @@ function audioErrorMessage(code) {
       :register-selected-upload-backfill="registerSelectedUploadBackfill"
       :save-uploader-phone-account="saveUploaderPhoneAccount"
       :run-uploader-phone-account-script="runUploaderPhoneAccountScript"
+      :run-standalone-account="runStandaloneAccount"
       :account-display="accountDisplay"
       :account-avatar-url="accountAvatarUrl"
       :account-avatar-initial="accountAvatarInitial"
