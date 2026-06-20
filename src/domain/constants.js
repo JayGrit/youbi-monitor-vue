@@ -103,6 +103,7 @@ export function createPlatformIconUrls(baseUrl) {
     jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
     x: `${baseUrl}platform-icons/x-official-appstore-512.png`,
     youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.png`,
+    doubao: `${baseUrl}platform-icons/doubao-official-appstore-512.png`,
   }
 }
 
@@ -116,5 +117,6 @@ export function createAccountPlatforms(platformIconUrls) {
     { type: 'jinritoutiao', label: '今日头条', iconUrl: platformIconUrls.jinritoutiao },
     { type: 'x', label: 'X', iconUrl: platformIconUrls.x },
     { type: 'youtube', label: 'YouTube', iconUrl: platformIconUrls.youtube },
+    { type: 'doubao', label: '豆包', iconUrl: platformIconUrls.doubao },
   ]
 }

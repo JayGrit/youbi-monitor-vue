@@ -67,7 +67,6 @@ const diskStatusOpen = ref(false)
 
 const standaloneLabels = {
   notebooklm: 'NotebookLM',
-  doubao: '豆包',
   chatgpt: 'ChatGPT',
 }
 
