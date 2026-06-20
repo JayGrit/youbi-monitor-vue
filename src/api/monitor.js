@@ -16,6 +16,10 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/progress`)
     },
 
+    loadServiceHeartbeats() {
+      return requestJson(`${apiBase}/services/heartbeats`)
+    },
+
     loadTaskTypes() {
       return requestJson(`${apiBase}/accounts/types`)
     },

@@ -9,6 +9,7 @@ export function useAppShell({
   warmPlatformIcons,
   startAccountPolling,
   loadTasks,
+  loadServiceHeartbeats,
   loadTaskTypes,
   loadFailureLogs,
   clearAccountPolling,
@@ -19,6 +20,7 @@ export function useAppShell({
 }) {
   const activePage = ref('accounts')
   let monitorTimer = null
+  let heartbeatTimer = null
 
   function openPage(page) {
     if (flowPageOpen.value) {
@@ -46,12 +48,17 @@ export function useAppShell({
     startAccountPolling()
     loadTaskTypes()
     loadTasks()
+    loadServiceHeartbeats()
     monitorTimer = window.setInterval(loadTasks, 2000)
+    heartbeatTimer = window.setInterval(loadServiceHeartbeats, 30000)
   })
 
   onUnmounted(() => {
     if (monitorTimer) {
       window.clearInterval(monitorTimer)
+    }
+    if (heartbeatTimer) {
+      window.clearInterval(heartbeatTimer)
     }
     clearAccountPolling()
     clearFlowPolling()

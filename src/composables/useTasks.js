@@ -148,7 +148,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       pruneTaskProgress(tasks.value.map(task => task.taskId))
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
       if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
-      serviceHeartbeats.value = payload.serviceHeartbeats || []
       serverTime.value = payload.serverTime || ''
       warmTaskThumbnails()
       error.value = ''
@@ -156,6 +155,14 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadServiceHeartbeats() {
+    try {
+      serviceHeartbeats.value = await monitorApi.loadServiceHeartbeats() || []
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : String(err)
     }
   }
 
@@ -733,6 +740,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     downloaderFailureTypeOptions,
     downloaderFailureTypeSelected,
     loadTasks,
+    loadServiceHeartbeats,
     loadTaskProgress,
     toggleTaskProgress,
     refreshTaskProgress,
