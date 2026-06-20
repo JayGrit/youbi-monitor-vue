@@ -2380,6 +2380,24 @@ h1 {
   min-width: 964px;
 }
 
+.task-progress-summary,
+.task-progress-toolbar,
+.task-progress-error {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.task-progress-detail {
+  min-width: 0;
+}
+
+.task-progress-loading,
+.task-progress-error {
+  color: var(--muted-text, #64748b);
+  padding: 0.5rem 0;
+}
+
 .stage-node {
   flex: 0 0 100px;
   width: 100px;

@@ -12,6 +12,10 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`)
     },
 
+    loadTaskProgress(taskId) {
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/progress`)
+    },
+
     loadTaskTypes() {
       return requestJson(`${apiBase}/accounts/types`)
     },

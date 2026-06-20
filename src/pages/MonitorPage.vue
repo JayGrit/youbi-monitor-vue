@@ -24,6 +24,10 @@ const props = defineProps({
   hasTaskFilter: { type: Boolean, default: false },
   pagedTasks: { type: Array, default: () => [] },
   openFailureKey: { type: String, default: '' },
+  progressByTaskId: { type: Object, default: () => ({}) },
+  progressLoadingTaskIds: { type: Object, default: () => ({}) },
+  progressErrorByTaskId: { type: Object, default: () => ({}) },
+  expandedTaskIds: { type: Object, default: () => ({}) },
   uploadRetryPlatform: { type: String, default: '' },
   uploadRetryPlatformOptions: { type: Array, default: () => [] },
   uploadRetryRows: { type: Array, default: () => [] },
@@ -60,6 +64,8 @@ const props = defineProps({
   nodeProgress: { type: Function, required: true },
   nodeTitle: { type: Function, required: true },
   openTaskFlow: { type: Function, required: true },
+  toggleTaskProgress: { type: Function, required: true },
+  refreshTaskProgress: { type: Function, required: true },
   isTaskReadyBusy: { type: Function, required: true },
   markTaskReady: { type: Function, required: true },
   setUploadRetryPlatform: { type: Function, required: true },
@@ -133,15 +139,23 @@ function displayTaskCount() {
 }
 
 function taskStageNodes(task) {
-  const nodes = Array.isArray(task?.nodes) ? task.nodes : []
+  const progress = props.progressByTaskId[task?.taskId]
+  const nodes = Array.isArray(progress?.nodes) ? progress.nodes : []
   if (stageDisplayMode.value === 'all') {
     return nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
   }
 
   const nodesByKey = new Map(nodes.map(node => [node.key, node]))
-  const configuredStages = Array.isArray(task?.distributorStages) ? task.distributorStages : []
+  const configuredStages = Array.isArray(progress?.distributorStages) ? progress.distributorStages : []
   const routedNodes = configuredStages.map(key => nodesByKey.get(key)).filter(Boolean)
   return routedNodes.length > 0 ? routedNodes : nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
+}
+
+function taskStatusSummary(task) {
+  const status = statusText[task?.status] || task?.status || '-'
+  return task?.status === 'running' && task?.currentStage
+    ? `${status} · ${props.stageName(task.currentStage)}`
+    : status
 }
 
 function showStageTime(node) {
@@ -477,7 +491,22 @@ function onlineDeviceNames(service) {
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
       </div>
 
-      <div class="stage-chain" aria-label="阶段链路">
+      <div class="task-progress-summary">
+        <strong>{{ taskStatusSummary(task) }}</strong>
+        <button type="button" @click="toggleTaskProgress(task)">
+          {{ expandedTaskIds[task.taskId] ? '收起详情' : '加载详情' }}
+        </button>
+      </div>
+      <div v-if="expandedTaskIds[task.taskId]" class="task-progress-detail">
+        <div v-if="progressLoadingTaskIds[task.taskId]" class="task-progress-loading">正在加载详情</div>
+        <div v-else-if="progressErrorByTaskId[task.taskId]" class="task-progress-error">
+          <span>{{ progressErrorByTaskId[task.taskId] }}</span>
+          <button type="button" @click="refreshTaskProgress(task)">重试</button>
+        </div>
+        <div v-else-if="progressByTaskId[task.taskId]" class="task-progress-toolbar">
+          <button type="button" @click="refreshTaskProgress(task)">刷新详情</button>
+        </div>
+      <div v-if="progressByTaskId[task.taskId]" class="stage-chain" aria-label="阶段链路">
         <template v-for="(node, index) in taskStageNodes(task)" :key="node.key">
           <button
             type="button"
@@ -510,6 +539,7 @@ function onlineDeviceNames(service) {
             aria-hidden="true"
           ></div>
         </template>
+      </div>
       </div>
       <div class="task-action-rail" :class="{ open: taskActionsOpen() }">
         <button
@@ -554,7 +584,7 @@ function onlineDeviceNames(service) {
         </button>
       </div>
       <div
-        v-for="node in task.nodes"
+        v-for="node in (progressByTaskId[task.taskId]?.nodes || [])"
         v-show="openFailureKey === failureKey(task, node)"
         :key="`${node.key}-failure`"
         class="failure-panel"

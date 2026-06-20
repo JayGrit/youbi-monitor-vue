@@ -46,6 +46,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const downloaderFailureBusy = ref(false)
   const downloaderFailureSelectedIds = ref([])
   const downloaderFailureTypeFilter = ref('all')
+  const progressByTaskId = ref({})
+  const progressLoadingTaskIds = ref({})
+  const progressErrorByTaskId = ref({})
+  const expandedTaskIds = ref({})
+  const progressRequests = new Map()
 
   const taskStageFilters = computed(() => {
     const keys = new Set()
@@ -140,6 +145,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
         sort: taskSort.value,
       })
       tasks.value = payload.tasks || []
+      pruneTaskProgress(tasks.value.map(task => task.taskId))
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
       if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
       serviceHeartbeats.value = payload.serviceHeartbeats || []
@@ -151,6 +157,62 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     } finally {
       loading.value = false
     }
+  }
+
+  function pruneTaskProgress(visibleTaskIds) {
+    const visible = new Set(visibleTaskIds)
+    for (const state of [progressByTaskId, progressLoadingTaskIds, progressErrorByTaskId, expandedTaskIds]) {
+      state.value = Object.fromEntries(Object.entries(state.value).filter(([taskId]) => visible.has(taskId)))
+    }
+  }
+
+  async function loadTaskProgress(taskId, force = false) {
+    if (!taskId) return null
+    if (!force && progressByTaskId.value[taskId]) return progressByTaskId.value[taskId]
+    if (progressRequests.has(taskId)) return progressRequests.get(taskId)
+    progressLoadingTaskIds.value = { ...progressLoadingTaskIds.value, [taskId]: true }
+    progressErrorByTaskId.value = { ...progressErrorByTaskId.value, [taskId]: '' }
+    const request = monitorApi.loadTaskProgress(taskId)
+      .then(payload => {
+        if (tasks.value.some(task => task.taskId === taskId)) {
+          progressByTaskId.value = { ...progressByTaskId.value, [taskId]: payload }
+        }
+        return payload
+      })
+      .catch(err => {
+        if (tasks.value.some(task => task.taskId === taskId)) {
+          progressErrorByTaskId.value = {
+            ...progressErrorByTaskId.value,
+            [taskId]: err instanceof Error ? err.message : String(err),
+          }
+        }
+        return null
+      })
+      .finally(() => {
+        progressRequests.delete(taskId)
+        const next = { ...progressLoadingTaskIds.value }
+        delete next[taskId]
+        progressLoadingTaskIds.value = next
+      })
+    progressRequests.set(taskId, request)
+    return request
+  }
+
+  async function toggleTaskProgress(task) {
+    const taskId = task?.taskId
+    if (!taskId) return
+    if (expandedTaskIds.value[taskId]) {
+      const next = { ...expandedTaskIds.value }
+      delete next[taskId]
+      expandedTaskIds.value = next
+      return
+    }
+    expandedTaskIds.value = { ...expandedTaskIds.value, [taskId]: true }
+    if (!progressByTaskId.value[taskId]) await loadTaskProgress(taskId)
+  }
+
+  function refreshTaskProgress(task) {
+    return loadTaskProgress(task?.taskId, true)
   }
 
   async function loadTaskTypes() {
@@ -651,6 +713,10 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     downloaderFailureBusy,
     downloaderFailureSelectedIds,
     downloaderFailureTypeFilter,
+    progressByTaskId,
+    progressLoadingTaskIds,
+    progressErrorByTaskId,
+    expandedTaskIds,
     taskTypeFilters,
     taskStageFilters,
     filteredTasks,
@@ -667,6 +733,9 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     downloaderFailureTypeOptions,
     downloaderFailureTypeSelected,
     loadTasks,
+    loadTaskProgress,
+    toggleTaskProgress,
+    refreshTaskProgress,
     loadTaskTypes,
     markTaskReady,
     isTaskReadyBusy,
