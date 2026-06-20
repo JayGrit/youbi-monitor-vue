@@ -236,6 +236,8 @@ const {
   clearFlowPolling,
   refreshTaskFlow,
   loadSelectedUploaderDiagnostics,
+  submitNarrationSegments,
+  uploadNarrationImage,
   flowTaskTitle,
   flowSourceUrl,
   flowCoverUrl,
@@ -642,6 +644,8 @@ function audioErrorMessage(code) {
       :flow-task-title="flowTaskTitle"
       :refresh-task-flow="refreshTaskFlow"
       :load-selected-uploader-diagnostics="loadSelectedUploaderDiagnostics"
+      :submit-narration-segments="submitNarrationSegments"
+      :upload-narration-image="uploadNarrationImage"
       :close-task-flow="closeTaskFlow"
       :flow-cover-url="flowCoverUrl"
       :flow-source-url="flowSourceUrl"

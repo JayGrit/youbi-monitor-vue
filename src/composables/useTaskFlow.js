@@ -202,6 +202,22 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     }
   }
 
+  async function submitNarrationSegments(response) {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (!taskId) throw new Error('缺少 task ID')
+    const result = await monitorApi.submitNarrationSegments(taskId, response)
+    await loadTaskFlow(taskId, true)
+    return result
+  }
+
+  async function uploadNarrationImage(kind, file) {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (!taskId) throw new Error('缺少 task ID')
+    const result = await monitorApi.uploadNarrationImage(taskId, kind, file)
+    await loadTaskFlow(taskId, true)
+    return result
+  }
+
   function flowTaskTitle(flow) {
     const task = flow?.task || {}
     return task.title || flow?.videoInfo?.title || task.id || '任务详情'
@@ -649,6 +665,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     clearFlowPolling,
     refreshTaskFlow,
     loadSelectedUploaderDiagnostics,
+    submitNarrationSegments,
+    uploadNarrationImage,
     flowTaskTitle,
     flowSourceUrl,
     flowCoverUrl,

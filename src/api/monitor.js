@@ -91,6 +91,23 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/uploader-diagnostics`)
     },
 
+    submitNarrationSegments(taskId, response) {
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/publisher/narration/segments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response }),
+      })
+    },
+
+    uploadNarrationImage(taskId, kind, file) {
+      const form = new FormData()
+      form.append('file', file)
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/publisher/narration/images/${encodeURIComponent(kind)}`, {
+        method: 'POST',
+        body: form,
+      })
+    },
+
     saveSpeakerSegmentDstText(taskId, segmentId, dstText) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/speaker-segments/${encodeURIComponent(segmentId)}/dst-text`, {
         method: 'PATCH',

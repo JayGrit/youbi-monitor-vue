@@ -31,6 +31,8 @@ defineProps({
   flowTaskTitle: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
   loadSelectedUploaderDiagnostics: { type: Function, required: true },
+  submitNarrationSegments: { type: Function, required: true },
+  uploadNarrationImage: { type: Function, required: true },
   closeTaskFlow: { type: Function, required: true },
   flowCoverUrl: { type: Function, required: true },
   flowSourceUrl: { type: Function, required: true },
@@ -126,6 +128,8 @@ function seekVocalsPlayback(ms) {
           :diagnostics-loading="uploaderDiagnosticsLoading"
           :diagnostics-error="uploaderDiagnosticsError"
           :load-diagnostics="loadSelectedUploaderDiagnostics"
+          :submit-segments="submitNarrationSegments"
+          :upload-image="uploadNarrationImage"
         />
 
         <AsseterPanel

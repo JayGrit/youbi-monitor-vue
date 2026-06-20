@@ -2595,6 +2595,75 @@ h1 {
   line-height: 1.8;
 }
 
+.narration-manual-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.narration-manual-card {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.narration-manual-image-grid .narration-manual-card {
+  margin: 0;
+}
+
+.narration-manual-head,
+.narration-manual-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.narration-manual-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.narration-manual-head span,
+.narration-manual-complete {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.narration-manual-card textarea {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 12px 0 8px;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  resize: vertical;
+  font: inherit;
+}
+
+.narration-manual-card input[type='file'] {
+  display: block;
+  max-width: 100%;
+  margin: 10px 0;
+}
+
+.narration-manual-prompt {
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.narration-manual-success {
+  color: #15803d;
+  font-size: 13px;
+}
+
 .narration-image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
