@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { createPlatformIconUrls, MONITOR_PAGE_SIZE, uploadPlatformText } from '../domain/constants'
+import { createPlatformIconUrls, MONITOR_PAGE_SIZE, statusText, uploadPlatformText } from '../domain/constants'
 import { formatDateTime, formatDuration } from '../utils/format'
 
 const props = defineProps({
