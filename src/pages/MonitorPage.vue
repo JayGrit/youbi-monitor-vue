@@ -373,7 +373,11 @@ function onlineDeviceNames(service) {
       当前筛选下暂无任务
     </div>
 
-    <article v-for="task in pagedTasks" :key="task.taskId" :class="['task-row', `status-${task.status}`]">
+    <article
+      v-for="task in pagedTasks"
+      :key="task.taskId"
+      :class="['task-row', `status-${task.status}`]"
+    >
       <a
         v-if="taskThumbnailUrl(task)"
         class="task-cover"
@@ -428,7 +432,7 @@ function onlineDeviceNames(service) {
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
       </div>
 
-      <div class="task-progress-summary">
+      <div v-if="!taskDetailsExpanded" class="task-progress-summary">
         <strong>{{ taskStatusSummary(task) }}</strong>
       </div>
       <div v-if="taskDetailsExpanded" class="task-progress-detail">

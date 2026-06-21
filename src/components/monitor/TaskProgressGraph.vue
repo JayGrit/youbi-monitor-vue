@@ -19,33 +19,70 @@ const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
 let resizeObserver = null
 
 const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
-const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
+const edges = computed(() => normalizeEdges(
+  nodes.value,
+  Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [],
+))
 const maxOrder = computed(() => Math.max(1, ...nodes.value.map(node => Number(node.order) || 1)))
-const rowByNodeId = computed(() => {
-  const parentsByNode = new Map()
-  for (const edge of edges.value) {
-    if (!parentsByNode.has(edge.to)) parentsByNode.set(edge.to, [])
-    parentsByNode.get(edge.to).push(edge.from)
-  }
+const layout = computed(() => {
   const nodesByOrder = new Map()
   for (const node of nodes.value) {
     const order = Number(node.order) || 1
     if (!nodesByOrder.has(order)) nodesByOrder.set(order, [])
     nodesByOrder.get(order).push(node)
   }
-  const result = new Map()
-  for (const order of [...nodesByOrder.keys()].sort((left, right) => left - right)) {
-    const columnNodes = nodesByOrder.get(order)
-    if (columnNodes.length > 1) {
-      columnNodes.forEach((node, index) => result.set(node.id, index + 1))
-      continue
-    }
-    const node = columnNodes[0]
-    const parentRows = (parentsByNode.get(node.id) || []).map(id => result.get(id)).filter(Boolean)
-    result.set(node.id, parentRows.length ? Math.max(...parentRows) : 1)
+
+  const columnCounts = [...nodesByOrder.values()].map(columnNodes => columnNodes.length).filter(Boolean)
+  const rowUnits = columnCounts.reduce((result, count) => leastCommonMultiple(result, count), 1)
+  const nodeLayouts = new Map()
+  for (const columnNodes of nodesByOrder.values()) {
+    const rowSpan = rowUnits / columnNodes.length
+    columnNodes.forEach((node, index) => {
+      nodeLayouts.set(node.id, {
+        rowStart: index * rowSpan + 1,
+        rowSpan,
+      })
+    })
   }
-  return result
+  return {
+    maxRows: Math.max(1, ...columnCounts),
+    nodeLayouts,
+    rowUnits,
+  }
 })
+
+function normalizeEdges(routeNodes, routeEdges) {
+  const imageGeneration = routeNodes.find(node =>
+    node.stage === 'publisher' && node.subStage === 'image_generation'
+  )
+  const whisper = routeNodes.find(node => node.stage === 'whisper')
+  const asseter = routeNodes.find(node => node.stage === 'asseter')
+  const videoRender = routeNodes.find(node =>
+    node.stage === 'combiner' && node.subStage === 'video_render'
+  )
+  if (!imageGeneration || !whisper || !asseter) return routeEdges
+
+  const normalized = routeEdges.filter(edge =>
+    !(edge.from === imageGeneration.id && [whisper.id, videoRender?.id].includes(edge.to))
+  )
+  for (const from of [imageGeneration.id, whisper.id]) {
+    if (!normalized.some(edge => edge.from === from && edge.to === asseter.id)) {
+      normalized.push({ from, to: asseter.id })
+    }
+  }
+  return normalized
+}
+
+function greatestCommonDivisor(left, right) {
+  let a = Math.abs(left)
+  let b = Math.abs(right)
+  while (b) [a, b] = [b, a % b]
+  return a || 1
+}
+
+function leastCommonMultiple(left, right) {
+  return Math.abs(left * right) / greatestCommonDivisor(left, right)
+}
 
 function setNodeElement(id, element) {
   if (element) nodeElements.set(id, element)
@@ -112,7 +149,11 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   <div
     ref="container"
     class="task-dag"
-    :style="{ '--dag-columns': maxOrder }"
+    :style="{
+      '--dag-columns': maxOrder,
+      '--dag-row-units': layout.rowUnits,
+      '--dag-min-height': `${layout.maxRows * 80}px`,
+    }"
     aria-label="任务 DAG 阶段图"
   >
     <svg class="task-dag-links" aria-hidden="true">
@@ -136,7 +177,11 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         :ref="element => setNodeElement(node.id, element)"
         type="button"
         :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
-        :style="{ '--dag-column': Number(node.order) || 1, '--dag-row': rowByNodeId.get(node.id) || 1 }"
+        :style="{
+          '--dag-column': Number(node.order) || 1,
+          '--dag-row-start': layout.nodeLayouts.get(node.id)?.rowStart || 1,
+          '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
+        }"
         :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
         @click="openTaskFlow(task, node.stage)"
       >
