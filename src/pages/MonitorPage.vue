@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue'
-import { createPlatformIconUrls, MONITOR_PAGE_SIZE, statusText, uploadPlatformText } from '../domain/constants'
+import { MONITOR_PAGE_SIZE, statusText } from '../domain/constants'
 import { formatDateTime, formatDuration } from '../utils/format'
+import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
 
 const props = defineProps({
   error: { type: String, default: '' },
@@ -25,9 +25,9 @@ const props = defineProps({
   pagedTasks: { type: Array, default: () => [] },
   openFailureKey: { type: String, default: '' },
   progressByTaskId: { type: Object, default: () => ({}) },
-  progressLoadingTaskIds: { type: Object, default: () => ({}) },
-  progressErrorByTaskId: { type: Object, default: () => ({}) },
-  expandedTaskIds: { type: Object, default: () => ({}) },
+  taskDetailsExpanded: { type: Boolean, default: false },
+  taskProgressLoading: { type: Boolean, default: false },
+  taskProgressError: { type: String, default: '' },
   uploadRetryPlatform: { type: String, default: '' },
   uploadRetryPlatformOptions: { type: Array, default: () => [] },
   uploadRetryRows: { type: Array, default: () => [] },
@@ -64,8 +64,7 @@ const props = defineProps({
   nodeProgress: { type: Function, required: true },
   nodeTitle: { type: Function, required: true },
   openTaskFlow: { type: Function, required: true },
-  toggleTaskProgress: { type: Function, required: true },
-  refreshTaskProgress: { type: Function, required: true },
+  toggleTaskDetails: { type: Function, required: true },
   isTaskReadyBusy: { type: Function, required: true },
   markTaskReady: { type: Function, required: true },
   setUploadRetryPlatform: { type: Function, required: true },
@@ -101,54 +100,8 @@ const emit = defineEmits([
   'clearFailure',
 ])
 
-const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
-const LEGACY_STAGE_KEYS = new Set([
-  'downloader',
-  'publisher',
-  'demucs',
-  'whisper',
-  'translator',
-  'speaker',
-  'combiner',
-  'uploader',
-])
-const stageDisplayMode = ref('task')
-
-function hasUploaderPlatformStatuses(node) {
-  return node.key === 'uploader' && Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0
-}
-
-function stageNodeStatusClass(node) {
-  if (node.key === 'uploader' && node.status === 'running' && hasUploaderPlatformStatuses(node)) {
-    return 'status-success'
-  }
-  return `status-${node.status}`
-}
-
-function platformIconUrl(platform) {
-  return PLATFORM_ICON_URLS[platform] || ''
-}
-
-function platformTitle(platformStatus) {
-  const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
-  return `${platform} · ${platformStatus.status}`
-}
-
 function displayTaskCount() {
   return props.taskTotalCount || props.filteredTasks.length
-}
-
-function taskStageNodes(task) {
-  const progress = props.progressByTaskId[task?.taskId]
-  const nodes = Array.isArray(progress?.nodes) ? progress.nodes : []
-  if (stageDisplayMode.value === 'all') {
-    return nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
-  }
-
-  const nodesByKey = new Map(nodes.map(node => [node.key, node]))
-  const configuredStages = Array.isArray(progress?.distributorStages) ? progress.distributorStages : []
-  const routedNodes = configuredStages.map(key => nodesByKey.get(key)).filter(Boolean)
-  return routedNodes.length > 0 ? routedNodes : nodes.filter(node => LEGACY_STAGE_KEYS.has(node.key))
 }
 
 function taskStatusSummary(task) {
@@ -156,14 +109,6 @@ function taskStatusSummary(task) {
   return task?.status === 'running' && task?.currentStage
     ? `${status} · ${props.stageName(task.currentStage)}`
     : status
-}
-
-function showStageTime(node) {
-  return !['translator', 'speaker', 'uploader'].includes(node?.key)
-}
-
-function showStageProgress(node) {
-  return node?.key !== 'uploader'
 }
 
 function onlineDeviceNames(service) {
@@ -255,26 +200,14 @@ function onlineDeviceNames(service) {
         />
         <button type="submit">搜索</button>
       </form>
-      <div class="stage-display-tabs" role="tablist" aria-label="阶段显示方案">
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="stageDisplayMode === 'task'"
-          :class="{ active: stageDisplayMode === 'task' }"
-          @click="stageDisplayMode = 'task'"
-        >
-          任务阶段
-        </button>
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="stageDisplayMode === 'all'"
-          :class="{ active: stageDisplayMode === 'all' }"
-          @click="stageDisplayMode = 'all'"
-        >
-          全部阶段
-        </button>
-      </div>
+      <button
+        type="button"
+        :class="['task-filter-button', 'task-details-toggle', { active: taskDetailsExpanded }]"
+        :disabled="taskProgressLoading && !taskDetailsExpanded"
+        @click="toggleTaskDetails"
+      >
+        {{ taskDetailsExpanded ? '收起全部详情' : (taskProgressLoading ? '加载详情中' : '展开全部详情') }}
+      </button>
       <button
         type="button"
         :class="['task-filter-button', 'task-actions-toggle', { active: taskActionsExpanded }]"
@@ -308,6 +241,10 @@ function onlineDeviceNames(service) {
       >
         {{ downloaderFailuresOpen ? '收起稍后执行' : '稍后执行' }}
       </button>
+    </div>
+
+    <div v-if="taskDetailsExpanded && taskProgressError" class="task-progress-global-error">
+      详情刷新失败：{{ taskProgressError }}；将在 10 秒后自动重试。
     </div>
 
     <div v-if="uploadRetryPlatform" class="upload-retry-panel">
@@ -493,53 +430,19 @@ function onlineDeviceNames(service) {
 
       <div class="task-progress-summary">
         <strong>{{ taskStatusSummary(task) }}</strong>
-        <button type="button" @click="toggleTaskProgress(task)">
-          {{ expandedTaskIds[task.taskId] ? '收起详情' : '加载详情' }}
-        </button>
       </div>
-      <div v-if="expandedTaskIds[task.taskId]" class="task-progress-detail">
-        <div v-if="progressLoadingTaskIds[task.taskId]" class="task-progress-loading">正在加载详情</div>
-        <div v-else-if="progressErrorByTaskId[task.taskId]" class="task-progress-error">
-          <span>{{ progressErrorByTaskId[task.taskId] }}</span>
-          <button type="button" @click="refreshTaskProgress(task)">重试</button>
+      <div v-if="taskDetailsExpanded" class="task-progress-detail">
+        <div v-if="!progressByTaskId[task.taskId] && taskProgressLoading" class="task-progress-loading">
+          正在加载详情
         </div>
-        <div v-else-if="progressByTaskId[task.taskId]" class="task-progress-toolbar">
-          <button type="button" @click="refreshTaskProgress(task)">刷新详情</button>
-        </div>
-      <div v-if="progressByTaskId[task.taskId]" class="stage-chain" aria-label="阶段链路">
-        <template v-for="(node, index) in taskStageNodes(task)" :key="node.key">
-          <button
-            type="button"
-            :class="['stage-node', 'stage-node-button', stageNodeStatusClass(node), { 'with-uploader-platforms': hasUploaderPlatformStatuses(node) }]"
-            :title="`${nodeTitle(node)}\n点击查看任务流详情`"
-            @click="openTaskFlow(task, node.key)"
-          >
-            <span class="stage-label">{{ stageName(node) }}</span>
-            <span v-if="showStageProgress(node) && nodeProgress(node)" class="stage-progress">{{ nodeProgress(node) }}</span>
-            <span v-if="hasUploaderPlatformStatuses(node)" class="uploader-platform-icons" aria-label="上传平台状态">
-              <span
-                v-for="platformStatus in node.platformStatuses"
-                :key="platformStatus.platform"
-                :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
-                :title="platformTitle(platformStatus)"
-              >
-                <img
-                  v-if="platformIconUrl(platformStatus.platform)"
-                  :src="platformIconUrl(platformStatus.platform)"
-                  :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
-                  loading="lazy"
-                />
-              </span>
-            </span>
-            <span v-if="showStageTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
-          </button>
-          <div
-            v-if="index < taskStageNodes(task).length - 1"
-            :class="['stage-link', `status-${node.status}`]"
-            aria-hidden="true"
-          ></div>
-        </template>
-      </div>
+        <TaskProgressGraph
+          v-else-if="progressByTaskId[task.taskId]"
+          :task="task"
+          :progress="progressByTaskId[task.taskId]"
+          :node-progress="nodeProgress"
+          :node-title="nodeTitle"
+          :open-task-flow="openTaskFlow"
+        />
       </div>
       <div class="task-action-rail" :class="{ open: taskActionsOpen() }">
         <button

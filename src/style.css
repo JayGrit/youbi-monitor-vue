@@ -2269,6 +2269,7 @@ h1 {
 .restart-button:hover:not(:disabled),
 .delete-button:hover:not(:disabled),
 .task-actions-toggle.task-filter-button:hover:not(:disabled),
+.task-details-toggle.task-filter-button:hover:not(:disabled),
 .task-sort-button.task-filter-button:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
@@ -2292,6 +2293,7 @@ h1 {
 .restart-button:disabled,
 .delete-button:disabled,
 .task-actions-toggle:disabled,
+.task-details-toggle:disabled,
 .task-sort-button:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -2378,6 +2380,59 @@ h1 {
   justify-content: start;
   gap: 0;
   min-width: 964px;
+}
+
+.task-dag {
+  position: relative;
+  min-width: 760px;
+  padding: 10px 8px;
+}
+
+.task-dag-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--dag-columns), minmax(100px, 1fr));
+  grid-auto-rows: minmax(64px, auto);
+  align-items: center;
+  gap: 16px 32px;
+}
+
+.task-dag-grid .stage-node {
+  grid-column: var(--dag-column);
+  grid-row: var(--dag-row);
+  justify-self: center;
+}
+
+.task-dag-links {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.task-dag-links path {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-width: 2;
+}
+
+.task-dag-links marker path {
+  fill: #94a3b8;
+  stroke: none;
+}
+
+.task-progress-global-error {
+  margin: 0 0 10px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  font-size: 13px;
 }
 
 .task-progress-summary,
@@ -5832,6 +5887,26 @@ a.submitter-cell:hover {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .task-dag {
+    min-width: 0;
+    width: 100%;
+    padding-inline: 0;
+  }
+
+  .task-dag-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .task-dag-grid .stage-node {
+    grid-column: auto !important;
+    grid-row: auto !important;
+  }
+
+  .task-dag-links {
+    display: none;
   }
 
   .stage-node {

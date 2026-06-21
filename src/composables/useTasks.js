@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   MONITOR_PAGE_SIZE,
   stageNameText,
@@ -47,10 +47,11 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const downloaderFailureSelectedIds = ref([])
   const downloaderFailureTypeFilter = ref('all')
   const progressByTaskId = ref({})
-  const progressLoadingTaskIds = ref({})
-  const progressErrorByTaskId = ref({})
-  const expandedTaskIds = ref({})
-  const progressRequests = new Map()
+  const taskDetailsExpanded = ref(false)
+  const taskProgressLoading = ref(false)
+  const taskProgressError = ref('')
+  let progressRefreshTimer = null
+  let batchProgressRequest = null
 
   const taskStageFilters = computed(() => {
     const keys = new Set()
@@ -168,59 +169,72 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   function pruneTaskProgress(visibleTaskIds) {
     const visible = new Set(visibleTaskIds)
-    for (const state of [progressByTaskId, progressLoadingTaskIds, progressErrorByTaskId, expandedTaskIds]) {
-      state.value = Object.fromEntries(Object.entries(state.value).filter(([taskId]) => visible.has(taskId)))
-    }
+    progressByTaskId.value = Object.fromEntries(
+      Object.entries(progressByTaskId.value).filter(([taskId]) => visible.has(taskId))
+    )
   }
 
-  async function loadTaskProgress(taskId, force = false) {
-    if (!taskId) return null
-    if (!force && progressByTaskId.value[taskId]) return progressByTaskId.value[taskId]
-    if (progressRequests.has(taskId)) return progressRequests.get(taskId)
-    progressLoadingTaskIds.value = { ...progressLoadingTaskIds.value, [taskId]: true }
-    progressErrorByTaskId.value = { ...progressErrorByTaskId.value, [taskId]: '' }
-    const request = monitorApi.loadTaskProgress(taskId)
-      .then(payload => {
-        if (tasks.value.some(task => task.taskId === taskId)) {
-          progressByTaskId.value = { ...progressByTaskId.value, [taskId]: payload }
+  async function loadTaskProgressBatch() {
+    const taskIds = pagedTasks.value.map(task => task.taskId).filter(Boolean).slice(0, MONITOR_PAGE_SIZE)
+    if (!taskDetailsExpanded.value || taskIds.length === 0) return []
+    if (batchProgressRequest) return batchProgressRequest
+    const requestedTaskIdsKey = taskIds.join('\u0000')
+    taskProgressLoading.value = true
+    taskProgressError.value = ''
+    batchProgressRequest = monitorApi.loadTaskProgressBatch(taskIds)
+      .then(items => {
+        const visible = new Set(pagedTasks.value.map(task => task.taskId))
+        const next = { ...progressByTaskId.value }
+        for (const item of items || []) {
+          if (item?.taskId && visible.has(item.taskId)) next[item.taskId] = item
         }
-        return payload
+        progressByTaskId.value = next
+        return items || []
       })
       .catch(err => {
-        if (tasks.value.some(task => task.taskId === taskId)) {
-          progressErrorByTaskId.value = {
-            ...progressErrorByTaskId.value,
-            [taskId]: err instanceof Error ? err.message : String(err),
-          }
-        }
-        return null
+        taskProgressError.value = err instanceof Error ? err.message : String(err)
+        return []
       })
       .finally(() => {
-        progressRequests.delete(taskId)
-        const next = { ...progressLoadingTaskIds.value }
-        delete next[taskId]
-        progressLoadingTaskIds.value = next
+        taskProgressLoading.value = false
+        batchProgressRequest = null
+        const currentTaskIdsKey = pagedTasks.value.map(task => task.taskId).filter(Boolean).slice(0, MONITOR_PAGE_SIZE).join('\u0000')
+        if (taskDetailsExpanded.value && currentTaskIdsKey !== requestedTaskIdsKey) {
+          queueMicrotask(loadTaskProgressBatch)
+        }
       })
-    progressRequests.set(taskId, request)
-    return request
+    return batchProgressRequest
   }
 
-  async function toggleTaskProgress(task) {
-    const taskId = task?.taskId
-    if (!taskId) return
-    if (expandedTaskIds.value[taskId]) {
-      const next = { ...expandedTaskIds.value }
-      delete next[taskId]
-      expandedTaskIds.value = next
+  function stopTaskProgressRefresh() {
+    if (progressRefreshTimer) window.clearInterval(progressRefreshTimer)
+    progressRefreshTimer = null
+  }
+
+  function startTaskProgressRefresh() {
+    stopTaskProgressRefresh()
+    progressRefreshTimer = window.setInterval(loadTaskProgressBatch, 10000)
+  }
+
+  async function toggleTaskDetails() {
+    taskDetailsExpanded.value = !taskDetailsExpanded.value
+    if (!taskDetailsExpanded.value) {
+      stopTaskProgressRefresh()
+      taskProgressError.value = ''
       return
     }
-    expandedTaskIds.value = { ...expandedTaskIds.value, [taskId]: true }
-    if (!progressByTaskId.value[taskId]) await loadTaskProgress(taskId)
+    await loadTaskProgressBatch()
+    if (taskDetailsExpanded.value) startTaskProgressRefresh()
   }
 
-  function refreshTaskProgress(task) {
-    return loadTaskProgress(task?.taskId, true)
-  }
+  watch(
+    () => pagedTasks.value.map(task => task.taskId).join('\u0000'),
+    () => {
+      if (taskDetailsExpanded.value) loadTaskProgressBatch()
+    }
+  )
+
+  onUnmounted(stopTaskProgressRefresh)
 
   async function loadTaskTypes() {
     try {
@@ -650,7 +664,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   function nodeTitle(node) {
     const parts = [
-      stageName(node),
+      node?.label || stageName(node),
       statusText[node.status] || node.status,
     ]
     const progress = nodeProgress(node)
@@ -721,9 +735,9 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     downloaderFailureSelectedIds,
     downloaderFailureTypeFilter,
     progressByTaskId,
-    progressLoadingTaskIds,
-    progressErrorByTaskId,
-    expandedTaskIds,
+    taskDetailsExpanded,
+    taskProgressLoading,
+    taskProgressError,
     taskTypeFilters,
     taskStageFilters,
     filteredTasks,
@@ -741,9 +755,8 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     downloaderFailureTypeSelected,
     loadTasks,
     loadServiceHeartbeats,
-    loadTaskProgress,
-    toggleTaskProgress,
-    refreshTaskProgress,
+    loadTaskProgressBatch,
+    toggleTaskDetails,
     loadTaskTypes,
     markTaskReady,
     isTaskReadyBusy,

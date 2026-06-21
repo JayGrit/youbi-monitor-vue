@@ -1,0 +1,166 @@
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { createPlatformIconUrls, uploadPlatformText } from '../../domain/constants'
+import { formatDuration } from '../../utils/format'
+
+const props = defineProps({
+  progress: { type: Object, default: null },
+  nodeProgress: { type: Function, required: true },
+  nodeTitle: { type: Function, required: true },
+  openTaskFlow: { type: Function, required: true },
+  task: { type: Object, required: true },
+})
+
+const container = ref(null)
+const nodeElements = new Map()
+const paths = ref([])
+const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
+const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
+let resizeObserver = null
+
+const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
+const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
+const maxOrder = computed(() => Math.max(1, ...nodes.value.map(node => Number(node.order) || 1)))
+const rowByNodeId = computed(() => {
+  const parentsByNode = new Map()
+  for (const edge of edges.value) {
+    if (!parentsByNode.has(edge.to)) parentsByNode.set(edge.to, [])
+    parentsByNode.get(edge.to).push(edge.from)
+  }
+  const nodesByOrder = new Map()
+  for (const node of nodes.value) {
+    const order = Number(node.order) || 1
+    if (!nodesByOrder.has(order)) nodesByOrder.set(order, [])
+    nodesByOrder.get(order).push(node)
+  }
+  const result = new Map()
+  for (const order of [...nodesByOrder.keys()].sort((left, right) => left - right)) {
+    const columnNodes = nodesByOrder.get(order)
+    if (columnNodes.length > 1) {
+      columnNodes.forEach((node, index) => result.set(node.id, index + 1))
+      continue
+    }
+    const node = columnNodes[0]
+    const parentRows = (parentsByNode.get(node.id) || []).map(id => result.get(id)).filter(Boolean)
+    result.set(node.id, parentRows.length ? Math.max(...parentRows) : 1)
+  }
+  return result
+})
+
+function setNodeElement(id, element) {
+  if (element) nodeElements.set(id, element)
+  else nodeElements.delete(id)
+}
+
+function statusClass(node) {
+  if (node.stage === 'uploader' && node.status === 'running' && node.platformStatuses?.length) {
+    return 'status-success'
+  }
+  return `status-${node.status || 'pending'}`
+}
+
+function hasUploaderPlatforms(node) {
+  return node.stage === 'uploader' && Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0
+}
+
+function platformTitle(platformStatus) {
+  const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
+  return `${platform} · ${platformStatus.status}`
+}
+
+function showTime(node) {
+  return !['translator', 'speaker', 'uploader'].includes(node.stage)
+    && Number(node.elapsedSeconds) > 0
+}
+
+function updatePaths() {
+  const root = container.value
+  if (!root) return
+  const rootRect = root.getBoundingClientRect()
+  paths.value = edges.value.flatMap(edge => {
+    const from = nodeElements.get(edge.from)
+    const to = nodeElements.get(edge.to)
+    if (!from || !to) return []
+    const fromRect = from.getBoundingClientRect()
+    const toRect = to.getBoundingClientRect()
+    const x1 = fromRect.right - rootRect.left
+    const y1 = fromRect.top + fromRect.height / 2 - rootRect.top
+    const x2 = toRect.left - rootRect.left
+    const y2 = toRect.top + toRect.height / 2 - rootRect.top
+    const middle = x1 + Math.max(12, (x2 - x1) / 2)
+    return [{ id: `${edge.from}->${edge.to}`, d: `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}` }]
+  })
+}
+
+async function schedulePathUpdate() {
+  await nextTick()
+  updatePaths()
+}
+
+watch([nodes, edges], schedulePathUpdate, { deep: true })
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver(updatePaths)
+  if (container.value) resizeObserver.observe(container.value)
+  schedulePathUpdate()
+})
+
+onBeforeUnmount(() => resizeObserver?.disconnect())
+</script>
+
+<template>
+  <div
+    ref="container"
+    class="task-dag"
+    :style="{ '--dag-columns': maxOrder }"
+    aria-label="任务 DAG 阶段图"
+  >
+    <svg class="task-dag-links" aria-hidden="true">
+      <defs>
+        <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" />
+        </marker>
+      </defs>
+      <path
+        v-for="path in paths"
+        :key="path.id"
+        :d="path.d"
+        :marker-end="`url(#${markerId})`"
+      />
+    </svg>
+
+    <div class="task-dag-grid">
+      <button
+        v-for="node in nodes"
+        :key="node.id"
+        :ref="element => setNodeElement(node.id, element)"
+        type="button"
+        :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
+        :style="{ '--dag-column': Number(node.order) || 1, '--dag-row': rowByNodeId.get(node.id) || 1 }"
+        :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
+        @click="openTaskFlow(task, node.stage)"
+      >
+        <span class="stage-label">{{ node.label }}</span>
+        <span v-if="nodeProgress({ ...node, key: node.stage })" class="stage-progress">
+          {{ nodeProgress({ ...node, key: node.stage }) }}
+        </span>
+        <span v-if="hasUploaderPlatforms(node)" class="uploader-platform-icons" aria-label="上传平台状态">
+          <span
+            v-for="platformStatus in node.platformStatuses"
+            :key="platformStatus.platform"
+            :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
+            :title="platformTitle(platformStatus)"
+          >
+            <img
+              v-if="platformIconUrls[platformStatus.platform]"
+              :src="platformIconUrls[platformStatus.platform]"
+              :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
+              loading="lazy"
+            />
+          </span>
+        </span>
+        <span v-if="showTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
+      </button>
+    </div>
+  </div>
+</template>

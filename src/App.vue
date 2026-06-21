@@ -88,9 +88,9 @@ const {
   downloaderFailureSelectedIds,
   downloaderFailureTypeFilter,
   progressByTaskId,
-  progressLoadingTaskIds,
-  progressErrorByTaskId,
-  expandedTaskIds,
+  taskDetailsExpanded,
+  taskProgressLoading,
+  taskProgressError,
   taskTypeFilters,
   taskStageFilters,
   filteredTasks,
@@ -106,8 +106,7 @@ const {
   downloaderFailureTypeSelected,
   loadTasks,
   loadServiceHeartbeats,
-  toggleTaskProgress,
-  refreshTaskProgress,
+  toggleTaskDetails,
   loadTaskTypes,
   markTaskReady,
   isTaskReadyBusy,
@@ -402,9 +401,9 @@ function audioErrorMessage(code) {
       :paged-tasks="pagedTasks"
       :open-failure-key="openFailureKey"
       :progress-by-task-id="progressByTaskId"
-      :progress-loading-task-ids="progressLoadingTaskIds"
-      :progress-error-by-task-id="progressErrorByTaskId"
-      :expanded-task-ids="expandedTaskIds"
+      :task-details-expanded="taskDetailsExpanded"
+      :task-progress-loading="taskProgressLoading"
+      :task-progress-error="taskProgressError"
       :upload-retry-platform="uploadRetryPlatform"
       :upload-retry-platform-options="uploadRetryPlatformOptions"
       :upload-retry-rows="uploadRetryRows"
@@ -441,8 +440,7 @@ function audioErrorMessage(code) {
       :node-progress="nodeProgress"
       :node-title="nodeTitle"
       :open-task-flow="openTaskFlow"
-      :toggle-task-progress="toggleTaskProgress"
-      :refresh-task-progress="refreshTaskProgress"
+      :toggle-task-details="toggleTaskDetails"
       :is-task-ready-busy="isTaskReadyBusy"
       :mark-task-ready="markTaskReady"
       :set-upload-retry-platform="setUploadRetryPlatform"

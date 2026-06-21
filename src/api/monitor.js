@@ -16,6 +16,14 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/progress`)
     },
 
+    loadTaskProgressBatch(taskIds) {
+      return requestJson(`${apiBase}/video-tasks/progress/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskIds }),
+      })
+    },
+
     loadServiceHeartbeats() {
       return requestJson(`${apiBase}/services/heartbeats`)
     },
