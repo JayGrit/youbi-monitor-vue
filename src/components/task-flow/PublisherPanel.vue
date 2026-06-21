@@ -29,7 +29,7 @@ const segmentResponse = ref('')
 const segmentBusy = ref(false)
 const segmentMessage = ref('')
 const segmentError = ref('')
-const imageFiles = ref({ cover: null, background: null })
+const imageFiles = ref({ cover: null, background: null, vertical: null, horizontal: null })
 const imageBusy = ref('')
 const imageMessage = ref('')
 const imageError = ref('')
@@ -87,22 +87,54 @@ const segmentRequest = computed(() => {
   const input = parseJsonObject(jobByName.value.generate_segment_plan?.input_json)
   return input.request ? JSON.stringify(input.request, null, 2) : ''
 })
+
+function promptWithRatio(prompt, ratio) {
+  const value = String(prompt || '').trim()
+  if (!value) return ''
+  if (value.includes(ratio)) return value
+  return `${value.replace(/[。\s]+$/, '')}。严格使用 ${ratio} 比例构图。`
+}
+
+function imageJobPrompt(jobName, fallbackPrompt, ratio) {
+  const input = parseJsonObject(jobByName.value[jobName]?.input_json)
+  return String(input.prompt || '').trim() || promptWithRatio(fallbackPrompt, ratio)
+}
+
 const manualImages = computed(() => [
   {
     kind: 'cover',
     label: '封面图',
     ratio: '1:1',
-    prompt: narration.value.cover_prompt || '',
+    prompt: imageJobPrompt('generate_cover_image', narration.value.cover_prompt, '1:1'),
     url: narration.value.cover_image_url || '',
   },
   {
     kind: 'background',
     label: '背景图',
     ratio: '4:3',
-    prompt: narration.value.background_prompt || '',
+    prompt: imageJobPrompt('generate_background_image', narration.value.background_prompt, '4:3'),
     url: narration.value.background_image_url || '',
   },
 ])
+const publishMetadataImages = computed(() => [
+  {
+    kind: 'vertical',
+    label: '竖版封面',
+    ratio: '3:4',
+    prompt: imageJobPrompt('generate_narration_vertical_cover', '', '3:4'),
+    url: videoInfo.value.vertical_cover_url || '',
+  },
+  {
+    kind: 'horizontal',
+    label: '横版封面',
+    ratio: '4:3',
+    prompt: imageJobPrompt('generate_narration_horizontal_cover', '', '4:3'),
+    url: videoInfo.value.horizontal_cover_url || '',
+  },
+])
+const showPublishMetadataImages = computed(() => {
+  return publishMetadataImages.value.some(item => item.prompt || item.url)
+})
 
 const matchingDiagnostics = computed(() => {
   return props.diagnostics.filter(row => {
@@ -360,6 +392,39 @@ function diagnosticTitlePrefix(row) {
       </div>
       <p v-if="imageMessage" class="narration-manual-success">{{ imageMessage }}</p>
       <p v-if="imageError" class="inline-error">{{ imageError }}</p>
+      <template v-if="showPublishMetadataImages">
+        <h4>投稿封面人工补交</h4>
+        <div class="narration-manual-image-grid">
+          <section v-for="item in publishMetadataImages" :key="item.kind" class="narration-manual-card">
+            <div class="narration-manual-head">
+              <div>
+                <strong>人工生成{{ item.label }}</strong>
+                <span>要求精确 {{ item.ratio }}</span>
+              </div>
+              <button
+                type="button"
+                :disabled="!item.prompt"
+                @click="copyText(`image-${item.kind}`, item.prompt)"
+              >
+                {{ copiedKey === `image-${item.kind}` ? '已复制' : '复制完整绘图提示词' }}
+              </button>
+            </div>
+            <p v-if="item.prompt" class="narration-manual-prompt">{{ item.prompt }}</p>
+            <p v-else class="flow-muted">请先让 publisher 执行一次投稿元数据阶段，以保存实际发送的提示词。</p>
+            <input type="file" accept="image/*" @change="selectImage(item.kind, $event)" />
+            <div class="narration-manual-actions">
+              <button
+                type="button"
+                :disabled="Boolean(imageBusy) || !imageFiles[item.kind] || !item.prompt"
+                @click="uploadManualImage(item)"
+              >
+                {{ imageBusy === item.kind ? '校验并上传中' : `上传${item.label}` }}
+              </button>
+              <span v-if="item.url" class="narration-manual-complete">已入库</span>
+            </div>
+          </section>
+        </div>
+      </template>
       <div v-if="narrationImages.length" class="narration-image-grid">
         <figure v-for="item in narrationImages" :key="item.label">
           <a :href="item.url" target="_blank" rel="noreferrer"><img :src="item.url" :alt="item.label" loading="lazy" /></a>
