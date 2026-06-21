@@ -16,6 +16,7 @@ const props = defineProps({
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
   loadDiagnostics: { type: Function, required: true },
+  uploadPlatformName: { type: Function, required: true },
   submitSegments: { type: Function, required: true },
   uploadImage: { type: Function, required: true },
 })
@@ -104,7 +105,10 @@ const manualImages = computed(() => [
 ])
 
 const matchingDiagnostics = computed(() => {
-  return props.diagnostics.filter(row => row?.platform === 'doubao')
+  return props.diagnostics.filter(row => {
+    const source = String(row?.source || '').toLowerCase()
+    return ['doubao', 'chatgpt'].includes(row?.platform) && !source.includes('upload')
+  })
 })
 const runOptions = computed(() => publisherRunOptions(matchingDiagnostics.value))
 const activeRunId = computed(() => {
@@ -280,7 +284,7 @@ function diagnosticCreatedAt(row) {
 
 function diagnosticTitlePrefix(row) {
   return [
-    '豆包封面',
+    props.uploadPlatformName(row.platform),
     row.accountKey || row.account_key || '',
   ].filter(Boolean).join(' / ')
 }
@@ -437,9 +441,9 @@ function diagnosticTitlePrefix(row) {
       </div>
     </section>
 
-    <section v-if="rows.length" class="flow-section publisher-diagnostics">
+    <section class="flow-section publisher-diagnostics">
       <div class="publisher-diagnostics-head">
-        <h4>Publisher 诊断截图</h4>
+        <h4>诊断截图</h4>
         <button type="button" class="diagnostic-load-button" :disabled="diagnosticsLoading" @click="requestDiagnostics">
           {{ diagnosticsLoading ? '加载中' : '加载诊断截图' }}
         </button>

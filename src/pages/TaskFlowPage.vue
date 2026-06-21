@@ -128,6 +128,7 @@ function seekVocalsPlayback(ms) {
           :diagnostics-loading="uploaderDiagnosticsLoading"
           :diagnostics-error="uploaderDiagnosticsError"
           :load-diagnostics="loadSelectedUploaderDiagnostics"
+          :upload-platform-name="uploadPlatformName"
           :submit-segments="submitNarrationSegments"
           :upload-image="uploadNarrationImage"
         />
