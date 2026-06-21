@@ -48,6 +48,11 @@ export function jobPrompt(jobs, jobName, fallbackPrompt, ratio) {
   return String(input.prompt || '').trim() || promptWithRatio(fallbackPrompt, ratio)
 }
 
+export function jobResult(jobs, jobName) {
+  const job = jobs.find(item => item.job_name === jobName && item.status === 'success')
+  return parseJsonObject(job?.result_json)
+}
+
 export function jobsNamed(jobs, names) {
   const accepted = new Set(names)
   return jobs.filter(job => accepted.has(job.job_name))

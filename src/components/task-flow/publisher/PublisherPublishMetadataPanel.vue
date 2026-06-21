@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import PublisherDiagnosticsPanel from './PublisherDiagnosticsPanel.vue'
 import PublisherImageTable from './PublisherImageTable.vue'
-import { formatTags, jobPrompt } from './publisherUtils'
+import { formatTags, jobPrompt, jobResult } from './publisherUtils'
 
 const props = defineProps({
   flow: { type: Object, default: null },
@@ -18,11 +18,17 @@ const props = defineProps({
 
 const videoInfo = computed(() => props.flow?.videoInfo || {})
 const result = computed(() => props.rows[0] || {})
+const generated = computed(() => ({
+  ...jobResult(props.jobs, 'generate_narration_upload_title'),
+  ...jobResult(props.jobs, 'generate_narration_upload_description'),
+  ...jobResult(props.jobs, 'generate_narration_upload_tags'),
+  ...jobResult(props.jobs, 'generate_narration_cover_text'),
+}))
 const metadataRows = computed(() => [
-  { key: 'title', label: 'Title', value: videoInfo.value.upload_title || result.value.upload_title || '-' },
-  { key: 'coverText', label: '封面文字', value: videoInfo.value.cover_text || result.value.cover_text || '-' },
-  { key: 'description', label: '简介', value: videoInfo.value.upload_description || result.value.upload_description || '-' },
-  { key: 'tags', label: 'Tags', value: formatTags(videoInfo.value.upload_tags || result.value.upload_tags) },
+  { key: 'title', label: 'Title', value: videoInfo.value.upload_title || result.value.upload_title || generated.value.upload_title || '-' },
+  { key: 'coverText', label: '封面文字', value: videoInfo.value.cover_text || result.value.cover_text || generated.value.cover_text || '-' },
+  { key: 'description', label: '简介', value: videoInfo.value.upload_description || result.value.upload_description || generated.value.upload_description || '-' },
+  { key: 'tags', label: 'Tags', value: formatTags(videoInfo.value.upload_tags || result.value.upload_tags || generated.value.upload_tags) },
 ])
 const images = computed(() => [
   {
