@@ -19,69 +19,64 @@ const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
 let resizeObserver = null
 
 const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
-const edges = computed(() => normalizeEdges(
-  nodes.value,
-  Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [],
-))
-const maxOrder = computed(() => Math.max(1, ...nodes.value.map(node => Number(node.order) || 1)))
+const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
 const layout = computed(() => {
-  const nodesByOrder = new Map()
-  for (const node of nodes.value) {
-    const order = Number(node.order) || 1
-    if (!nodesByOrder.has(order)) nodesByOrder.set(order, [])
-    nodesByOrder.get(order).push(node)
+  const nodeById = new Map(nodes.value.map(node => [node.id, node]))
+  const parents = new Map(nodes.value.map(node => [node.id, []]))
+  for (const edge of edges.value) {
+    if (nodeById.has(edge.from) && nodeById.has(edge.to)) parents.get(edge.to).push(edge.from)
   }
 
-  const columnCounts = [...nodesByOrder.values()].map(columnNodes => columnNodes.length).filter(Boolean)
-  const rowUnits = columnCounts.reduce((result, count) => leastCommonMultiple(result, count), 1)
-  const nodeLayouts = new Map()
-  for (const columnNodes of nodesByOrder.values()) {
-    const rowSpan = rowUnits / columnNodes.length
-    columnNodes.forEach((node, index) => {
-      nodeLayouts.set(node.id, {
-        rowStart: index * rowSpan + 1,
-        rowSpan,
-      })
-    })
+  const roots = nodes.value
+    .filter(node => !parents.get(node.id)?.length)
+    .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
+  const rootLane = new Map(roots.map((node, index) => [node.id, index + 1]))
+  const depthCache = new Map()
+  const originCache = new Map()
+
+  function depth(id, visiting = new Set()) {
+    if (depthCache.has(id)) return depthCache.get(id)
+    if (visiting.has(id)) return 1
+    const nextVisiting = new Set(visiting).add(id)
+    const value = 1 + Math.max(0, ...(parents.get(id) || []).map(parent => depth(parent, nextVisiting)))
+    depthCache.set(id, value)
+    return value
   }
+
+  function origins(id, visiting = new Set()) {
+    if (originCache.has(id)) return originCache.get(id)
+    if (visiting.has(id)) return new Set()
+    const nodeParents = parents.get(id) || []
+    const value = nodeParents.length
+      ? new Set(nodeParents.flatMap(parent => [...origins(parent, new Set(visiting).add(id))]))
+      : new Set([id])
+    originCache.set(id, value)
+    return value
+  }
+
+  const rowUnits = Math.max(1, roots.length)
+  const nodeLayouts = new Map(nodes.value.map(node => {
+    const lanes = [...origins(node.id)].map(root => rootLane.get(root)).filter(Boolean)
+    const isShared = lanes.length !== 1
+    return [node.id, {
+      column: depth(node.id),
+      rowStart: isShared ? 1 : lanes[0],
+      rowSpan: isShared ? rowUnits : 1,
+    }]
+  }))
+
   return {
-    maxRows: Math.max(1, ...columnCounts),
+    columns: Math.max(1, ...[...nodeLayouts.values()].map(node => node.column)),
+    maxRows: rowUnits,
     nodeLayouts,
     rowUnits,
   }
 })
 
-function normalizeEdges(routeNodes, routeEdges) {
-  const imageGeneration = routeNodes.find(node =>
-    node.stage === 'publisher' && node.subStage === 'image_generation'
-  )
-  const whisper = routeNodes.find(node => node.stage === 'whisper')
-  const asseter = routeNodes.find(node => node.stage === 'asseter')
-  const videoRender = routeNodes.find(node =>
-    node.stage === 'combiner' && node.subStage === 'video_render'
-  )
-  if (!imageGeneration || !whisper || !asseter) return routeEdges
-
-  const normalized = routeEdges.filter(edge =>
-    !(edge.from === imageGeneration.id && [whisper.id, videoRender?.id].includes(edge.to))
-  )
-  for (const from of [imageGeneration.id, whisper.id]) {
-    if (!normalized.some(edge => edge.from === from && edge.to === asseter.id)) {
-      normalized.push({ from, to: asseter.id })
-    }
-  }
-  return normalized
-}
-
-function greatestCommonDivisor(left, right) {
-  let a = Math.abs(left)
-  let b = Math.abs(right)
-  while (b) [a, b] = [b, a % b]
-  return a || 1
-}
-
-function leastCommonMultiple(left, right) {
-  return Math.abs(left * right) / greatestCommonDivisor(left, right)
+function rootLanePriority(node) {
+  if (node.stage === 'publisher' && node.subStage === 'image_generation') return 0
+  if (node.stage === 'publisher' && node.subStage === 'segment_plan') return 1
+  return Number(node.order) || Number.MAX_SAFE_INTEGER
 }
 
 function setNodeElement(id, element) {
@@ -150,7 +145,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     ref="container"
     class="task-dag"
     :style="{
-      '--dag-columns': maxOrder,
+      '--dag-columns': layout.columns,
       '--dag-row-units': layout.rowUnits,
       '--dag-min-height': `${layout.maxRows * 80}px`,
     }"
@@ -178,7 +173,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         type="button"
         :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
         :style="{
-          '--dag-column': Number(node.order) || 1,
+          '--dag-column': layout.nodeLayouts.get(node.id)?.column || 1,
           '--dag-row-start': layout.nodeLayouts.get(node.id)?.rowStart || 1,
           '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
         }"
