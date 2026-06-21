@@ -109,18 +109,56 @@ function updatePaths() {
   const root = container.value
   if (!root) return
   const rootRect = root.getBoundingClientRect()
-  paths.value = edges.value.flatMap(edge => {
-    const from = nodeElements.get(edge.from)
-    const to = nodeElements.get(edge.to)
-    if (!from || !to) return []
-    const fromRect = from.getBoundingClientRect()
+  const incoming = new Map()
+  for (const edge of edges.value) {
+    if (!incoming.has(edge.to)) incoming.set(edge.to, [])
+    incoming.get(edge.to).push(edge)
+  }
+
+  paths.value = [...incoming.entries()].flatMap(([targetId, targetEdges]) => {
+    const to = nodeElements.get(targetId)
+    if (!to) return []
     const toRect = to.getBoundingClientRect()
-    const x1 = fromRect.right - rootRect.left
-    const y1 = fromRect.top + fromRect.height / 2 - rootRect.top
     const x2 = toRect.left - rootRect.left
     const y2 = toRect.top + toRect.height / 2 - rootRect.top
-    const middle = x1 + Math.max(12, (x2 - x1) / 2)
-    return [{ id: `${edge.from}->${edge.to}`, d: `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}` }]
+    const sources = targetEdges.flatMap(edge => {
+      const from = nodeElements.get(edge.from)
+      if (!from) return []
+      const rect = from.getBoundingClientRect()
+      return [{
+        edge,
+        x: rect.right - rootRect.left,
+        y: rect.top + rect.height / 2 - rootRect.top,
+      }]
+    })
+    if (!sources.length) return []
+
+    if (sources.length === 1) {
+      const source = sources[0]
+      const middle = source.x + Math.max(12, (x2 - source.x) / 2)
+      return [{
+        id: `${source.edge.from}->${targetId}`,
+        d: `M ${source.x} ${source.y} H ${middle} V ${y2} H ${x2}`,
+        arrow: true,
+      }]
+    }
+
+    const nearestSourceX = Math.max(...sources.map(source => source.x))
+    const trunkLength = Math.max(12, Math.min(36, (x2 - nearestSourceX) / 2))
+    const junctionX = x2 - trunkLength
+    const branches = sources.map(source => ({
+      id: `${source.edge.from}->${targetId}:branch`,
+      d: `M ${source.x} ${source.y} H ${junctionX} V ${y2}`,
+      arrow: false,
+    }))
+    return [
+      ...branches,
+      {
+        id: `${targetId}:incoming-trunk`,
+        d: `M ${junctionX} ${y2} H ${x2}`,
+        arrow: true,
+      },
+    ]
   })
 }
 
@@ -161,7 +199,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         v-for="path in paths"
         :key="path.id"
         :d="path.d"
-        :marker-end="`url(#${markerId})`"
+        :marker-end="path.arrow ? `url(#${markerId})` : null"
       />
     </svg>
 
