@@ -17,7 +17,7 @@ const selectedRunId = ref('')
 const historyOpen = ref(false)
 const matching = computed(() => props.diagnostics.filter(row => {
   const source = String(row?.source || '').toLowerCase()
-  return ['doubao', 'chatgpt'].includes(row?.platform) && !source.includes('upload')
+  return row?.platform === 'doubao' && !source.includes('upload')
 }))
 const options = computed(() => {
   const byRunId = new Map()

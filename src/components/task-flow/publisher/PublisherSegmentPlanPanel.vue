@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue'
-import StageJobsPanel from '../StageJobsPanel.vue'
 import { copyText, jobsNamed, parseJsonObject } from './publisherUtils'
 
 const props = defineProps({
@@ -12,6 +11,7 @@ const props = defineProps({
 
 const response = ref('')
 const busy = ref(false)
+const attempted = ref(false)
 const message = ref('')
 const error = ref('')
 const copied = ref(false)
@@ -24,6 +24,23 @@ const request = computed(() => {
 const orderedSentences = computed(() => [...props.sentences].sort((left, right) => {
   return Number(left.line_index ?? left.id ?? 0) - Number(right.line_index ?? right.id ?? 0)
 }))
+const totalChars = computed(() => orderedSentences.value.reduce((total, row) => {
+  return total + String(row.sentence_text || '').replace(/\s/g, '').length
+}, 0))
+const segmentParagraphs = computed(() => {
+  const grouped = new Map()
+  for (const row of orderedSentences.value) {
+    const index = Number(row.segment_index ?? 1)
+    if (!grouped.has(index)) grouped.set(index, [])
+    grouped.get(index).push(String(row.sentence_text || '').trim())
+  }
+  return [...grouped.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([index, sentences]) => ({ index, text: sentences.filter(Boolean).join('') }))
+})
+const completed = computed(() => {
+  return orderedSentences.value.length > 0 && segmentJobs.value.some(job => job.status === 'success')
+})
 
 async function copyRequest() {
   await copyText(request.value)
@@ -32,7 +49,8 @@ async function copyRequest() {
 }
 
 async function submit() {
-  if (!response.value.trim() || busy.value) return
+  if (!response.value.trim() || busy.value || attempted.value) return
+  attempted.value = true
   busy.value = true
   message.value = ''
   error.value = ''
@@ -55,15 +73,15 @@ async function submit() {
       <div class="narration-status-line">
         <span :class="['stage-job-status', `status-${narration.status || 'pending'}`]">{{ narration.status || 'pending' }}</span>
         <span>{{ orderedSentences.length }} 句</span>
-        <span v-if="narration.operator">{{ narration.operator }}</span>
+        <span>共 {{ totalChars }} 字</span>
       </div>
-      <p class="narration-text">{{ narration.text || '暂无旁白文本' }}</p>
-      <section class="narration-manual-card">
+      <div v-if="segmentParagraphs.length" class="narration-segment-paragraphs">
+        <p v-for="segment in segmentParagraphs" :key="segment.index">{{ segment.text }}</p>
+      </div>
+      <p v-else class="narration-text">{{ narration.text || '暂无旁白文本' }}</p>
+      <section v-if="!completed" class="narration-manual-card">
         <div class="narration-manual-head">
-          <div>
-            <strong>人工分段</strong>
-            <span>复制完整大模型请求，提交模型原始返回值</span>
-          </div>
+          <strong>人工分段</strong>
           <button type="button" :disabled="!request" @click="copyRequest">
             {{ copied ? '已复制' : '复制完整请求' }}
           </button>
@@ -71,23 +89,14 @@ async function submit() {
         <p v-if="!request" class="flow-muted">暂无完整请求；请先让 publisher 执行一次分段任务。</p>
         <textarea v-model="response" rows="5" placeholder='粘贴大模型返回值，例如 {"end_line_ids":[8,17,25]}'></textarea>
         <div class="narration-manual-actions">
-          <button type="button" :disabled="busy || !response.trim()" @click="submit">
-            {{ busy ? '校验并提交中' : '校验并提交分段' }}
+          <button type="button" :disabled="busy || attempted || !response.trim()" @click="submit">
+            {{ busy ? '校验并提交中' : attempted && error ? '提交失败，不再重试' : '校验并提交分段' }}
           </button>
           <span v-if="message" class="narration-manual-success">{{ message }}</span>
         </div>
         <p v-if="error" class="inline-error">{{ error }}</p>
       </section>
-      <details v-if="orderedSentences.length">
-        <summary>旁白分句（{{ orderedSentences.length }}）</summary>
-        <ol class="narration-sentence-list">
-          <li v-for="row in orderedSentences" :key="row.id">
-            <span>片段 {{ row.segment_index ?? '-' }}</span>{{ row.sentence_text }}
-          </li>
-        </ol>
-      </details>
       <pre v-if="narration.error_message" class="flow-stage-error">{{ narration.error_message }}</pre>
     </section>
-    <StageJobsPanel v-if="segmentJobs.length" title="文案分段执行步骤" :rows="segmentJobs" />
   </div>
 </template>

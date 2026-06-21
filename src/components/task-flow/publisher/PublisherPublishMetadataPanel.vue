@@ -1,9 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue'
-import StageJobsPanel from '../StageJobsPanel.vue'
+import { computed } from 'vue'
+import { normalizeResourceUrl } from '../../../utils/media'
 import PublisherDiagnosticsPanel from './PublisherDiagnosticsPanel.vue'
-import PublisherMetadataSummary from './PublisherMetadataSummary.vue'
-import { copyText, jobPrompt, jobsNamed } from './publisherUtils'
+import PublisherImageTable from './PublisherImageTable.vue'
+import { formatTags, jobPrompt } from './publisherUtils'
 
 const props = defineProps({
   flow: { type: Object, default: null },
@@ -17,25 +17,22 @@ const props = defineProps({
   uploadImage: { type: Function, required: true },
 })
 
-const files = ref({ vertical: null, horizontal: null })
-const busy = ref('')
-const message = ref('')
-const error = ref('')
-const copied = ref('')
 const videoInfo = computed(() => props.flow?.videoInfo || {})
-const metadataJobNames = [
-  'generate_narration_upload_title',
-  'generate_narration_upload_description',
-  'generate_narration_upload_tags',
-  'generate_narration_cover_text',
-  'generate_narration_image_prompt',
-  'generate_narration_vertical_cover',
-  'generate_narration_horizontal_cover',
-  'generate_upload_title',
-  'generate_upload_description',
-  'generate_cover_text',
-]
-const metadataJobs = computed(() => jobsNamed(props.jobs, metadataJobNames))
+const result = computed(() => props.rows[0] || {})
+const coverUrl = computed(() => normalizeResourceUrl(
+  videoInfo.value.horizontal_cover_url
+  || videoInfo.value.final_cover_url
+  || videoInfo.value.vertical_cover_url
+  || result.value.horizontal_cover_url
+  || result.value.vertical_cover_url
+  || '',
+))
+const metadataRows = computed(() => [
+  { key: 'title', label: 'Title', value: videoInfo.value.upload_title || result.value.upload_title || '-' },
+  { key: 'cover', label: '封面图', image: coverUrl.value },
+  { key: 'description', label: '简介', value: videoInfo.value.upload_description || result.value.upload_description || '-' },
+  { key: 'tags', label: 'Tags', value: formatTags(videoInfo.value.upload_tags || result.value.upload_tags) },
+])
 const images = computed(() => [
   {
     kind: 'vertical',
@@ -53,69 +50,30 @@ const images = computed(() => [
   },
 ])
 
-async function copyPrompt(item) {
-  await copyText(item.prompt)
-  copied.value = item.kind
-  window.setTimeout(() => {
-    if (copied.value === item.kind) copied.value = ''
-  }, 1600)
-}
-
-function selectImage(kind, event) {
-  files.value = { ...files.value, [kind]: event.target.files?.[0] || null }
-  message.value = ''
-  error.value = ''
-}
-
-async function upload(item) {
-  const file = files.value[item.kind]
-  if (!file || busy.value) return
-  busy.value = item.kind
-  message.value = ''
-  error.value = ''
-  try {
-    const result = await props.uploadImage(item.kind, file)
-    files.value = { ...files.value, [item.kind]: null }
-    message.value = `${item.label}已上传：${result.width}x${result.height}`
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err)
-  } finally {
-    busy.value = ''
-  }
-}
 </script>
 
 <template>
   <div class="publisher-panel">
-    <PublisherMetadataSummary :flow="flow" :rows="rows" />
     <section class="flow-section narration-section">
-      <h4>投稿封面人工补交</h4>
-      <div class="narration-manual-image-grid">
-        <section v-for="item in images" :key="item.kind" class="narration-manual-card">
-          <div class="narration-manual-head">
-            <div>
-              <strong>人工生成{{ item.label }}</strong>
-              <span>要求精确 {{ item.ratio }}</span>
-            </div>
-            <button type="button" :disabled="!item.prompt" @click="copyPrompt(item)">
-              {{ copied === item.kind ? '已复制' : '复制完整绘图提示词' }}
-            </button>
+      <h4>投稿信息</h4>
+      <div class="publisher-generated-table">
+        <div class="publisher-generated-row publisher-generated-head"><strong>字段</strong><strong>生成值</strong></div>
+        <div v-for="item in metadataRows" :key="item.key" class="publisher-generated-row">
+          <strong class="publisher-field-name">{{ item.label }}</strong>
+          <div>
+            <a v-if="item.image" :href="item.image" target="_blank" rel="noreferrer" class="publisher-generated-cover">
+              <img :src="item.image" alt="封面图" loading="lazy" />
+            </a>
+            <span v-else-if="item.key === 'cover'">-</span>
+            <p v-else>{{ item.value }}</p>
           </div>
-          <p v-if="item.prompt" class="narration-manual-prompt">{{ item.prompt }}</p>
-          <p v-else class="flow-muted">该阶段尚未保存绘图提示词。</p>
-          <input type="file" accept="image/*" @change="selectImage(item.kind, $event)" />
-          <div class="narration-manual-actions">
-            <button type="button" :disabled="Boolean(busy) || !files[item.kind] || !item.prompt" @click="upload(item)">
-              {{ busy === item.kind ? '校验并上传中' : `上传${item.label}` }}
-            </button>
-            <span v-if="item.url" class="narration-manual-complete">已入库</span>
-          </div>
-        </section>
+        </div>
       </div>
-      <p v-if="message" class="narration-manual-success">{{ message }}</p>
-      <p v-if="error" class="inline-error">{{ error }}</p>
     </section>
-    <StageJobsPanel v-if="metadataJobs.length" title="投稿元数据执行步骤" :rows="metadataJobs" />
+    <section class="flow-section narration-section">
+      <h4>投稿封面</h4>
+      <PublisherImageTable :items="images" :upload-image="uploadImage" />
+    </section>
     <PublisherDiagnosticsPanel
       :diagnostics="diagnostics"
       :loading="diagnosticsLoading"

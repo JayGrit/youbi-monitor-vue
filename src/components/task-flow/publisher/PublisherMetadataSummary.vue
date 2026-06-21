@@ -12,10 +12,17 @@ const expanded = ref(new Set())
 const result = computed(() => props.rows[0] || {})
 const videoInfo = computed(() => props.flow?.videoInfo || {})
 const comparisonRows = computed(() => [
-  { key: 'title', label: '标题', original: videoInfo.value.title || props.flow?.task?.title || '-', generated: result.value.upload_title || '-' },
-  { key: 'description', label: '简介', original: videoInfo.value.source_description || '-', generated: result.value.upload_description || '-', collapsible: true },
-  { key: 'tags', label: '标签', original: formatTags(videoInfo.value.source_tags_json), generated: formatTags(result.value.upload_tags) },
+  { key: 'title', label: '标题', original: videoInfo.value.title || props.flow?.task?.title || '-', generated: videoInfo.value.upload_title || result.value.upload_title || '-' },
+  { key: 'description', label: '简介', original: videoInfo.value.source_description || '-', generated: videoInfo.value.upload_description || result.value.upload_description || '-', collapsible: true },
+  { key: 'tags', label: '标签', original: formatTags(videoInfo.value.source_tags_json), generated: formatTags(videoInfo.value.upload_tags || result.value.upload_tags) },
 ])
+const completion = computed(() => {
+  const status = String(result.value.status || '').toLowerCase()
+  if (status === 'success') return { text: '已完成', className: 'status-success' }
+  if (status === 'failed') return { text: '失败', className: 'status-failed' }
+  if (status === 'running') return { text: '进行中', className: 'status-running' }
+  return { text: '未完成', className: 'status-pending' }
+})
 const coverImages = computed(() => [
   normalizeResourceUrl(result.value.source_cover_url || videoInfo.value.source_thumbnail_url || ''),
   normalizeResourceUrl(result.value.clean_cover_url || ''),
@@ -45,7 +52,7 @@ function toggle(key) {
     <template v-else>
       <div class="publisher-comparison-table">
         <div class="publisher-comparison-row publisher-comparison-head">
-          <strong>字段</strong><strong>原始值</strong><strong>Publisher 生成值</strong>
+          <strong>字段</strong><strong>原始值</strong><strong>Publisher 生成值</strong><strong>完成状态</strong>
         </div>
         <div v-for="item in comparisonRows" :key="item.key" class="publisher-comparison-row">
           <strong class="publisher-field-name">{{ item.label }}</strong>
@@ -61,6 +68,9 @@ function toggle(key) {
             >
               {{ isExpanded(`${item.key}-${side}`) ? '收起' : '展开' }}
             </button>
+          </div>
+          <div class="publisher-completion-cell">
+            <span :class="['stage-job-status', completion.className]">{{ completion.text }}</span>
           </div>
         </div>
       </div>

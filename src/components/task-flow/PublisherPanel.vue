@@ -51,11 +51,5 @@ defineProps({
     v-else
     :flow="flow"
     :rows="rows"
-    :jobs="jobs"
-    :diagnostics="diagnostics"
-    :diagnostics-loading="diagnosticsLoading"
-    :diagnostics-error="diagnosticsError"
-    :load-diagnostics="loadDiagnostics"
-    :upload-platform-name="uploadPlatformName"
   />
 </template>
