@@ -1,11 +1,17 @@
 <script setup>
 import { computed } from 'vue'
+import PublisherDiagnosticsPanel from './PublisherDiagnosticsPanel.vue'
 import PublisherImageTable from './PublisherImageTable.vue'
 import { jobPrompt } from './publisherUtils'
 
 const props = defineProps({
   narrations: { type: Array, default: () => [] },
   jobs: { type: Array, default: () => [] },
+  diagnostics: { type: Array, default: () => [] },
+  diagnosticsLoading: { type: Boolean, default: false },
+  diagnosticsError: { type: String, default: '' },
+  loadDiagnostics: { type: Function, required: true },
+  uploadPlatformName: { type: Function, required: true },
   uploadImage: { type: Function, required: true },
 })
 
@@ -26,6 +32,10 @@ const imageItems = computed(() => [
     url: narration.value.background_image_url || '',
   },
 ])
+const diagnosticItems = [
+  { key: 'cover', label: '1:1 豆包生成', platform: 'doubao', jobName: 'generate_cover_image', ratio: '1:1' },
+  { key: 'background', label: '4:3 豆包生成', platform: 'doubao', jobName: 'generate_background_image', ratio: '4:3' },
+]
 </script>
 
 <template>
@@ -35,5 +45,13 @@ const imageItems = computed(() => [
       <PublisherImageTable :items="imageItems" :upload-image="uploadImage" />
       <pre v-if="narration.error_message" class="flow-stage-error">{{ narration.error_message }}</pre>
     </section>
+    <PublisherDiagnosticsPanel
+      :diagnostics="diagnostics"
+      :items="diagnosticItems"
+      :loading="diagnosticsLoading"
+      :error="diagnosticsError"
+      :load="loadDiagnostics"
+      :upload-platform-name="uploadPlatformName"
+    />
   </div>
 </template>

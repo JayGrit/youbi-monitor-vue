@@ -11,7 +11,6 @@ const props = defineProps({
 
 const response = ref('')
 const busy = ref(false)
-const attempted = ref(false)
 const message = ref('')
 const error = ref('')
 const copied = ref(false)
@@ -49,8 +48,7 @@ async function copyRequest() {
 }
 
 async function submit() {
-  if (!response.value.trim() || busy.value || attempted.value) return
-  attempted.value = true
+  if (!response.value.trim() || busy.value) return
   busy.value = true
   message.value = ''
   error.value = ''
@@ -89,8 +87,8 @@ async function submit() {
         <p v-if="!request" class="flow-muted">暂无完整请求；请先让 publisher 执行一次分段任务。</p>
         <textarea v-model="response" rows="5" placeholder='粘贴大模型返回值，例如 {"end_line_ids":[8,17,25]}'></textarea>
         <div class="narration-manual-actions">
-          <button type="button" :disabled="busy || attempted || !response.trim()" @click="submit">
-            {{ busy ? '校验并提交中' : attempted && error ? '提交失败，不再重试' : '校验并提交分段' }}
+          <button type="button" :disabled="busy || !response.trim()" @click="submit">
+            {{ busy ? '校验并提交中' : '校验并提交分段' }}
           </button>
           <span v-if="message" class="narration-manual-success">{{ message }}</span>
         </div>

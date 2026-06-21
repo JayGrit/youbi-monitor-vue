@@ -3783,6 +3783,10 @@ h1 {
   background: #eff6ff;
 }
 
+.publisher-diagnostic-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .publisher-cover-text {
   display: flex;
   gap: 10px;
@@ -5667,6 +5671,10 @@ a.submitter-cell:hover {
 
   .publisher-image-row {
     min-width: 680px;
+  }
+
+  .publisher-diagnostic-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .publisher-cover-flow {

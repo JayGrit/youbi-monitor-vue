@@ -33,6 +33,11 @@ defineProps({
     v-else-if="subStage === 'image_generation'"
     :narrations="narrations"
     :jobs="jobs"
+    :diagnostics="diagnostics"
+    :diagnostics-loading="diagnosticsLoading"
+    :diagnostics-error="diagnosticsError"
+    :load-diagnostics="loadDiagnostics"
+    :upload-platform-name="uploadPlatformName"
     :upload-image="uploadImage"
   />
   <PublisherPublishMetadataPanel

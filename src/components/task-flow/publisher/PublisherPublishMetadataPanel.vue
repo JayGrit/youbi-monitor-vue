@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import { normalizeResourceUrl } from '../../../utils/media'
 import PublisherDiagnosticsPanel from './PublisherDiagnosticsPanel.vue'
 import PublisherImageTable from './PublisherImageTable.vue'
 import { formatTags, jobPrompt } from './publisherUtils'
@@ -19,17 +18,9 @@ const props = defineProps({
 
 const videoInfo = computed(() => props.flow?.videoInfo || {})
 const result = computed(() => props.rows[0] || {})
-const coverUrl = computed(() => normalizeResourceUrl(
-  videoInfo.value.horizontal_cover_url
-  || videoInfo.value.final_cover_url
-  || videoInfo.value.vertical_cover_url
-  || result.value.horizontal_cover_url
-  || result.value.vertical_cover_url
-  || '',
-))
 const metadataRows = computed(() => [
   { key: 'title', label: 'Title', value: videoInfo.value.upload_title || result.value.upload_title || '-' },
-  { key: 'cover', label: '封面图', image: coverUrl.value },
+  { key: 'coverText', label: '封面文字', value: videoInfo.value.cover_text || result.value.cover_text || '-' },
   { key: 'description', label: '简介', value: videoInfo.value.upload_description || result.value.upload_description || '-' },
   { key: 'tags', label: 'Tags', value: formatTags(videoInfo.value.upload_tags || result.value.upload_tags) },
 ])
@@ -49,6 +40,10 @@ const images = computed(() => [
     url: videoInfo.value.horizontal_cover_url || '',
   },
 ])
+const diagnosticItems = [
+  { key: 'vertical', label: '3:4 ChatGPT 生成', platform: 'chatgpt', jobName: 'generate_narration_vertical_cover', ratio: '3:4' },
+  { key: 'horizontal', label: '4:3 ChatGPT 生成', platform: 'chatgpt', jobName: 'generate_narration_horizontal_cover', ratio: '4:3' },
+]
 
 </script>
 
@@ -61,11 +56,7 @@ const images = computed(() => [
         <div v-for="item in metadataRows" :key="item.key" class="publisher-generated-row">
           <strong class="publisher-field-name">{{ item.label }}</strong>
           <div>
-            <a v-if="item.image" :href="item.image" target="_blank" rel="noreferrer" class="publisher-generated-cover">
-              <img :src="item.image" alt="封面图" loading="lazy" />
-            </a>
-            <span v-else-if="item.key === 'cover'">-</span>
-            <p v-else>{{ item.value }}</p>
+            <p>{{ item.value }}</p>
           </div>
         </div>
       </div>
@@ -76,6 +67,7 @@ const images = computed(() => [
     </section>
     <PublisherDiagnosticsPanel
       :diagnostics="diagnostics"
+      :items="diagnosticItems"
       :loading="diagnosticsLoading"
       :error="diagnosticsError"
       :load="loadDiagnostics"

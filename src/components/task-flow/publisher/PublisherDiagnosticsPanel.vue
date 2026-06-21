@@ -1,106 +1,132 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { formatDateTime } from '../../../utils/format'
-import { diagnosticRunId } from '../../../utils/uploaderDiagnostics'
+import { diagnosticRunId, diagnosticRunOptions } from '../../../utils/uploaderDiagnostics'
 import DiagnosticScreenshotGrid from '../DiagnosticScreenshotGrid.vue'
 
 const props = defineProps({
   diagnostics: { type: Array, default: () => [] },
+  items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   load: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
 })
 
-const requested = ref(false)
-const selectedRunId = ref('')
-const historyOpen = ref(false)
-const matching = computed(() => props.diagnostics.filter(row => {
-  const source = String(row?.source || '').toLowerCase()
-  return row?.platform === 'doubao' && !source.includes('upload')
-}))
-const options = computed(() => {
-  const byRunId = new Map()
-  for (const row of matching.value) {
-    const runId = diagnosticRunId(row)
-    if (!runId) continue
-    const sortTime = createdAt(row)
-    const current = byRunId.get(runId)
-    if (!current || sortTime > current.sortTime) {
-      byRunId.set(runId, { runId, createdAt: row.createdAt || row.created_at || '', sortTime })
-    }
-  }
-  const chronological = [...byRunId.values()].sort((left, right) => left.sortTime - right.sortTime || left.runId.localeCompare(right.runId))
-  return chronological.map((option, index) => ({ ...option, attempt: index + 1 })).reverse()
-})
-const activeRunId = computed(() => {
-  if (!options.value.length) return ''
-  return options.value.some(option => option.runId === selectedRunId.value) ? selectedRunId.value : options.value[0].runId
-})
-const activeOption = computed(() => options.value.find(option => option.runId === activeRunId.value) || null)
-const visible = computed(() => {
-  const rows = activeRunId.value ? matching.value.filter(row => diagnosticRunId(row) === activeRunId.value) : matching.value
-  return [...rows].sort((left, right) => step(left) - step(right) || createdAt(left) - createdAt(right) || Number(left.id || 0) - Number(right.id || 0))
-})
+const requestedKey = ref('')
+const selectedRunIds = ref({})
+const historyOpenKey = ref('')
 
-watch(options, value => {
-  if (selectedRunId.value && !value.some(option => option.runId === selectedRunId.value)) selectedRunId.value = ''
-})
-
-function createdAt(row) {
-  return Date.parse(row.createdAt || row.created_at || '') || 0
+function matching(item) {
+  return props.diagnostics.filter(row => {
+    const jobName = row.publisherJobName || row.publisher_job_name || ''
+    const aspectRatio = row.aspectRatio || row.aspect_ratio || ''
+    return row.platform === item.platform
+      && jobName === item.jobName
+      && (!item.ratio || aspectRatio === item.ratio)
+  })
 }
 
-function step(row) {
-  const value = Number(row.stepIndex ?? row.step_index)
-  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+function options(item) {
+  return diagnosticRunOptions(matching(item))
 }
 
-function request() {
-  requested.value = true
+function activeRunId(item) {
+  const rows = options(item)
+  const selected = selectedRunIds.value[item.key]
+  return rows.some(option => option.runId === selected) ? selected : rows[0]?.runId || ''
+}
+
+function activeOption(item) {
+  return options(item).find(option => option.runId === activeRunId(item)) || null
+}
+
+function visible(item) {
+  const runId = activeRunId(item)
+  const rows = runId ? matching(item).filter(row => diagnosticRunId(row) === runId) : matching(item)
+  return [...rows].sort((left, right) => {
+    return Number(left.stepIndex ?? left.step_index) - Number(right.stepIndex ?? right.step_index)
+      || Date.parse(left.createdAt || left.created_at || '') - Date.parse(right.createdAt || right.created_at || '')
+      || Number(left.id || 0) - Number(right.id || 0)
+  })
+}
+
+function request(item) {
+  requestedKey.value = item.key
   props.load()
 }
 
-function select(runId) {
-  selectedRunId.value = runId
-  historyOpen.value = false
+function select(item, runId) {
+  selectedRunIds.value = { ...selectedRunIds.value, [item.key]: runId }
+  historyOpenKey.value = ''
 }
 
 function titlePrefix(row) {
   return [props.uploadPlatformName(row.platform), row.accountKey || row.account_key || ''].filter(Boolean).join(' / ')
 }
+
+watch(
+  () => props.items,
+  items => {
+    const keys = new Set(items.map(item => item.key))
+    selectedRunIds.value = Object.fromEntries(
+      Object.entries(selectedRunIds.value).filter(([key]) => keys.has(key)),
+    )
+  },
+)
 </script>
 
 <template>
-  <section class="flow-section publisher-diagnostics">
-    <div class="publisher-diagnostics-head">
-      <h4>诊断截图</h4>
-      <button type="button" class="diagnostic-load-button" :disabled="loading" @click="request">
-        {{ loading ? '加载中' : '加载诊断截图' }}
-      </button>
-    </div>
-    <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
-    <template v-if="requested">
-      <div v-if="options.length > 1" class="diagnostic-history">
-        <button type="button" class="diagnostic-history-button" @click="historyOpen = !historyOpen">
-          历史版本 <span v-if="activeOption">第 {{ activeOption.attempt }} 版</span>
-        </button>
-        <div v-if="historyOpen" class="diagnostic-history-options">
-          <button
-            v-for="option in options"
-            :key="option.runId"
-            type="button"
-            :class="{ active: option.runId === activeRunId }"
-            @click="select(option.runId)"
-          >
-            <strong>第 {{ option.attempt }} 版</strong>
-            <span>{{ formatDateTime(option.createdAt) }}</span>
-          </button>
+  <section class="flow-section">
+    <h4>诊断记录</h4>
+    <div class="upload-submission-grid publisher-diagnostic-grid">
+      <article v-for="item in items" :key="item.key" class="upload-submission-card">
+        <div class="upload-submission-body">
+          <div class="upload-submission-head">
+            <strong>{{ item.label }}</strong>
+            <button
+              type="button"
+              class="diagnostic-load-button"
+              :disabled="loading && requestedKey === item.key"
+              @click="request(item)"
+            >
+              {{ loading && requestedKey === item.key ? '加载中' : '加载诊断截图' }}
+            </button>
+          </div>
+          <div v-if="requestedKey === item.key" class="upload-submission-diagnostics">
+            <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
+            <div v-if="options(item).length > 1" class="diagnostic-history">
+              <button
+                type="button"
+                class="diagnostic-history-button"
+                @click="historyOpenKey = historyOpenKey === item.key ? '' : item.key"
+              >
+                历史调用
+                <span v-if="activeOption(item)">第 {{ activeOption(item).attempt }} 次</span>
+              </button>
+              <div v-if="historyOpenKey === item.key" class="diagnostic-history-options">
+                <button
+                  v-for="option in options(item)"
+                  :key="option.runId"
+                  type="button"
+                  :class="{ active: option.runId === activeRunId(item) }"
+                  @click="select(item, option.runId)"
+                >
+                  <strong>第 {{ option.attempt }} 次</strong>
+                  <span>{{ formatDateTime(option.createdAt) }}</span>
+                </button>
+              </div>
+            </div>
+            <p v-if="loading && !visible(item).length" class="flow-muted">正在加载诊断截图</p>
+            <DiagnosticScreenshotGrid
+              v-else
+              :rows="visible(item)"
+              :title-prefix="titlePrefix"
+              :empty-text="`没有${item.label}诊断截图`"
+            />
+          </div>
         </div>
-      </div>
-      <p v-if="loading && !visible.length" class="flow-muted">正在加载诊断截图</p>
-      <p v-else-if="loading" class="flow-muted diagnostic-refreshing">正在自动更新诊断截图</p>
-      <DiagnosticScreenshotGrid v-if="visible.length || !loading" :rows="visible" :title-prefix="titlePrefix" />
-    </template>
+      </article>
+    </div>
   </section>
 </template>
