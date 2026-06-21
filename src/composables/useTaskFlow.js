@@ -34,7 +34,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     if (selectedStageKey.value === SPEECH_STAGE_KEY) {
       return speechStage.value
     }
-    return stages.find(stage => stage.key === selectedStageKey.value) || stages[0] || null
+    const stageKey = baseStageKey(selectedStageKey.value)
+    return stages.find(stage => stage.key === stageKey) || stages[0] || null
   })
 
   const flowTabs = computed(() => {
@@ -92,11 +93,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     return taskId ? whisperProcessingByTask.value[taskId] || null : null
   })
 
-  async function openTaskFlow(task, stageKey = 'downloader') {
+  async function openTaskFlow(task, stageKey = 'downloader', subStage = 'main') {
     if (!task?.taskId) return
     clearUploaderDiagnosticsPolling()
     flowPageOpen.value = true
-    selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
+    selectedStageKey.value = detailStageKey(stageKey, subStage)
     selectedTaskFlow.value = null
     selectedTaskProgress.value = null
     cancelSpeechEdit()
@@ -125,7 +126,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   async function loadTaskFlow(taskId, quiet = false) {
     if (!taskId) return
     const requestId = ++flowRequestId
-    const detailStage = selectedStageKey.value
+    const detailStage = baseStageKey(selectedStageKey.value)
     if (!quiet) {
       flowLoading.value = true
     }
@@ -157,15 +158,25 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     }
   }
 
-  async function selectTaskFlowStage(stageKey) {
+  async function selectTaskFlowStage(stageKey, subStage = 'main') {
     const taskId = selectedTaskFlow.value?.task?.id
     if (!taskId) return
-    const normalized = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
+    const normalized = detailStageKey(stageKey, subStage)
     if (normalized === selectedStageKey.value && selectedTaskFlow.value) return
     selectedStageKey.value = normalized
     cancelSpeechEdit()
     selectedTaskFlow.value = { ...selectedTaskFlow.value, stages: [], minioObjects: [] }
     await loadTaskFlow(taskId)
+  }
+
+  function detailStageKey(stageKey, subStage = 'main') {
+    if (SPEECH_STAGE_KEYS.includes(stageKey)) return SPEECH_STAGE_KEY
+    if (stageKey === 'publisher' && subStage && subStage !== 'main') return `${stageKey}:${subStage}`
+    return stageKey
+  }
+
+  function baseStageKey(stageKey) {
+    return String(stageKey || '').split(':', 1)[0]
   }
 
   function closeTaskFlow() {

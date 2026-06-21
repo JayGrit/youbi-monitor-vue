@@ -216,7 +216,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
           '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
         }"
         :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-        @click="openTaskFlow(task, node.stage)"
+        @click="openTaskFlow(task, node.stage, node.subStage)"
       >
         <span class="stage-label">{{ node.label }}</span>
         <span v-if="nodeProgress({ ...node, key: node.stage })" class="stage-progress">

@@ -10,9 +10,9 @@ import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.v
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import AsseterPanel from '../components/task-flow/AsseterPanel.vue'
 import { SPEECH_STAGE_KEY } from '../domain/constants'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   selectedTaskFlow: { type: Object, default: null },
   selectedTaskProgress: { type: Object, default: null },
   flowLoading: { type: Boolean, default: false },
@@ -65,6 +65,10 @@ defineProps({
 const emit = defineEmits(['update:speechEditDraft'])
 const vocalsPlayback = ref({ currentMs: 0, playing: false })
 const demucsAudioPanel = ref(null)
+const publisherSubStage = computed(() => {
+  if (!props.selectedStageKey.startsWith('publisher:')) return 'main'
+  return props.selectedStageKey.slice('publisher:'.length) || 'main'
+})
 
 function demucsStage(flow) {
   return flow?.stages?.find(stage => stage.key === 'demucs') || null
@@ -98,7 +102,7 @@ function seekVocalsPlayback(ms) {
         :progress="selectedTaskProgress"
         :node-progress="nodeProgress"
         :node-title="nodeTitle"
-        :open-task-flow="(_task, stage) => selectTaskFlowStage(stage)"
+        :open-task-flow="(_task, stage, subStage) => selectTaskFlowStage(stage, subStage)"
       />
 
       <section v-if="selectedStage" class="flow-stage">
@@ -124,6 +128,7 @@ function seekVocalsPlayback(ms) {
 
         <PublisherPanel
           v-if="selectedStage.key === 'publisher'"
+          :sub-stage="publisherSubStage"
           :flow="selectedTaskFlow"
           :rows="publisherResultRows(selectedStage)"
           :jobs="stageTableRows(selectedStage, 'publisher_jobs')"
