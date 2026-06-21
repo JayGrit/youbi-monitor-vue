@@ -215,6 +215,7 @@ const {
 
 const {
   selectedTaskFlow,
+  selectedTaskProgress,
   selectedStageKey,
   flowPageOpen,
   flowLoading,
@@ -230,6 +231,7 @@ const {
   selectedStage,
   flowTabs,
   openTaskFlow,
+  selectTaskFlowStage,
   loadTaskFlow,
   closeTaskFlow,
   clearFlowPolling,
@@ -624,12 +626,12 @@ function audioErrorMessage(code) {
 
     <TaskFlowPage
       v-else
-      v-model:selected-stage-key="selectedStageKey"
       v-model:speech-edit-draft="speechEditDraft"
       :selected-task-flow="selectedTaskFlow"
+      :selected-task-progress="selectedTaskProgress"
       :flow-loading="flowLoading"
       :flow-error="flowError"
-      :flow-tabs="flowTabs"
+      :selected-stage-key="selectedStageKey"
       :selected-stage="selectedStage"
       :speech-edit-saving="speechEditSaving"
       :speech-edit-error="speechEditError"
@@ -641,6 +643,9 @@ function audioErrorMessage(code) {
       :whisper-processing="whisperProcessing"
       :flow-task-title="flowTaskTitle"
       :refresh-task-flow="refreshTaskFlow"
+      :select-task-flow-stage="selectTaskFlowStage"
+      :node-progress="nodeProgress"
+      :node-title="nodeTitle"
       :load-selected-uploader-diagnostics="loadSelectedUploaderDiagnostics"
       :submit-narration-segments="submitNarrationSegments"
       :upload-narration-image="uploadNarrationImage"

@@ -5,7 +5,7 @@ import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
 import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
 import PublisherPanel from '../components/task-flow/PublisherPanel.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
-import TaskFlowTabs from '../components/task-flow/TaskFlowTabs.vue'
+import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
 import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
 import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
 import AsseterPanel from '../components/task-flow/AsseterPanel.vue'
@@ -14,9 +14,9 @@ import { ref } from 'vue'
 
 defineProps({
   selectedTaskFlow: { type: Object, default: null },
+  selectedTaskProgress: { type: Object, default: null },
   flowLoading: { type: Boolean, default: false },
   flowError: { type: String, default: '' },
-  flowTabs: { type: Array, default: () => [] },
   selectedStageKey: { type: String, default: '' },
   selectedStage: { type: Object, default: null },
   speechEditDraft: { type: String, default: '' },
@@ -30,6 +30,9 @@ defineProps({
   whisperProcessing: { type: Object, default: null },
   flowTaskTitle: { type: Function, required: true },
   refreshTaskFlow: { type: Function, required: true },
+  selectTaskFlowStage: { type: Function, required: true },
+  nodeProgress: { type: Function, required: true },
+  nodeTitle: { type: Function, required: true },
   loadSelectedUploaderDiagnostics: { type: Function, required: true },
   submitNarrationSegments: { type: Function, required: true },
   uploadNarrationImage: { type: Function, required: true },
@@ -59,7 +62,7 @@ defineProps({
   stageMedia: { type: Function, required: true },
 })
 
-const emit = defineEmits(['update:selectedStageKey', 'update:speechEditDraft'])
+const emit = defineEmits(['update:speechEditDraft'])
 const vocalsPlayback = ref({ currentMs: 0, playing: false })
 const demucsAudioPanel = ref(null)
 
@@ -89,11 +92,13 @@ function seekVocalsPlayback(ms) {
     <div v-if="flowError" class="flow-error">Task flow API error: {{ flowError }}</div>
     <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">Loading task flow</div>
     <template v-else-if="selectedTaskFlow">
-      <TaskFlowTabs
-        :flow-tabs="flowTabs"
-        :selected-stage-key="selectedStageKey"
-        :stage-name="stageName"
-        @update:selected-stage-key="emit('update:selectedStageKey', $event)"
+      <TaskProgressGraph
+        v-if="selectedTaskProgress"
+        :task="{ taskId: selectedTaskFlow.task.id }"
+        :progress="selectedTaskProgress"
+        :node-progress="nodeProgress"
+        :node-title="nodeTitle"
+        :open-task-flow="(_task, stage) => selectTaskFlowStage(stage)"
       />
 
       <section v-if="selectedStage" class="flow-stage">
@@ -205,6 +210,7 @@ function seekVocalsPlayback(ms) {
         />
 
       </section>
+      <div v-else-if="flowLoading" class="flow-loading">Loading stage metrics</div>
     </template>
   </section>
 </template>

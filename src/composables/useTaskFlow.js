@@ -10,6 +10,7 @@ import { kindForField, kindForName, normalizeResourceUrl, youtubeThumbnailUrl } 
 
 export function useTaskFlow(monitorApi, brokenImageUrls) {
   const selectedTaskFlow = ref(null)
+  const selectedTaskProgress = ref(null)
   const selectedStageKey = ref('downloader')
   const flowPageOpen = ref(false)
   const flowLoading = ref(false)
@@ -26,6 +27,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const whisperProcessingByTask = ref({})
   let flowTimer = null
   let uploaderDiagnosticsTimer = null
+  let flowRequestId = 0
 
   const selectedStage = computed(() => {
     const stages = selectedTaskFlow.value?.stages || []
@@ -96,49 +98,80 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     flowPageOpen.value = true
     selectedStageKey.value = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
     selectedTaskFlow.value = null
+    selectedTaskProgress.value = null
     cancelSpeechEdit()
-    await loadTaskFlow(task.taskId)
+    await loadTaskFlowPage(task.taskId)
     clearFlowPolling()
     flowTimer = window.setInterval(() => {
       if (!selectedTaskFlow.value?.task?.id) return
       const status = selectedTaskFlow.value.task.status
       if (status === 'running' || status === 'ready') {
-        loadTaskFlow(selectedTaskFlow.value.task.id, true)
+        loadTaskFlowPage(selectedTaskFlow.value.task.id, true)
       }
     }, 5000)
   }
 
+  async function loadTaskFlowPage(taskId, quiet = false) {
+    if (!taskId) return
+    const progressPromise = monitorApi.loadTaskProgress(taskId)
+      .then(progress => { selectedTaskProgress.value = progress })
+      .catch(err => { flowError.value = err instanceof Error ? err.message : String(err) })
+    await Promise.all([
+      progressPromise,
+      loadTaskFlow(taskId, quiet),
+    ])
+  }
+
   async function loadTaskFlow(taskId, quiet = false) {
     if (!taskId) return
+    const requestId = ++flowRequestId
+    const detailStage = selectedStageKey.value
     if (!quiet) {
       flowLoading.value = true
     }
     try {
+      const needsWhisperMetrics = ['demucs', 'whisper', SPEECH_STAGE_KEY].includes(detailStage)
       const [flow, words, processing] = await Promise.all([
-        monitorApi.loadTaskFlow(taskId),
-        monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []),
-        monitorApi.loadWhisperProcessing(taskId).catch(() => null),
+        monitorApi.loadTaskFlow(taskId, detailStage),
+        needsWhisperMetrics ? monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []) : Promise.resolve(null),
+        needsWhisperMetrics ? monitorApi.loadWhisperProcessing(taskId).catch(() => null) : Promise.resolve(null),
       ])
+      if (requestId !== flowRequestId) return
       selectedTaskFlow.value = flow
-      whisperWordTimestampsByTask.value = {
-        ...whisperWordTimestampsByTask.value,
-        [taskId]: Array.isArray(words) ? words : [],
-      }
-      whisperProcessingByTask.value = {
-        ...whisperProcessingByTask.value,
-        [taskId]: processing && typeof processing === 'object' ? processing : null,
+      if (needsWhisperMetrics) {
+        whisperWordTimestampsByTask.value = {
+          ...whisperWordTimestampsByTask.value,
+          [taskId]: Array.isArray(words) ? words : [],
+        }
+        whisperProcessingByTask.value = {
+          ...whisperProcessingByTask.value,
+          [taskId]: processing && typeof processing === 'object' ? processing : null,
+        }
       }
       flowError.value = ''
     } catch (err) {
+      if (requestId !== flowRequestId) return
       flowError.value = err instanceof Error ? err.message : String(err)
     } finally {
-      flowLoading.value = false
+      if (requestId === flowRequestId) flowLoading.value = false
     }
+  }
+
+  async function selectTaskFlowStage(stageKey) {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (!taskId) return
+    const normalized = SPEECH_STAGE_KEYS.includes(stageKey) ? SPEECH_STAGE_KEY : stageKey
+    if (normalized === selectedStageKey.value && selectedTaskFlow.value) return
+    selectedStageKey.value = normalized
+    cancelSpeechEdit()
+    selectedTaskFlow.value = { ...selectedTaskFlow.value, stages: [], minioObjects: [] }
+    await loadTaskFlow(taskId)
   }
 
   function closeTaskFlow() {
     flowPageOpen.value = false
     selectedTaskFlow.value = null
+    selectedTaskProgress.value = null
     flowError.value = ''
     cancelSpeechEdit()
     clearFlowPolling()
@@ -162,7 +195,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   function refreshTaskFlow() {
     const taskId = selectedTaskFlow.value?.task?.id
     if (taskId) {
-      loadTaskFlow(taskId)
+      loadTaskFlowPage(taskId)
     }
   }
 
@@ -645,6 +678,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   return {
     selectedTaskFlow,
+    selectedTaskProgress,
     selectedStageKey,
     flowPageOpen,
     flowLoading,
@@ -660,6 +694,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     selectedStage,
     flowTabs,
     openTaskFlow,
+    selectTaskFlowStage,
     loadTaskFlow,
     closeTaskFlow,
     clearFlowPolling,

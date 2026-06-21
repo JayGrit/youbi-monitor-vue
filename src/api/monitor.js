@@ -83,8 +83,9 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' })
     },
 
-    loadTaskFlow(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/flow`)
+    loadTaskFlow(taskId, stage) {
+      const params = new URLSearchParams({ stage })
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/flow?${params.toString()}`)
     },
 
     loadWhisperWordTimestamps(taskId) {
