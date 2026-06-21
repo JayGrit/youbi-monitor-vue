@@ -52,6 +52,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskProgressError = ref('')
   let progressRefreshTimer = null
   let batchProgressRequest = null
+  let progressPollingActive = false
 
   const taskStageFilters = computed(() => {
     const keys = new Set()
@@ -213,7 +214,20 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
 
   function startTaskProgressRefresh() {
     stopTaskProgressRefresh()
+    if (!progressPollingActive || !taskDetailsExpanded.value) return
     progressRefreshTimer = window.setInterval(loadTaskProgressBatch, 10000)
+  }
+
+  function setTaskProgressPollingActive(active) {
+    progressPollingActive = Boolean(active)
+    if (!progressPollingActive) {
+      stopTaskProgressRefresh()
+      return
+    }
+    if (taskDetailsExpanded.value) {
+      loadTaskProgressBatch()
+      startTaskProgressRefresh()
+    }
   }
 
   async function toggleTaskDetails() {
@@ -757,6 +771,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     loadServiceHeartbeats,
     loadTaskProgressBatch,
     toggleTaskDetails,
+    setTaskProgressPollingActive,
     loadTaskTypes,
     markTaskReady,
     isTaskReadyBusy,

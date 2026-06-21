@@ -42,6 +42,7 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
   function startAccountPolling() {
     clearAccountPagePolling()
     loadAccountPage()
+    platformAccounts.resumeQrPolling()
     accountTimer = window.setInterval(loadAccountPage, 30000)
   }
 

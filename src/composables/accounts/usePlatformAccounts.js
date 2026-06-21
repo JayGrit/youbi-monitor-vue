@@ -63,6 +63,14 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  function resumeQrPolling() {
+    for (const platform of QR_LOGIN_PLATFORM_TYPES) {
+      if (platformState[platform].qrCode.value?.authCode && !qrTimers[platform]) {
+        pollQrCode(platform)
+      }
+    }
+  }
+
   async function startPlatformLogin(platform, row) {
     if (!QR_LOGIN_PLATFORM_TYPES.includes(platform)) return null
     try {
@@ -357,6 +365,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     bilibiliRenewing,
     loadAccountOverview,
     clearQrPolling,
+    resumeQrPolling,
     startPlatformLogin,
     renewBilibiliAccount,
     refreshPlatformRow,

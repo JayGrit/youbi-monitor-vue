@@ -670,6 +670,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     createSubmitterVideo,
     importSubmitterAuthor,
     clearSubmitterPolling,
+    resumeSubmitterPolling: updateSubmitterPolling,
     submitterFieldValue,
     submitterVideoHref,
     submitterVideoTitle,

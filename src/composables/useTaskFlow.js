@@ -28,6 +28,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   let flowTimer = null
   let uploaderDiagnosticsTimer = null
   let flowRequestId = 0
+  let flowPollingActive = false
+  let diagnosticsPollingRequested = false
 
   const selectedStage = computed(() => {
     const stages = selectedTaskFlow.value?.stages || []
@@ -95,6 +97,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   async function openTaskFlow(task, stageKey = 'downloader', subStage = 'main') {
     if (!task?.taskId) return
+    diagnosticsPollingRequested = false
     clearUploaderDiagnosticsPolling()
     flowPageOpen.value = true
     selectedStageKey.value = detailStageKey(stageKey, subStage)
@@ -102,7 +105,13 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     selectedTaskProgress.value = null
     cancelSpeechEdit()
     await loadTaskFlowPage(task.taskId)
-    clearFlowPolling()
+    startFlowPolling()
+  }
+
+  function startFlowPolling() {
+    if (flowTimer) window.clearInterval(flowTimer)
+    flowTimer = null
+    if (!flowPollingActive || !flowPageOpen.value) return
     flowTimer = window.setInterval(() => {
       if (!selectedTaskFlow.value?.task?.id) return
       const status = selectedTaskFlow.value.task.status
@@ -110,6 +119,18 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
         loadTaskFlowPage(selectedTaskFlow.value.task.id, true)
       }
     }, 5000)
+  }
+
+  function setFlowPollingActive(active) {
+    flowPollingActive = Boolean(active)
+    if (!flowPollingActive) {
+      clearFlowPolling()
+      return
+    }
+    startFlowPolling()
+    if (diagnosticsPollingRequested && ['uploader', 'publisher'].includes(baseStageKey(selectedStageKey.value))) {
+      startUploaderDiagnosticsPolling()
+    }
   }
 
   async function loadTaskFlowPage(taskId, quiet = false) {
@@ -163,6 +184,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     if (!taskId) return
     const normalized = detailStageKey(stageKey, subStage)
     if (normalized === selectedStageKey.value && selectedTaskFlow.value) return
+    diagnosticsPollingRequested = false
+    clearUploaderDiagnosticsPolling()
     selectedStageKey.value = normalized
     cancelSpeechEdit()
     selectedTaskFlow.value = { ...selectedTaskFlow.value, stages: [], minioObjects: [] }
@@ -185,6 +208,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     selectedTaskProgress.value = null
     flowError.value = ''
     cancelSpeechEdit()
+    diagnosticsPollingRequested = false
     clearFlowPolling()
   }
 
@@ -234,16 +258,20 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   function loadSelectedUploaderDiagnostics() {
     const taskId = selectedTaskFlow.value?.task?.id
     if (taskId) {
+      diagnosticsPollingRequested = true
       loadUploaderDiagnostics(taskId, true)
-      if (!uploaderDiagnosticsTimer) {
-        uploaderDiagnosticsTimer = window.setInterval(() => {
-          const currentTaskId = selectedTaskFlow.value?.task?.id
-          if (currentTaskId) {
-            loadUploaderDiagnostics(currentTaskId, true)
-          }
-        }, 5000)
-      }
+      startUploaderDiagnosticsPolling()
     }
+  }
+
+  function startUploaderDiagnosticsPolling() {
+    clearUploaderDiagnosticsPolling()
+    if (!flowPollingActive || !flowPageOpen.value || !diagnosticsPollingRequested) return
+    if (!['uploader', 'publisher'].includes(baseStageKey(selectedStageKey.value))) return
+    uploaderDiagnosticsTimer = window.setInterval(() => {
+      const currentTaskId = selectedTaskFlow.value?.task?.id
+      if (currentTaskId) loadUploaderDiagnostics(currentTaskId, true)
+    }, 5000)
   }
 
   async function submitNarrationSegments(response) {
@@ -709,6 +737,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     loadTaskFlow,
     closeTaskFlow,
     clearFlowPolling,
+    setFlowPollingActive,
     refreshTaskFlow,
     loadSelectedUploaderDiagnostics,
     submitNarrationSegments,
