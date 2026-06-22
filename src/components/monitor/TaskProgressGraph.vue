@@ -23,16 +23,18 @@ const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.p
 const layout = computed(() => {
   const nodeById = new Map(nodes.value.map(node => [node.id, node]))
   const parents = new Map(nodes.value.map(node => [node.id, []]))
+  const children = new Map(nodes.value.map(node => [node.id, []]))
   for (const edge of edges.value) {
-    if (nodeById.has(edge.from) && nodeById.has(edge.to)) parents.get(edge.to).push(edge.from)
+    if (nodeById.has(edge.from) && nodeById.has(edge.to)) {
+      parents.get(edge.to).push(edge.from)
+      children.get(edge.from).push(edge.to)
+    }
   }
 
   const roots = nodes.value
     .filter(node => !parents.get(node.id)?.length)
     .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
-  const rootLane = new Map(roots.map((node, index) => [node.id, index + 1]))
   const depthCache = new Map()
-  const originCache = new Map()
 
   function depth(id, visiting = new Set()) {
     if (depthCache.has(id)) return depthCache.get(id)
@@ -43,20 +45,37 @@ const layout = computed(() => {
     return value
   }
 
-  function origins(id, visiting = new Set()) {
-    if (originCache.has(id)) return originCache.get(id)
+  // A DAG with a single root can still fork into parallel branches. Use the
+  // children of its first fork as lane origins; roots are only sufficient when
+  // the graph genuinely starts with multiple independent branches.
+  const firstFork = nodes.value
+    .filter(node => (children.get(node.id) || []).length > 1)
+    .sort((left, right) => depth(left.id) - depth(right.id) || Number(left.order) - Number(right.order))[0]
+  const laneOrigins = (roots.length > 1
+    ? roots
+    : (children.get(firstFork?.id) || []).map(id => nodeById.get(id)))
+    .filter(Boolean)
+    .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
+  const laneByOrigin = new Map(laneOrigins.map((node, index) => [node.id, index + 1]))
+  const branchCache = new Map()
+
+  function branches(id, visiting = new Set()) {
+    if (branchCache.has(id)) return branchCache.get(id)
     if (visiting.has(id)) return new Set()
+    if (laneByOrigin.has(id)) {
+      const value = new Set([id])
+      branchCache.set(id, value)
+      return value
+    }
     const nodeParents = parents.get(id) || []
-    const value = nodeParents.length
-      ? new Set(nodeParents.flatMap(parent => [...origins(parent, new Set(visiting).add(id))]))
-      : new Set([id])
-    originCache.set(id, value)
+    const value = new Set(nodeParents.flatMap(parent => [...branches(parent, new Set(visiting).add(id))]))
+    branchCache.set(id, value)
     return value
   }
 
-  const rowUnits = Math.max(1, roots.length)
+  const rowUnits = Math.max(1, laneOrigins.length)
   const nodeLayouts = new Map(nodes.value.map(node => {
-    const lanes = [...origins(node.id)].map(root => rootLane.get(root)).filter(Boolean)
+    const lanes = [...branches(node.id)].map(origin => laneByOrigin.get(origin)).filter(Boolean)
     const isShared = lanes.length !== 1
     return [node.id, {
       column: depth(node.id),
