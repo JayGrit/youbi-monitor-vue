@@ -26,6 +26,7 @@ defineProps({
   submitterAuthorOptions: { type: Array, default: () => [] },
   submitterDurationFilter: { type: String, default: 'all' },
   submitterPublishedFilter: { type: String, default: 'all' },
+  submitterManualSubtitleFilter: { type: String, default: 'all' },
   submitterSort: { type: String, default: 'published_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
   submitterFilteredVideos: { type: Array, default: () => [] },
@@ -63,6 +64,7 @@ const emit = defineEmits([
   'update:submitterVideoName',
   'update:submitterDurationFilter',
   'update:submitterPublishedFilter',
+  'update:submitterManualSubtitleFilter',
   'update:submitterSort',
   'update:submitterUploadFilter',
 ])
@@ -167,6 +169,17 @@ const emit = defineEmits([
             <option v-for="option in SUBMITTER_PUBLISHED_FILTERS" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
+          </select>
+        </label>
+        <label>
+          <span>人工字幕</span>
+          <select
+            :value="submitterManualSubtitleFilter"
+            @change="emit('update:submitterManualSubtitleFilter', $event.target.value); applySubmitterFilters()"
+          >
+            <option value="all">全部</option>
+            <option value="en">人工英文字幕</option>
+            <option value="zh">人工中文字幕</option>
           </select>
         </label>
         <label>

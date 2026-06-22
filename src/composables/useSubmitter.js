@@ -17,6 +17,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterVideoName = ref('')
   const submitterDurationFilter = ref('all')
   const submitterPublishedFilter = ref('all')
+  const submitterManualSubtitleFilter = ref('all')
   const submitterUploadFilter = ref('unuploaded')
   const submitterSort = ref('published_desc')
   const submitterAuthors = ref([])
@@ -122,6 +123,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         publishedFrom: publishedRange.from,
         publishedTo: publishedRange.to,
         submissionStatus: submitterUploadFilter.value,
+        manualSubtitle: submitterManualSubtitleFilter.value,
       })
       submitterVideos.value = payload?.items || []
       submitterTotal.value = Number(payload?.total || 0)
@@ -164,6 +166,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterVideoName.value = ''
     submitterDurationFilter.value = 'all'
     submitterPublishedFilter.value = 'all'
+    submitterManualSubtitleFilter.value = 'all'
     submitterUploadFilter.value = 'unuploaded'
     submitterSort.value = 'published_desc'
     submitterFocusedBatch.value = ''
@@ -633,6 +636,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterVideoName,
     submitterDurationFilter,
     submitterPublishedFilter,
+    submitterManualSubtitleFilter,
     submitterUploadFilter,
     submitterSort,
     submitterAuthors,

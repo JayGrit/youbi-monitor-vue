@@ -279,6 +279,7 @@ const {
   submitterVideoName,
   submitterDurationFilter,
   submitterPublishedFilter,
+  submitterManualSubtitleFilter,
   submitterUploadFilter,
   submitterSort,
   submitterAuthors,
@@ -489,6 +490,7 @@ function audioErrorMessage(code) {
       v-model:submitter-video-name="submitterVideoName"
       v-model:submitter-duration-filter="submitterDurationFilter"
       v-model:submitter-published-filter="submitterPublishedFilter"
+      v-model:submitter-manual-subtitle-filter="submitterManualSubtitleFilter"
       v-model:submitter-sort="submitterSort"
       v-model:submitter-upload-filter="submitterUploadFilter"
       :submitter-error="submitterError"

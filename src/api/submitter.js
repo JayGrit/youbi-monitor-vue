@@ -16,6 +16,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       publishedFrom,
       publishedTo,
       submissionStatus,
+      manualSubtitle,
     } = {}) {
       const params = new URLSearchParams()
       params.set('limit', String(limit || 50))
@@ -31,6 +32,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
       if (publishedFrom !== undefined && publishedFrom !== null) params.set('published_from', String(publishedFrom))
       if (publishedTo !== undefined && publishedTo !== null) params.set('published_to', String(publishedTo))
       if (submissionStatus && submissionStatus !== 'all') params.set('submission_status', submissionStatus)
+      if (manualSubtitle && manualSubtitle !== 'all') params.set('manual_subtitle', manualSubtitle)
       const query = params.toString()
       return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`)
     },
