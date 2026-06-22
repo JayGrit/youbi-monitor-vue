@@ -1,63 +1,5 @@
 import { postJson, requestJson } from './http'
 
-function platformAccountApi(apiBase, platform) {
-  const base = `${apiBase}/${platform}`
-
-  return {
-    startQrLogin(accountKey) {
-      return requestJson(`${base}/account/qrcode?accountKey=${encodeURIComponent(accountKey)}`, { method: 'POST' })
-    },
-
-    pollQrLogin(accountKey, authCode) {
-      return requestJson(
-        `${base}/account/${encodeURIComponent(accountKey)}/qrcode/${encodeURIComponent(authCode)}/poll`,
-        { method: 'POST' },
-      )
-    },
-
-    refresh(accountKey) {
-      return requestJson(`${base}/account?accountKey=${encodeURIComponent(accountKey)}`)
-    },
-
-    saveKey(accountKey, newAccountKey) {
-      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/key`, { newAccountKey })
-    },
-
-    setEnabled(accountKey, enabled) {
-      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/enabled`, { enabled })
-    },
-
-    setCooldown(accountKey, minSeconds, maxSeconds) {
-      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds })
-    },
-
-    setNextUploadAllowedAt(accountKey, nextUploadAllowedAt) {
-      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt })
-    },
-
-    setQuietTime(accountKey, startTime, endTime) {
-      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/quiet-time`, { startTime, endTime })
-    },
-
-    setDownloaderMaxStagedCount(accountKey, maxStagedCount) {
-      return postJson(`${apiBase}/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(accountKey)}/downloader-max-staged-count`, { maxStagedCount })
-    },
-
-    updateProfile(accountKey, displayName) {
-      return postJson(`${base}/account/${encodeURIComponent(accountKey)}/profile`, { displayName })
-    },
-
-    uploadAvatar(accountKey, file) {
-      const form = new FormData()
-      form.append('file', file)
-      return requestJson(`${base}/account/${encodeURIComponent(accountKey)}/avatar`, {
-        method: 'POST',
-        body: form,
-      })
-    },
-  }
-}
-
 function genericPlatformAccountApi(apiBase, platform) {
   const base = `${apiBase}/accounts/${platform}`
   return {
@@ -97,6 +39,8 @@ function genericPlatformAccountApi(apiBase, platform) {
 }
 
 export function createAccountsApi(apiBase) {
+  const managedAccountApi = platform => genericPlatformAccountApi(apiBase, platform)
+
   return {
     overview() {
       return requestJson(`${apiBase}/accounts/overview`)
@@ -117,18 +61,13 @@ export function createAccountsApi(apiBase) {
     updateUploaderPhoneAccount(phoneId, platform, accountId, note, disabled = false) {
       return postJson(`${apiBase}/uploader-phones/${encodeURIComponent(phoneId)}/platform/${encodeURIComponent(platform)}`, { accountId, note, disabled })
     },
-    bilibili: {
-      ...platformAccountApi(apiBase, 'bilibili'),
-      renew(accountKey) {
-        return requestJson(`${apiBase}/bilibili/account/renew?accountKey=${encodeURIComponent(accountKey)}`, { method: 'POST' })
-      },
-    },
-    xiaohongshu: platformAccountApi(apiBase, 'xiaohongshu'),
-    shipinhao: platformAccountApi(apiBase, 'shipinhao'),
-    douyin: platformAccountApi(apiBase, 'douyin'),
-    kuaishou: platformAccountApi(apiBase, 'kuaishou'),
-    jinritoutiao: platformAccountApi(apiBase, 'jinritoutiao'),
-    x: genericPlatformAccountApi(apiBase, 'x'),
-    youtube: genericPlatformAccountApi(apiBase, 'youtube'),
+    bilibili: managedAccountApi('bilibili'),
+    xiaohongshu: managedAccountApi('xiaohongshu'),
+    shipinhao: managedAccountApi('shipinhao'),
+    douyin: managedAccountApi('douyin'),
+    kuaishou: managedAccountApi('kuaishou'),
+    jinritoutiao: managedAccountApi('jinritoutiao'),
+    x: managedAccountApi('x'),
+    youtube: managedAccountApi('youtube'),
   }
 }
