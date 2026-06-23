@@ -39,10 +39,15 @@ const images = computed(() => [
     url: videoInfo.value.horizontal_cover_url || '',
   },
 ])
-const diagnosticItems = [
-  { key: 'vertical', label: '3:4 ChatGPT 生成', platform: 'chatgpt', jobName: 'generate_narration_vertical_cover', ratio: '3:4' },
-  { key: 'horizontal', label: '4:3 ChatGPT 生成', platform: 'chatgpt', jobName: 'generate_narration_horizontal_cover', ratio: '4:3' },
-]
+const diagnosticItems = computed(() => [
+  { key: 'vertical', label: '3:4 ChatGPT 生成', operatorOpId: jobOperatorOpId('generate_narration_vertical_cover') },
+  { key: 'horizontal', label: '4:3 ChatGPT 生成', operatorOpId: jobOperatorOpId('generate_narration_horizontal_cover') },
+])
+
+function jobOperatorOpId(jobName) {
+  const job = props.jobs.find(row => row.job_name === jobName || row.jobName === jobName)
+  return String(job?.operator_op_id || job?.operatorOpId || job?.operator_run_id || '').trim()
+}
 
 </script>
 

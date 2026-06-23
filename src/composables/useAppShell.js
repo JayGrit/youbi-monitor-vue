@@ -20,7 +20,7 @@ export function useAppShell({
   submitterThumbUrls,
   revokeCachedUrls,
 }) {
-  const activePage = ref('accounts')
+  const activePage = ref(initialPage())
   let monitorTimer = null
   let heartbeatTimer = null
   const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
@@ -100,4 +100,10 @@ export function useAppShell({
     activePage,
     openPage,
   }
+}
+
+function initialPage() {
+  if (typeof window === 'undefined') return 'accounts'
+  const page = new URLSearchParams(window.location.search).get('page')
+  return page || 'accounts'
 }

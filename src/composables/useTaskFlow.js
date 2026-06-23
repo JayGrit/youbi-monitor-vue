@@ -19,7 +19,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   const speechEditDraft = ref('')
   const speechEditSaving = ref(false)
   const speechEditError = ref('')
-  const uploaderDiagnosticsByTask = ref({})
+  const uploaderDiagnosticsByOpId = ref({})
   const uploaderDiagnosticsLoading = ref(false)
   const uploaderDiagnosticsLoadingTask = ref('')
   const uploaderDiagnosticsError = ref('')
@@ -81,8 +81,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   })
 
   const uploaderDiagnostics = computed(() => {
-    const taskId = selectedTaskFlow.value?.task?.id
-    return taskId ? uploaderDiagnosticsByTask.value[taskId] || [] : []
+    return Object.values(uploaderDiagnosticsByOpId.value).flat()
   })
 
   const whisperWordTimestamps = computed(() => {
@@ -234,33 +233,36 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     }
   }
 
-  async function loadUploaderDiagnostics(taskId, force = false) {
-    if (!taskId || (!force && uploaderDiagnosticsByTask.value[taskId]) || uploaderDiagnosticsLoadingTask.value === taskId) return
+  async function loadUploaderDiagnostics(target, force = false) {
+    const opId = operatorOpId(target)
+    if (!opId || (!force && uploaderDiagnosticsByOpId.value[opId]) || uploaderDiagnosticsLoadingTask.value === opId) return
     uploaderDiagnosticsLoading.value = true
-    uploaderDiagnosticsLoadingTask.value = taskId
+    uploaderDiagnosticsLoadingTask.value = opId
     uploaderDiagnosticsError.value = ''
     try {
-      const rows = await monitorApi.loadUploaderDiagnostics(taskId)
-      uploaderDiagnosticsByTask.value = {
-        ...uploaderDiagnosticsByTask.value,
-        [taskId]: Array.isArray(rows) ? rows : [],
+      const response = await monitorApi.loadOperatorDiagnostics(opId)
+      uploaderDiagnosticsByOpId.value = {
+        ...uploaderDiagnosticsByOpId.value,
+        [opId]: Array.isArray(response?.items) ? response.items : [],
       }
     } catch (err) {
       uploaderDiagnosticsError.value = err instanceof Error ? err.message : String(err)
     } finally {
-      if (uploaderDiagnosticsLoadingTask.value === taskId) {
+      if (uploaderDiagnosticsLoadingTask.value === opId) {
         uploaderDiagnosticsLoading.value = false
         uploaderDiagnosticsLoadingTask.value = ''
       }
     }
   }
 
-  function loadSelectedUploaderDiagnostics() {
-    const taskId = selectedTaskFlow.value?.task?.id
-    if (taskId) {
+  function loadSelectedUploaderDiagnostics(target) {
+    const opId = operatorOpId(target)
+    if (opId) {
       diagnosticsPollingRequested = true
-      loadUploaderDiagnostics(taskId, true)
+      loadUploaderDiagnostics(target, true)
       startUploaderDiagnosticsPolling()
+    } else {
+      uploaderDiagnosticsError.value = '缺少 operatorOpId'
     }
   }
 
@@ -269,8 +271,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     if (!flowPollingActive || !flowPageOpen.value || !diagnosticsPollingRequested) return
     if (!['uploader', 'publisher'].includes(baseStageKey(selectedStageKey.value))) return
     uploaderDiagnosticsTimer = window.setInterval(() => {
-      const currentTaskId = selectedTaskFlow.value?.task?.id
-      if (currentTaskId) loadUploaderDiagnostics(currentTaskId, true)
+      Object.keys(uploaderDiagnosticsByOpId.value).forEach(opId => loadUploaderDiagnostics({ operatorOpId: opId }, true))
     }, 5000)
   }
 
@@ -491,6 +492,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   function uploadPlatformName(platform) {
     return uploadPlatformText[platform] || platform || ''
+  }
+
+  function operatorOpId(row) {
+    return String(row?.operatorOpId || row?.operator_op_id || row?.opId || row?.op_id || row?.operator_run_id || '').trim()
   }
 
   function rowsByIndex(rows) {

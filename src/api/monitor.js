@@ -96,8 +96,8 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/whisper-processing`)
     },
 
-    loadUploaderDiagnostics(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/uploader-diagnostics`)
+    loadOperatorDiagnostics(opId) {
+      return requestJson(`${apiBase}/operator/tasks/${encodeURIComponent(opId)}/diagnostics`)
     },
 
     submitNarrationSegments(taskId, response) {

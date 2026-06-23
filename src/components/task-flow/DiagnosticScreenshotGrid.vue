@@ -53,8 +53,8 @@ function diagnosticCreatedAt(row) {
   return Date.parse(row.createdAt || row.created_at || '') || 0
 }
 
-function diagnosticRunId(row) {
-  return row.runId || row.run_id || ''
+function diagnosticOpId(row) {
+  return row.opId || row.op_id || row.runId || row.run_id || ''
 }
 
 function diagnosticTitle(row) {
@@ -68,8 +68,8 @@ function diagnosticMeta(row) {
   const width = row.screenshotWidth || row.screenshot_width
   const height = row.screenshotHeight || row.screenshot_height
   return [
-    diagnosticRunId(row),
-    row.source,
+    diagnosticOpId(row),
+    row.pageTitle || row.page_title || '',
     formatDateTime(row.createdAt || row.created_at),
     width && height ? `${width}x${height}` : '',
   ].filter(Boolean).join(' · ')
@@ -141,7 +141,7 @@ async function downloadScreenshot(row) {
   <div v-else class="diagnostic-grid">
     <article
       v-for="row in visibleRows"
-      :key="row.id || `${diagnosticRunId(row)}-${row.stepIndex || row.step_index}-${screenshotUrl(row)}`"
+      :key="row.id || `${diagnosticOpId(row)}-${row.stepIndex || row.step_index}-${screenshotUrl(row)}`"
       class="diagnostic-item"
     >
       <div class="media-title">

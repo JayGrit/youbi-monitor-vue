@@ -40,6 +40,13 @@ const emit = defineEmits(['openPage'])
       </button>
       <button
         type="button"
+        :class="{ active: activePage === 'operator-diagnostics' && !flowPageOpen }"
+        @click="emit('openPage', 'operator-diagnostics')"
+      >
+        诊断
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'failure-logs' && !flowPageOpen }"
         @click="emit('openPage', 'failure-logs')"
       >

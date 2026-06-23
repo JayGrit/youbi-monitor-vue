@@ -9,6 +9,9 @@ export async function readJsonResponse(response) {
 }
 
 export function apiErrorMessage(payload, status) {
+  if (payload?.error && typeof payload.error === 'object') {
+    return [payload.error.code, payload.error.message].filter(Boolean).join(' ') || `HTTP ${status}`
+  }
   return payload?.message || payload?.detail || payload?.error || payload?.title || `HTTP ${status}`
 }
 

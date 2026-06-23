@@ -2,6 +2,7 @@
 import { createAccountsApi } from './api/accounts'
 import { createAgentApi } from './api/agent'
 import { createMonitorApi } from './api/monitor'
+import { createOperatorDiagnosticsApi } from './api/operatorDiagnostics'
 import { createSubmitterApi } from './api/submitter'
 import {
   createAccountPlatforms,
@@ -19,6 +20,7 @@ import { useTasks } from './composables/useTasks'
 import AccountsPage from './pages/AccountsPage.vue'
 import FailureLogsPage from './pages/FailureLogsPage.vue'
 import MonitorPage from './pages/MonitorPage.vue'
+import OperatorDiagnosticsPage from './pages/OperatorDiagnosticsPage.vue'
 import SubmitterAuthorsPage from './pages/SubmitterAuthorsPage.vue'
 import SubmitterPage from './pages/SubmitterPage.vue'
 import TaskFlowPage from './pages/TaskFlowPage.vue'
@@ -26,6 +28,7 @@ import TaskFlowPage from './pages/TaskFlowPage.vue'
 const apiBase = `${import.meta.env.BASE_URL}api`
 const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const monitorApi = createMonitorApi(apiBase)
+const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase)
 const accountsApi = createAccountsApi(apiBase)
 const agentApi = createAgentApi()
 const submitterApi = createSubmitterApi(submitterApiBase, apiBase)
@@ -627,6 +630,11 @@ function audioErrorMessage(code) {
       :reset-filters="resetFailureLogFilters"
       :open-task-flow="openTaskFlow"
       :copy-task-id="copyTaskId"
+    />
+
+    <OperatorDiagnosticsPage
+      v-else-if="activePage === 'operator-diagnostics'"
+      :api="operatorDiagnosticsApi"
     />
     </template>
 

@@ -32,10 +32,15 @@ const imageItems = computed(() => [
     url: narration.value.background_image_url || '',
   },
 ])
-const diagnosticItems = [
-  { key: 'cover', label: '1:1 豆包生成', platform: 'doubao', jobName: 'generate_cover_image', ratio: '1:1' },
-  { key: 'background', label: '4:3 豆包生成', platform: 'doubao', jobName: 'generate_background_image', ratio: '4:3' },
-]
+const diagnosticItems = computed(() => [
+  { key: 'cover', label: '1:1 豆包生成', operatorOpId: jobOperatorOpId('generate_cover_image') },
+  { key: 'background', label: '4:3 豆包生成', operatorOpId: jobOperatorOpId('generate_background_image') },
+])
+
+function jobOperatorOpId(jobName) {
+  const job = props.jobs.find(row => row.job_name === jobName || row.jobName === jobName)
+  return String(job?.operator_op_id || job?.operatorOpId || job?.operator_run_id || '').trim()
+}
 </script>
 
 <template>
