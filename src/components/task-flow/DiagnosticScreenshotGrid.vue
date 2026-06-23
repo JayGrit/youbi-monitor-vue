@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { formatDateTime } from '../../utils/format'
+import { formatTime, isSameDate, parseLocalDateTime } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
@@ -68,9 +68,8 @@ function diagnosticMeta(row) {
   const width = row.screenshotWidth || row.screenshot_width
   const height = row.screenshotHeight || row.screenshot_height
   return [
-    diagnosticOpId(row),
     row.pageTitle || row.page_title || '',
-    formatDateTime(row.createdAt || row.created_at),
+    relativeTime(row.createdAt || row.created_at),
     width && height ? `${width}x${height}` : '',
   ].filter(Boolean).join(' · ')
 }
@@ -133,6 +132,20 @@ async function downloadScreenshot(row) {
     delete next[key]
     screenshotLoadingUrls.value = next
   }
+}
+
+function relativeTime(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return ''
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const beforeYesterday = new Date(today)
+  beforeYesterday.setDate(beforeYesterday.getDate() - 2)
+  if (isSameDate(date, today)) return `今天 ${formatTime(date)}`
+  if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
+  if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
+  return formatTime(date)
 }
 </script>
 

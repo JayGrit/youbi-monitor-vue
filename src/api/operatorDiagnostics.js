@@ -23,8 +23,8 @@ export function createOperatorDiagnosticsApi(apiBase) {
     getTask(opId) {
       return requestJson(`${base}/tasks/${encodeURIComponent(opId)}`)
     },
-    getDiagnostics(opId) {
-      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics`)
+    getDiagnostics(opId, params) {
+      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics${queryString(params)}`)
     },
   }
 }

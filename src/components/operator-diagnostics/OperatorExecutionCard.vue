@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import DiagnosticScreenshotGrid from '../task-flow/DiagnosticScreenshotGrid.vue'
-import { formatDateTime } from '../../utils/format'
+import { formatTime, isSameDate, parseLocalDateTime } from '../../utils/format'
 import OperatorStatusBadge from './OperatorStatusBadge.vue'
 
 const props = defineProps({
@@ -10,9 +10,12 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   expanded: { type: Boolean, default: false },
+  diagnosticPage: { type: Number, default: 1 },
+  diagnosticPageCount: { type: Number, default: 0 },
+  diagnosticTotal: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['toggle', 'refresh', 'copy'])
+const emit = defineEmits(['toggle', 'refresh', 'copy', 'setDiagnosticPage'])
 
 const durationText = computed(() => {
   const created = timestamp(props.execution.createdAt)
@@ -42,6 +45,20 @@ function secondsText(ms) {
   const minutes = Math.floor(seconds / 60)
   return `${minutes}m ${seconds % 60}s`
 }
+
+function relativeTime(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return '-'
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const beforeYesterday = new Date(today)
+  beforeYesterday.setDate(beforeYesterday.getDate() - 2)
+  if (isSameDate(date, today)) return `今天 ${formatTime(date)}`
+  if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
+  if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
+  return formatTime(date)
+}
 </script>
 
 <template>
@@ -52,28 +69,13 @@ function secondsText(ms) {
         <OperatorStatusBadge :status="execution.status" />
       </div>
       <div class="operator-card-actions">
-        <button type="button" @click="emit('refresh', execution.opId)">刷新</button>
         <button type="button" @click="emit('toggle', execution.opId)">
-          {{ expanded ? '收起' : '诊断' }}
+          {{ expanded ? '收起' : '查看截图' }}
         </button>
       </div>
     </header>
 
     <dl class="operator-meta-grid">
-      <div>
-        <dt>taskId</dt>
-        <dd>
-          <code>{{ execution.taskId || '-' }}</code>
-          <button v-if="execution.taskId" type="button" @click="emit('copy', execution.taskId)">复制</button>
-        </dd>
-      </div>
-      <div>
-        <dt>opId</dt>
-        <dd>
-          <code>{{ execution.opId }}</code>
-          <button type="button" @click="emit('copy', execution.opId)">复制</button>
-        </dd>
-      </div>
       <div>
         <dt>账号</dt>
         <dd>{{ execution.accountKey || '-' }}</dd>
@@ -84,15 +86,15 @@ function secondsText(ms) {
       </div>
       <div>
         <dt>创建</dt>
-        <dd>{{ formatDateTime(execution.createdAt) || '-' }}</dd>
+        <dd>{{ relativeTime(execution.createdAt) }}</dd>
       </div>
       <div>
         <dt>开始</dt>
-        <dd>{{ formatDateTime(execution.startedAt) || '-' }}</dd>
+        <dd>{{ relativeTime(execution.startedAt) }}</dd>
       </div>
       <div>
         <dt>完成</dt>
-        <dd>{{ formatDateTime(execution.completedAt) || '-' }}</dd>
+        <dd>{{ relativeTime(execution.completedAt) }}</dd>
       </div>
       <div>
         <dt>耗时</dt>
@@ -108,9 +110,25 @@ function secondsText(ms) {
       <DiagnosticScreenshotGrid
         v-else
         :rows="diagnostics"
-        :title-prefix="row => row.opId || execution.opId"
         empty-text="没有诊断记录"
       />
+      <footer v-if="diagnosticPageCount > 1" class="operator-diagnostics-pagination">
+        <button
+          type="button"
+          :disabled="diagnosticPage <= 1 || loading"
+          @click="emit('setDiagnosticPage', execution.opId, diagnosticPage - 1)"
+        >
+          上一页
+        </button>
+        <span>{{ diagnosticPage }} / {{ diagnosticPageCount }} · {{ diagnosticTotal }}</span>
+        <button
+          type="button"
+          :disabled="diagnosticPage >= diagnosticPageCount || loading"
+          @click="emit('setDiagnosticPage', execution.opId, diagnosticPage + 1)"
+        >
+          下一页
+        </button>
+      </footer>
     </section>
   </article>
 </template>
@@ -184,6 +202,32 @@ function secondsText(ms) {
   margin-top: 14px;
   border-top: 1px solid #e2e8f0;
   padding-top: 14px;
+  min-width: 0;
+}
+
+.operator-diagnostics-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.operator-diagnostics-pagination button {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  min-height: 30px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.operator-diagnostics-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 900px) {

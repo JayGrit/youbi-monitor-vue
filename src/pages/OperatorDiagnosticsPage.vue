@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import OperatorExecutionCard from '../components/operator-diagnostics/OperatorExecutionCard.vue'
+import { pad2 } from '../utils/format'
 
 const props = defineProps({
   api: { type: Object, required: true },
@@ -17,14 +18,13 @@ const statuses = [
 const filters = reactive({
   status: '',
   platform: '',
-  action: '',
-  taskId: '',
-  opId: '',
   accountKey: '',
+  timeRange: 'recent',
 })
-const textDrafts = reactive({ taskId: '', opId: '', accountKey: '' })
+const textDrafts = reactive({ accountKey: '' })
 const page = ref(1)
 const limit = 10
+const diagnosticLimit = 12
 const executions = ref([])
 const total = ref(0)
 const pageCount = ref(0)
@@ -33,6 +33,9 @@ const error = ref('')
 const loadedAt = ref('')
 const expanded = ref({})
 const diagnostics = ref({})
+const diagnosticPages = ref({})
+const diagnosticTotals = ref({})
+const diagnosticPageCounts = ref({})
 const diagnosticLoading = ref({})
 const diagnosticErrors = ref({})
 const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
@@ -40,6 +43,12 @@ let pollTimer = null
 let requestToken = 0
 
 const hasRunning = computed(() => executions.value.some(item => ['ready', 'running'].includes(item.status)))
+const timeRanges = [
+  { value: 'recent', label: '近3小时' },
+  { value: 'today', label: '今天' },
+  { value: 'yesterday', label: '昨天' },
+  { value: 'beforeYesterday', label: '前天' },
+]
 
 onMounted(() => {
   restoreQuery()
@@ -54,12 +63,11 @@ onUnmounted(() => {
 
 function restoreQuery() {
   const query = new URLSearchParams(window.location.search)
-  page.value = Math.max(1, Number(query.get('operatorPage') || query.get('page') || 1))
+  page.value = positiveNumber(query.get('operatorPage'), 1)
   for (const key of Object.keys(filters)) {
     filters[key] = query.get(key) || ''
   }
-  textDrafts.taskId = filters.taskId
-  textDrafts.opId = filters.opId
+  if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'recent'
   textDrafts.accountKey = filters.accountKey
 }
 
@@ -85,10 +93,8 @@ async function loadExecutions({ silent = false } = {}) {
       limit,
       status: filters.status,
       platform: filters.platform,
-      action: filters.action,
-      taskId: filters.taskId,
-      opId: filters.opId,
       accountKey: filters.accountKey,
+      ...timeRangeParams(filters.timeRange),
       sort: 'created_desc',
     })
     if (token !== requestToken) return
@@ -125,8 +131,6 @@ function filterChanged() {
 }
 
 function applyTextFilters() {
-  filters.taskId = textDrafts.taskId.trim()
-  filters.opId = textDrafts.opId.trim()
   filters.accountKey = textDrafts.accountKey.trim()
   filterChanged()
 }
@@ -146,19 +150,23 @@ async function refreshExecution(opId) {
   try {
     const row = await props.api.getTask(opId)
     executions.value = executions.value.map(item => item.opId === opId ? { ...item, ...row } : item)
-    await loadDiagnostics(opId)
+    await loadDiagnostics(opId, { page: diagnosticPages.value[opId] || 1, force: true })
   } catch (err) {
     diagnosticErrors.value = { ...diagnosticErrors.value, [opId]: err instanceof Error ? err.message : String(err) }
   }
 }
 
-async function loadDiagnostics(opId) {
+async function loadDiagnostics(opId, { page: nextPage = diagnosticPages.value[opId] || 1, force = false } = {}) {
   if (!opId || diagnosticLoading.value[opId]) return
+  if (!force && diagnostics.value[opId] && diagnosticPages.value[opId] === nextPage) return
+  diagnosticPages.value = { ...diagnosticPages.value, [opId]: nextPage }
   diagnosticLoading.value = { ...diagnosticLoading.value, [opId]: true }
   diagnosticErrors.value = { ...diagnosticErrors.value, [opId]: '' }
   try {
-    const response = await props.api.getDiagnostics(opId)
+    const response = await props.api.getDiagnostics(opId, { page: nextPage, limit: diagnosticLimit })
     diagnostics.value = { ...diagnostics.value, [opId]: response.items || [] }
+    diagnosticTotals.value = { ...diagnosticTotals.value, [opId]: Number(response.total || 0) }
+    diagnosticPageCounts.value = { ...diagnosticPageCounts.value, [opId]: Number(response.pageCount || 0) }
   } catch (err) {
     diagnosticErrors.value = { ...diagnosticErrors.value, [opId]: err instanceof Error ? err.message : String(err) }
   } finally {
@@ -166,6 +174,12 @@ async function loadDiagnostics(opId) {
     delete next[opId]
     diagnosticLoading.value = next
   }
+}
+
+function setDiagnosticPage(opId, nextPage) {
+  const maxPage = diagnosticPageCounts.value[opId] || 1
+  const normalized = Math.min(maxPage, Math.max(1, nextPage))
+  loadDiagnostics(opId, { page: normalized, force: true })
 }
 
 function refreshExpandedDiagnostics({ onlyActive = false } = {}) {
@@ -198,6 +212,43 @@ function stopPolling() {
 async function copyText(text) {
   await navigator.clipboard?.writeText(String(text || ''))
 }
+
+function timeRangeParams(range) {
+  const now = new Date()
+  if (range === 'today') return dayRange(now)
+  if (range === 'yesterday') return dayRange(addDays(now, -1))
+  if (range === 'beforeYesterday') return dayRange(addDays(now, -2))
+  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000)
+  return {
+    createdFrom: localDateTime(from),
+    createdTo: localDateTime(now),
+  }
+}
+
+function dayRange(date) {
+  const from = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const to = new Date(from)
+  to.setDate(to.getDate() + 1)
+  return {
+    createdFrom: localDateTime(from),
+    createdTo: localDateTime(to),
+  }
+}
+
+function addDays(date, days) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function localDateTime(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
+}
+
+function positiveNumber(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback
+}
 </script>
 
 <template>
@@ -205,9 +256,8 @@ async function copyText(text) {
     <header class="operator-diagnostics-header">
       <div>
         <h1>诊断</h1>
-        <p>每页 10 条 Operator 执行，按 opId 查看诊断截图和 HTML。</p>
+        <p>每页 10 条 Operator 执行，展开后分页查看截图和 HTML。</p>
       </div>
-      <button type="button" @click="loadExecutions()">刷新</button>
     </header>
 
     <form class="operator-filter-bar" @submit.prevent="applyTextFilters">
@@ -222,16 +272,10 @@ async function copyText(text) {
         <input v-model.trim="filters.platform" type="text" @change="filterChanged" />
       </label>
       <label>
-        Action
-        <input v-model.trim="filters.action" type="text" @change="filterChanged" />
-      </label>
-      <label>
-        taskId
-        <input v-model="textDrafts.taskId" type="text" />
-      </label>
-      <label>
-        opId
-        <input v-model="textDrafts.opId" type="text" />
+        时间
+        <select v-model="filters.timeRange" @change="filterChanged">
+          <option v-for="item in timeRanges" :key="item.value" :value="item.value">{{ item.label }}</option>
+        </select>
       </label>
       <label>
         账号
@@ -254,10 +298,14 @@ async function copyText(text) {
         :execution="execution"
         :expanded="Boolean(expanded[execution.opId])"
         :diagnostics="diagnostics[execution.opId] || []"
+        :diagnostic-page="diagnosticPages[execution.opId] || 1"
+        :diagnostic-page-count="diagnosticPageCounts[execution.opId] || 0"
+        :diagnostic-total="diagnosticTotals[execution.opId] || 0"
         :loading="Boolean(diagnosticLoading[execution.opId])"
         :error="diagnosticErrors[execution.opId] || ''"
         @toggle="toggle"
         @refresh="refreshExecution"
+        @set-diagnostic-page="setDiagnosticPage"
         @copy="copyText"
       />
     </div>
@@ -296,7 +344,6 @@ async function copyText(text) {
   color: #64748b;
 }
 
-.operator-diagnostics-header button,
 .operator-filter-bar button,
 .operator-pagination button {
   min-height: 34px;
@@ -310,7 +357,7 @@ async function copyText(text) {
 
 .operator-filter-bar {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
 }
