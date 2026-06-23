@@ -95,6 +95,9 @@ const layout = computed(() => {
 function rootLanePriority(node) {
   if (node.stage === 'publisher' && node.subStage === 'image_generation') return 0
   if (node.stage === 'publisher' && node.subStage === 'segment_plan') return 1
+  if (node.stage === 'combiner' && node.subStage === 'audio_mix') return 20
+  if (node.stage === 'combiner' && node.subStage === 'subtitle') return 21
+  if (node.stage === 'combiner' && node.subStage === 'final_video') return 22
   return Number(node.order) || Number.MAX_SAFE_INTEGER
 }
 

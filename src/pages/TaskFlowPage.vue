@@ -3,6 +3,7 @@ import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
 import DownloaderPanel from '../components/task-flow/DownloaderPanel.vue'
 import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
 import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
+import CombinerPanel from '../components/task-flow/CombinerPanel.vue'
 import PublisherPanel from '../components/task-flow/PublisherPanel.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
@@ -68,6 +69,10 @@ const demucsAudioPanel = ref(null)
 const publisherSubStage = computed(() => {
   if (!props.selectedStageKey.startsWith('publisher:')) return 'main'
   return props.selectedStageKey.slice('publisher:'.length) || 'main'
+})
+const combinerSubStage = computed(() => {
+  if (!props.selectedStageKey.startsWith('combiner:')) return 'main'
+  return props.selectedStageKey.slice('combiner:'.length) || 'main'
 })
 
 function demucsStage(flow) {
@@ -150,6 +155,16 @@ function seekVocalsPlayback(ms) {
           :log-audio-event="logAudioEvent"
         />
 
+        <CombinerPanel
+          v-if="selectedStage.key === 'combiner'"
+          :sub-stage="combinerSubStage"
+          :flow="selectedTaskFlow"
+          :stage="selectedStage"
+          :jobs="[...stageTableRows(selectedStage, 'combiner_jobs'), ...stageTableRows(selectedStage, 'combiner_job')]"
+          :media="stageMedia(selectedStage)"
+          :log-audio-event="logAudioEvent"
+        />
+
         <DemucsAudioPanel
           v-if="selectedStage.key === 'demucs'"
           ref="demucsAudioPanel"
@@ -179,7 +194,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />
