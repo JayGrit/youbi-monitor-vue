@@ -24,9 +24,11 @@ const props = defineProps({
   allSelected: { type: Boolean, default: false },
   actualPublishedSelectedRows: { type: Array, default: () => [] },
   retryUploadSelectedRows: { type: Array, default: () => [] },
+  deferSelectedRows: { type: Array, default: () => [] },
   loadFailureLogs: { type: Function, required: true },
   markSelectedActualPublished: { type: Function, required: true },
   retrySelectedUploads: { type: Function, required: true },
+  deferSelectedTasks: { type: Function, required: true },
   toggleRow: { type: Function, required: true },
   toggleAll: { type: Function, required: true },
   clearSelection: { type: Function, required: true },
@@ -76,6 +78,17 @@ function canRetryUpload(row) {
   return canMarkActualPublished(row)
 }
 
+function canDeferTask(row) {
+  return Boolean(row.taskId)
+}
+
+function canSelectRow(row) {
+  if (actionMode.value === 'actual-published') return canMarkActualPublished(row)
+  if (actionMode.value === 'retry-upload') return canRetryUpload(row)
+  if (actionMode.value === 'defer') return canDeferTask(row)
+  return canMarkActualPublished(row) || canRetryUpload(row) || canDeferTask(row)
+}
+
 function openActionMode(mode) {
   actionsExpanded.value = true
   actionMode.value = mode
@@ -94,18 +107,24 @@ function submitSelectedAction() {
   }
   if (actionMode.value === 'retry-upload') {
     props.retrySelectedUploads()
+    return
+  }
+  if (actionMode.value === 'defer') {
+    props.deferSelectedTasks()
   }
 }
 
 function selectedActionCount() {
   if (actionMode.value === 'actual-published') return props.actualPublishedSelectedRows.length
   if (actionMode.value === 'retry-upload') return props.retryUploadSelectedRows.length
+  if (actionMode.value === 'defer') return props.deferSelectedRows.length
   return 0
 }
 
 function actionModeText() {
   if (actionMode.value === 'actual-published') return '实际发布'
   if (actionMode.value === 'retry-upload') return '重试上传'
+  if (actionMode.value === 'defer') return '稍后执行'
   return '批量操作'
 }
 </script>
@@ -126,6 +145,9 @@ function actionModeText() {
         </button>
         <button type="button" :class="{ active: actionMode === 'retry-upload' }" @click="openActionMode('retry-upload')">
           重试上传
+        </button>
+        <button type="button" :class="{ active: actionMode === 'defer' }" @click="openActionMode('defer')">
+          稍后执行
         </button>
         <button v-if="actionsExpanded" type="button" @click="closeActions">
           收起操作
@@ -186,7 +208,7 @@ function actionModeText() {
         <strong>{{ actionModeText() }}</strong>
         <p>
           已选 {{ selectedIds.length }} 条，当前操作可执行 {{ selectedActionCount() }} 条。
-          只支持 Uploader 平台失败子任务。
+          当前模式只会处理可执行的行。
         </p>
       </div>
       <div class="failure-log-bulk-actions">
@@ -229,11 +251,11 @@ function actionModeText() {
           <tr v-for="row in filteredRows" :key="row.id">
             <td v-if="actionsExpanded" class="failure-log-select-column">
               <input
-                v-if="canMarkActualPublished(row) || canRetryUpload(row)"
+                v-if="canSelectRow(row)"
                 type="checkbox"
                 :checked="selectedSet.has(row.id)"
                 :disabled="actionBusy"
-                :title="canMarkActualPublished(row) ? '选择上传失败子任务' : ''"
+                :title="actionModeText()"
                 @change="toggleRow(row)"
               >
               <span v-else>-</span>

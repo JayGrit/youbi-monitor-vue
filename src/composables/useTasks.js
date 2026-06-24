@@ -14,7 +14,7 @@ import {
   youtubeThumbnailUrl,
 } from '../utils/media'
 
-export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
+export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributorApi) {
   const tasks = ref([])
   const serviceHeartbeats = ref([])
   const serverTime = ref('')
@@ -35,17 +35,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
   const taskActionsExpanded = ref(false)
   const openFailureKey = ref('')
   const taskThumbUrls = ref({})
-  const uploadRetryPlatform = ref('')
-  const uploadRetryRows = ref([])
-  const uploadRetryLoading = ref(false)
-  const uploadRetryBusy = ref(false)
-  const uploadRetrySelectedIds = ref([])
-  const downloaderFailuresOpen = ref(false)
-  const downloaderFailureRows = ref([])
-  const downloaderFailureLoading = ref(false)
-  const downloaderFailureBusy = ref(false)
-  const downloaderFailureSelectedIds = ref([])
-  const downloaderFailureTypeFilter = ref('all')
   const progressByTaskId = ref({})
   const taskDetailsExpanded = ref(false)
   const taskProgressLoading = ref(false)
@@ -101,40 +90,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       }
     }
     return { online, total }
-  })
-
-  const uploadRetryPlatformOptions = computed(() => {
-    return Object.entries(uploadPlatformText).map(([value, label]) => ({ value, label }))
-  })
-
-  const uploadRetrySelectedSet = computed(() => new Set(uploadRetrySelectedIds.value))
-
-  const uploadRetrySelectableRows = computed(() => {
-    return uploadRetryRows.value.filter(row => !row.retryBlockedReason)
-  })
-
-  const uploadRetryAllSelected = computed(() => {
-    const rows = uploadRetrySelectableRows.value
-    return rows.length > 0 && rows.every(row => uploadRetrySelectedSet.value.has(row.id))
-  })
-
-  const downloaderFailureSelectedSet = computed(() => new Set(downloaderFailureSelectedIds.value))
-
-  const downloaderFailureTypeOptions = computed(() => {
-    return [...new Set(downloaderFailureRows.value
-      .map(row => String(row?.type || '').trim())
-      .filter(Boolean))]
-      .sort((left, right) => left.localeCompare(right))
-  })
-
-  const downloaderFailureAllSelected = computed(() => {
-    const rows = downloaderFailureRows.value
-    return rows.length > 0 && rows.every(row => downloaderFailureSelectedSet.value.has(row.submissionId))
-  })
-
-  const downloaderFailureTypeSelected = computed(() => {
-    const rows = downloaderFailureRowsByType(downloaderFailureTypeFilter.value)
-    return rows.length > 0 && rows.every(row => downloaderFailureSelectedSet.value.has(row.submissionId))
   })
 
   async function loadTasks() {
@@ -266,7 +221,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     if (!task?.taskId || task.status !== 'failed' || readyTaskId.value) return
     readyTaskId.value = task.taskId
     try {
-      await monitorApi.markTaskReady(task.taskId)
+      await distributorApi.retryTask(task.taskId)
       task.status = 'ready'
       task.errorMessage = ''
       await loadTasks()
@@ -274,150 +229,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
       error.value = err instanceof Error ? err.message : String(err)
     } finally {
       readyTaskId.value = ''
-    }
-  }
-
-  async function setUploadRetryPlatform(platform) {
-    uploadRetryPlatform.value = platform
-    uploadRetrySelectedIds.value = []
-    if (!platform) {
-      uploadRetryRows.value = []
-      return
-    }
-    await loadUploadRetryRows()
-  }
-
-  async function loadUploadRetryRows() {
-    const platform = uploadRetryPlatform.value
-    if (!platform || uploadRetryLoading.value) return
-    uploadRetryLoading.value = true
-    try {
-      const payload = await monitorApi.loadFailedUploadSubmissions(platform)
-      uploadRetryRows.value = payload.rows || []
-      uploadRetrySelectedIds.value = uploadRetrySelectedIds.value.filter(id => {
-        return uploadRetryRows.value.some(row => row.id === id && !row.retryBlockedReason)
-      })
-      error.value = ''
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      uploadRetryLoading.value = false
-    }
-  }
-
-  function toggleUploadRetryRow(row) {
-    if (!row?.id || row.retryBlockedReason) return
-    const selected = uploadRetrySelectedSet.value
-    uploadRetrySelectedIds.value = selected.has(row.id)
-      ? uploadRetrySelectedIds.value.filter(id => id !== row.id)
-      : [...uploadRetrySelectedIds.value, row.id]
-  }
-
-  function toggleUploadRetryAll() {
-    if (uploadRetryAllSelected.value) {
-      uploadRetrySelectedIds.value = []
-      return
-    }
-    uploadRetrySelectedIds.value = uploadRetrySelectableRows.value.map(row => row.id)
-  }
-
-  async function retrySelectedUploadSubmissions() {
-    if (!uploadRetryPlatform.value || uploadRetrySelectedIds.value.length === 0 || uploadRetryBusy.value) return
-    const ids = [...uploadRetrySelectedIds.value]
-    uploadRetryBusy.value = true
-    try {
-      await monitorApi.retryUploadSubmissions(uploadRetryPlatform.value, ids)
-      uploadRetrySelectedIds.value = []
-      await Promise.all([loadTasks(), loadUploadRetryRows()])
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      uploadRetryBusy.value = false
-    }
-  }
-
-  async function toggleDownloaderFailures() {
-    downloaderFailuresOpen.value = !downloaderFailuresOpen.value
-    if (downloaderFailuresOpen.value) await loadDownloaderFailures()
-  }
-
-  async function loadDownloaderFailures() {
-    if (downloaderFailureLoading.value) return
-    downloaderFailureLoading.value = true
-    try {
-      const payload = await monitorApi.loadFailedTasks()
-      downloaderFailureRows.value = payload.rows || []
-      downloaderFailureSelectedIds.value = downloaderFailureSelectedIds.value.filter(id => {
-        return downloaderFailureRows.value.some(row => row.submissionId === id)
-      })
-      if (
-        downloaderFailureTypeFilter.value !== 'all'
-        && !downloaderFailureTypeOptions.value.includes(downloaderFailureTypeFilter.value)
-      ) {
-        downloaderFailureTypeFilter.value = 'all'
-      }
-      error.value = ''
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      downloaderFailureLoading.value = false
-    }
-  }
-
-  function toggleDownloaderFailureRow(row) {
-    const id = row?.submissionId
-    if (!id) return
-    const selected = downloaderFailureSelectedSet.value
-    downloaderFailureSelectedIds.value = selected.has(id)
-      ? downloaderFailureSelectedIds.value.filter(item => item !== id)
-      : [...downloaderFailureSelectedIds.value, id]
-  }
-
-  function toggleDownloaderFailureAll() {
-    downloaderFailureSelectedIds.value = downloaderFailureAllSelected.value
-      ? []
-      : downloaderFailureRows.value.map(row => row.submissionId)
-  }
-
-  function setDownloaderFailureTypeFilter(type) {
-    downloaderFailureTypeFilter.value = String(type || 'all')
-  }
-
-  function downloaderFailureRowsByType(type) {
-    if (!type || type === 'all') return downloaderFailureRows.value
-    return downloaderFailureRows.value.filter(row => String(row?.type || '').trim() === type)
-  }
-
-  function toggleDownloaderFailureType() {
-    const rows = downloaderFailureRowsByType(downloaderFailureTypeFilter.value)
-    if (rows.length === 0) return
-    const rowIds = rows.map(row => row.submissionId)
-    const rowIdSet = new Set(rowIds)
-    downloaderFailureSelectedIds.value = downloaderFailureTypeSelected.value
-      ? downloaderFailureSelectedIds.value.filter(id => !rowIdSet.has(id))
-      : [...new Set([...downloaderFailureSelectedIds.value, ...rowIds])]
-  }
-
-  async function rollbackSelectedDownloaderFailures() {
-    if (downloaderFailureSelectedIds.value.length === 0 || downloaderFailureBusy.value) return
-    const count = downloaderFailureSelectedIds.value.length
-    const confirmed = window.confirm(
-      `确认稍后执行选中的 ${count} 个任务？\n\n`
-      + '这会删除已创建的任务数据库记录和 MinIO 文件，'
-      + '并把原 submission 恢复为可拉取。'
-    )
-    if (!confirmed) return
-    const submissionIds = [...downloaderFailureSelectedIds.value]
-    downloaderFailureBusy.value = true
-    try {
-      await monitorApi.rollbackFailedTasks(submissionIds)
-      downloaderFailureSelectedIds.value = []
-      await Promise.all([loadTasks(), loadDownloaderFailures()])
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err)
-      window.alert(`稍后执行失败：${error.value}`)
-    } finally {
-      downloaderFailureBusy.value = false
     }
   }
 
@@ -431,7 +242,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     if (!confirmed) return
     stopTaskId.value = task.taskId
     try {
-      await monitorApi.stopTask(task.taskId)
+      await distributorApi.stopTask(task.taskId)
       task.status = 'failed'
       task.errorMessage = '手动停止任务'
       await loadTasks()
@@ -452,7 +263,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     if (!confirmed) return
     restartTaskId.value = task.taskId
     try {
-      await monitorApi.restartTask(task.taskId)
+      await distributorApi.restartTask(task.taskId)
       task.status = 'ready'
       task.currentStage = 'downloader'
       task.errorMessage = ''
@@ -474,7 +285,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     if (!confirmed) return
     deleteTaskId.value = task.taskId
     try {
-      await monitorApi.deleteTask(task.taskId)
+      await distributorApi.deleteTask(task.taskId)
       tasks.value = tasks.value.filter(item => item.taskId !== task.taskId)
       await loadTasks()
     } catch (err) {
@@ -737,17 +548,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     taskActionsExpanded,
     openFailureKey,
     taskThumbUrls,
-    uploadRetryPlatform,
-    uploadRetryRows,
-    uploadRetryLoading,
-    uploadRetryBusy,
-    uploadRetrySelectedIds,
-    downloaderFailuresOpen,
-    downloaderFailureRows,
-    downloaderFailureLoading,
-    downloaderFailureBusy,
-    downloaderFailureSelectedIds,
-    downloaderFailureTypeFilter,
     progressByTaskId,
     taskDetailsExpanded,
     taskProgressLoading,
@@ -759,14 +559,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     pagedTasks,
     taskPageCount,
     onlineSummary,
-    uploadRetryPlatformOptions,
-    uploadRetrySelectedSet,
-    uploadRetrySelectableRows,
-    uploadRetryAllSelected,
-    downloaderFailureSelectedSet,
-    downloaderFailureAllSelected,
-    downloaderFailureTypeOptions,
-    downloaderFailureTypeSelected,
     loadTasks,
     loadServiceHeartbeats,
     loadTaskProgressBatch,
@@ -775,18 +567,6 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls) {
     loadTaskTypes,
     markTaskReady,
     isTaskReadyBusy,
-    setUploadRetryPlatform,
-    loadUploadRetryRows,
-    toggleUploadRetryRow,
-    toggleUploadRetryAll,
-    retrySelectedUploadSubmissions,
-    toggleDownloaderFailures,
-    loadDownloaderFailures,
-    toggleDownloaderFailureRow,
-    toggleDownloaderFailureAll,
-    setDownloaderFailureTypeFilter,
-    toggleDownloaderFailureType,
-    rollbackSelectedDownloaderFailures,
     stopTask,
     isTaskStopBusy,
     restartTask,

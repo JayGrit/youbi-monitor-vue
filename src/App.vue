@@ -1,6 +1,7 @@
 <script setup>
 import { createAccountsApi } from './api/accounts'
 import { createAgentApi } from './api/agent'
+import { createDistributorApi } from './api/distributor'
 import { createMonitorApi } from './api/monitor'
 import { createOperatorDiagnosticsApi } from './api/operatorDiagnostics'
 import { createSubmitterApi } from './api/submitter'
@@ -26,8 +27,10 @@ import SubmitterPage from './pages/SubmitterPage.vue'
 import TaskFlowPage from './pages/TaskFlowPage.vue'
 
 const apiBase = `${import.meta.env.BASE_URL}api`
+const distributorApiBase = `${import.meta.env.BASE_URL}distributor-api`
 const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const monitorApi = createMonitorApi(apiBase)
+const distributorApi = createDistributorApi(distributorApiBase)
 const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase)
 const accountsApi = createAccountsApi(apiBase)
 const agentApi = createAgentApi()
@@ -56,14 +59,16 @@ const {
   allSelected: failureLogAllSelected,
   actualPublishedSelectedRows: failureLogActualPublishedSelectedRows,
   retryUploadSelectedRows: failureLogRetryUploadSelectedRows,
+  deferSelectedRows: failureLogDeferSelectedRows,
   loadFailureLogs,
   markSelectedActualPublished: markSelectedFailureLogActualPublished,
   retrySelectedUploads: retrySelectedFailureLogUploads,
+  deferSelectedTasks: deferSelectedFailureLogTasks,
   toggleRow: toggleFailureLogRow,
   toggleAll: toggleFailureLogAll,
   clearSelection: clearFailureLogSelection,
   resetFilters: resetFailureLogFilters,
-} = useFailureLogs(monitorApi)
+} = useFailureLogs(monitorApi, distributorApi)
 
 const {
   tasks,
@@ -79,17 +84,6 @@ const {
   taskTotalCount,
   taskActionsExpanded,
   openFailureKey,
-  uploadRetryPlatform,
-  uploadRetryRows,
-  uploadRetryLoading,
-  uploadRetryBusy,
-  uploadRetrySelectedIds,
-  downloaderFailuresOpen,
-  downloaderFailureRows,
-  downloaderFailureLoading,
-  downloaderFailureBusy,
-  downloaderFailureSelectedIds,
-  downloaderFailureTypeFilter,
   progressByTaskId,
   taskDetailsExpanded,
   taskProgressLoading,
@@ -100,13 +94,6 @@ const {
   hasTaskFilter,
   pagedTasks,
   taskPageCount,
-  uploadRetryPlatformOptions,
-  uploadRetrySelectedSet,
-  uploadRetryAllSelected,
-  downloaderFailureSelectedSet,
-  downloaderFailureAllSelected,
-  downloaderFailureTypeOptions,
-  downloaderFailureTypeSelected,
   loadTasks,
   loadServiceHeartbeats,
   toggleTaskDetails,
@@ -114,18 +101,6 @@ const {
   loadTaskTypes,
   markTaskReady,
   isTaskReadyBusy,
-  setUploadRetryPlatform,
-  loadUploadRetryRows,
-  toggleUploadRetryRow,
-  toggleUploadRetryAll,
-  retrySelectedUploadSubmissions,
-  toggleDownloaderFailures,
-  loadDownloaderFailures,
-  toggleDownloaderFailureRow,
-  toggleDownloaderFailureAll,
-  setDownloaderFailureTypeFilter,
-  toggleDownloaderFailureType,
-  rollbackSelectedDownloaderFailures,
   stopTask,
   isTaskStopBusy,
   restartTask,
@@ -158,7 +133,7 @@ const {
   taskActionsOpen,
   nodeTitle,
   nodeProgress,
-} = useTasks(monitorApi, cacheImageUrl, brokenImageUrls)
+} = useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributorApi)
 
 const {
   bilibiliQrCode,
@@ -414,24 +389,6 @@ function audioErrorMessage(code) {
       :task-details-expanded="taskDetailsExpanded"
       :task-progress-loading="taskProgressLoading"
       :task-progress-error="taskProgressError"
-      :upload-retry-platform="uploadRetryPlatform"
-      :upload-retry-platform-options="uploadRetryPlatformOptions"
-      :upload-retry-rows="uploadRetryRows"
-      :upload-retry-loading="uploadRetryLoading"
-      :upload-retry-busy="uploadRetryBusy"
-      :upload-retry-selected-ids="uploadRetrySelectedIds"
-      :upload-retry-selected-set="uploadRetrySelectedSet"
-      :upload-retry-all-selected="uploadRetryAllSelected"
-      :downloader-failures-open="downloaderFailuresOpen"
-      :downloader-failure-rows="downloaderFailureRows"
-      :downloader-failure-loading="downloaderFailureLoading"
-      :downloader-failure-busy="downloaderFailureBusy"
-      :downloader-failure-selected-ids="downloaderFailureSelectedIds"
-      :downloader-failure-selected-set="downloaderFailureSelectedSet"
-      :downloader-failure-all-selected="downloaderFailureAllSelected"
-      :downloader-failure-type-filter="downloaderFailureTypeFilter"
-      :downloader-failure-type-options="downloaderFailureTypeOptions"
-      :downloader-failure-type-selected="downloaderFailureTypeSelected"
       :service-online="serviceOnline"
       :online-device-title="onlineDeviceTitle"
       :online-device-text="onlineDeviceText"
@@ -453,18 +410,6 @@ function audioErrorMessage(code) {
       :toggle-task-details="toggleTaskDetails"
       :is-task-ready-busy="isTaskReadyBusy"
       :mark-task-ready="markTaskReady"
-      :set-upload-retry-platform="setUploadRetryPlatform"
-      :load-upload-retry-rows="loadUploadRetryRows"
-      :toggle-upload-retry-row="toggleUploadRetryRow"
-      :toggle-upload-retry-all="toggleUploadRetryAll"
-      :retry-selected-upload-submissions="retrySelectedUploadSubmissions"
-      :toggle-downloader-failures="toggleDownloaderFailures"
-      :load-downloader-failures="loadDownloaderFailures"
-      :toggle-downloader-failure-row="toggleDownloaderFailureRow"
-      :toggle-downloader-failure-all="toggleDownloaderFailureAll"
-      :set-downloader-failure-type-filter="setDownloaderFailureTypeFilter"
-      :toggle-downloader-failure-type="toggleDownloaderFailureType"
-      :rollback-selected-downloader-failures="rollbackSelectedDownloaderFailures"
       :is-task-stop-busy="isTaskStopBusy"
       :stop-task="stopTask"
       :is-task-restart-busy="isTaskRestartBusy"
@@ -621,9 +566,11 @@ function audioErrorMessage(code) {
       :all-selected="failureLogAllSelected"
       :actual-published-selected-rows="failureLogActualPublishedSelectedRows"
       :retry-upload-selected-rows="failureLogRetryUploadSelectedRows"
+      :defer-selected-rows="failureLogDeferSelectedRows"
       :load-failure-logs="loadFailureLogs"
       :mark-selected-actual-published="markSelectedFailureLogActualPublished"
       :retry-selected-uploads="retrySelectedFailureLogUploads"
+      :defer-selected-tasks="deferSelectedFailureLogTasks"
       :toggle-row="toggleFailureLogRow"
       :toggle-all="toggleFailureLogAll"
       :clear-selection="clearFailureLogSelection"

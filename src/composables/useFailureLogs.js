@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue'
 import { parseLocalDateTime } from '../utils/format'
+import { normalizeUploadPlatform } from '../utils/uploadPlatform'
 
-export function useFailureLogs(monitorApi) {
+export function useFailureLogs(monitorApi, distributorApi) {
   const rows = ref([])
   const loading = ref(false)
   const error = ref('')
@@ -29,7 +30,7 @@ export function useFailureLogs(monitorApi) {
     })
     .sort((left, right) => errorLength(left) - errorLength(right)))
   const selectedSet = computed(() => new Set(selectedIds.value))
-  const selectableRows = computed(() => filteredRows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row)))
+  const selectableRows = computed(() => filteredRows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canDeferTask(row)))
   const allSelected = computed(() => {
     const rows = selectableRows.value
     return rows.length > 0 && rows.every(row => selectedSet.value.has(row.id))
@@ -40,6 +41,7 @@ export function useFailureLogs(monitorApi) {
   })
   const actualPublishedSelectedRows = computed(() => selectedRows.value.filter(canMarkActualPublished))
   const retryUploadSelectedRows = computed(() => selectedRows.value.filter(canRetryUpload))
+  const deferSelectedRows = computed(() => selectedRows.value.filter(canDeferTask))
 
   async function loadFailureLogs() {
     loading.value = true
@@ -65,7 +67,8 @@ export function useFailureLogs(monitorApi) {
     actionBusyId.value = row.id
     actionError.value = ''
     try {
-      await monitorApi.markFailureLogActualPublished(row.id)
+      const target = parseUploadLogId(row.id)
+      await distributorApi.markUploadSubmissionsActualPublished(target.platform, [target.id])
       await loadFailureLogs()
       return true
     } catch (err) {
@@ -85,9 +88,9 @@ export function useFailureLogs(monitorApi) {
     actionBusy.value = true
     actionError.value = ''
     try {
-      for (const row of targets) {
-        actionBusyId.value = row.id
-        await monitorApi.markFailureLogActualPublished(row.id)
+      const groups = groupedUploadTargets(targets)
+      for (const [platform, ids] of groups.entries()) {
+        await distributorApi.markUploadSubmissionsActualPublished(platform, ids)
       }
       selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
       await loadFailureLogs()
@@ -108,14 +111,9 @@ export function useFailureLogs(monitorApi) {
     actionBusy.value = true
     actionError.value = ''
     try {
-      const groups = new Map()
-      for (const row of targets) {
-        const uploadTarget = parseUploadLogId(row.id)
-        if (!uploadTarget) continue
-        groups.set(uploadTarget.platform, [...(groups.get(uploadTarget.platform) || []), uploadTarget.id])
-      }
+      const groups = groupedUploadTargets(targets)
       for (const [platform, ids] of groups.entries()) {
-        await monitorApi.retryUploadSubmissions(platform, ids)
+        await distributorApi.retryUploadSubmissions(platform, ids)
       }
       selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
       await loadFailureLogs()
@@ -126,8 +124,29 @@ export function useFailureLogs(monitorApi) {
     }
   }
 
+  async function deferSelectedTasks() {
+    const targets = deferSelectedRows.value
+    if (targets.length === 0 || actionBusy.value) return
+    const taskIds = [...new Set(targets.map(row => String(row.taskId || '').trim()).filter(Boolean))]
+    if (taskIds.length === 0) return
+    if (!window.confirm(`确认稍后执行选中的 ${taskIds.length} 个任务？\n\n这会删除任务数据库记录和 MinIO 文件，并把原 submission 恢复为可拉取。`)) {
+      return
+    }
+    actionBusy.value = true
+    actionError.value = ''
+    try {
+      await distributorApi.deferTasks(taskIds)
+      selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
+      await loadFailureLogs()
+    } catch (err) {
+      actionError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      actionBusy.value = false
+    }
+  }
+
   function toggleRow(row) {
-    if (!row?.id || (!canRetryUpload(row) && !canMarkActualPublished(row))) return
+    if (!row?.id || (!canRetryUpload(row) && !canMarkActualPublished(row) && !canDeferTask(row))) return
     const selected = selectedSet.value
     selectedIds.value = selected.has(row.id)
       ? selectedIds.value.filter(id => id !== row.id)
@@ -161,7 +180,7 @@ export function useFailureLogs(monitorApi) {
   }
 
   function normalizeSelection() {
-    const validIds = new Set(rows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row)).map(row => row.id))
+    const validIds = new Set(rows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canDeferTask(row)).map(row => row.id))
     selectedIds.value = selectedIds.value.filter(id => validIds.has(id))
   }
 
@@ -187,10 +206,12 @@ export function useFailureLogs(monitorApi) {
     allSelected,
     actualPublishedSelectedRows,
     retryUploadSelectedRows,
+    deferSelectedRows,
     loadFailureLogs,
     markActualPublished,
     markSelectedActualPublished,
     retrySelectedUploads,
+    deferSelectedTasks,
     toggleRow,
     toggleAll,
     clearSelection,
@@ -206,12 +227,28 @@ function canRetryUpload(row) {
   return canMarkActualPublished(row)
 }
 
+function canDeferTask(row) {
+  return Boolean(row?.taskId)
+}
+
 function parseUploadLogId(logId) {
   const parts = String(logId || '').split(':')
   if (parts.length !== 3 || parts[0] !== 'uploader' || !parts[1]) return null
   const id = Number(parts[2])
   if (!Number.isSafeInteger(id) || id <= 0) return null
-  return { platform: parts[1], id }
+  const platform = normalizeUploadPlatform(parts[1])
+  if (!platform) return null
+  return { platform, id }
+}
+
+function groupedUploadTargets(rows) {
+  const groups = new Map()
+  for (const row of rows) {
+    const uploadTarget = parseUploadLogId(row.id)
+    if (!uploadTarget) continue
+    groups.set(uploadTarget.platform, [...(groups.get(uploadTarget.platform) || []), uploadTarget.id])
+  }
+  return groups
 }
 
 function errorLength(row) {

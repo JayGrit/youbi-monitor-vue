@@ -36,53 +36,6 @@ export function createMonitorApi(apiBase) {
       return requestJson(`${apiBase}/failure-logs`)
     },
 
-    markFailureLogActualPublished(logId) {
-      return requestJson(`${apiBase}/failure-logs/${encodeURIComponent(logId)}/actual-published`, {
-        method: 'POST',
-      })
-    },
-
-    markTaskReady(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/ready`, { method: 'POST' })
-    },
-
-    loadFailedUploadSubmissions(platform) {
-      const params = new URLSearchParams({ platform })
-      return requestJson(`${apiBase}/upload-submissions/failed?${params.toString()}`)
-    },
-
-    retryUploadSubmissions(platform, ids) {
-      return requestJson(`${apiBase}/upload-submissions/failed/${encodeURIComponent(platform)}/retry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids }),
-      })
-    },
-
-    loadFailedTasks() {
-      return requestJson(`${apiBase}/task-failures`)
-    },
-
-    rollbackFailedTasks(submissionIds) {
-      return requestJson(`${apiBase}/task-failures/rollback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionIds }),
-      })
-    },
-
-    stopTask(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/stop`, { method: 'POST' })
-    },
-
-    restartTask(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/restart`, { method: 'POST' })
-    },
-
-    deleteTask(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' })
-    },
-
     loadTaskFlow(taskId, stage) {
       const params = new URLSearchParams({ stage })
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/flow?${params.toString()}`)

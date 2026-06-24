@@ -28,24 +28,6 @@ const props = defineProps({
   taskDetailsExpanded: { type: Boolean, default: false },
   taskProgressLoading: { type: Boolean, default: false },
   taskProgressError: { type: String, default: '' },
-  uploadRetryPlatform: { type: String, default: '' },
-  uploadRetryPlatformOptions: { type: Array, default: () => [] },
-  uploadRetryRows: { type: Array, default: () => [] },
-  uploadRetryLoading: { type: Boolean, default: false },
-  uploadRetryBusy: { type: Boolean, default: false },
-  uploadRetrySelectedIds: { type: Array, default: () => [] },
-  uploadRetrySelectedSet: { type: Object, required: true },
-  uploadRetryAllSelected: { type: Boolean, default: false },
-  downloaderFailuresOpen: { type: Boolean, default: false },
-  downloaderFailureRows: { type: Array, default: () => [] },
-  downloaderFailureLoading: { type: Boolean, default: false },
-  downloaderFailureBusy: { type: Boolean, default: false },
-  downloaderFailureSelectedIds: { type: Array, default: () => [] },
-  downloaderFailureSelectedSet: { type: Object, required: true },
-  downloaderFailureAllSelected: { type: Boolean, default: false },
-  downloaderFailureTypeFilter: { type: String, default: 'all' },
-  downloaderFailureTypeOptions: { type: Array, default: () => [] },
-  downloaderFailureTypeSelected: { type: Boolean, default: false },
   serviceOnline: { type: Function, required: true },
   onlineDeviceTitle: { type: Function, required: true },
   onlineDeviceText: { type: Function, required: true },
@@ -67,18 +49,6 @@ const props = defineProps({
   toggleTaskDetails: { type: Function, required: true },
   isTaskReadyBusy: { type: Function, required: true },
   markTaskReady: { type: Function, required: true },
-  setUploadRetryPlatform: { type: Function, required: true },
-  loadUploadRetryRows: { type: Function, required: true },
-  toggleUploadRetryRow: { type: Function, required: true },
-  toggleUploadRetryAll: { type: Function, required: true },
-  retrySelectedUploadSubmissions: { type: Function, required: true },
-  toggleDownloaderFailures: { type: Function, required: true },
-  loadDownloaderFailures: { type: Function, required: true },
-  toggleDownloaderFailureRow: { type: Function, required: true },
-  toggleDownloaderFailureAll: { type: Function, required: true },
-  setDownloaderFailureTypeFilter: { type: Function, required: true },
-  toggleDownloaderFailureType: { type: Function, required: true },
-  rollbackSelectedDownloaderFailures: { type: Function, required: true },
   isTaskStopBusy: { type: Function, required: true },
   stopTask: { type: Function, required: true },
   isTaskRestartBusy: { type: Function, required: true },
@@ -223,147 +193,10 @@ function onlineDeviceNames(service) {
       >
         {{ taskSort === 'minio_storage_desc' ? '体积降序' : '按体积排' }}
       </button>
-      <select
-        class="upload-retry-platform-select"
-        :value="uploadRetryPlatform"
-        aria-label="按平台选择失败上传任务"
-        @change="setUploadRetryPlatform($event.target.value)"
-      >
-        <option value="">上传重试</option>
-        <option v-for="platform in uploadRetryPlatformOptions" :key="platform.value" :value="platform.value">
-          {{ platform.label }}
-        </option>
-      </select>
-      <button
-        type="button"
-        :class="['task-filter-button', 'downloader-failure-toggle', { active: downloaderFailuresOpen }]"
-        @click="toggleDownloaderFailures"
-      >
-        {{ downloaderFailuresOpen ? '收起稍后执行' : '稍后执行' }}
-      </button>
     </div>
 
     <div v-if="taskDetailsExpanded && taskProgressError" class="task-progress-global-error">
       详情刷新失败：{{ taskProgressError }}；将在 10 秒后自动重试。
-    </div>
-
-    <div v-if="uploadRetryPlatform" class="upload-retry-panel">
-      <div class="upload-retry-head">
-        <strong>{{ uploadRetryLoading ? '正在加载失败上传任务' : `失败上传任务 ${uploadRetryRows.length} 个` }}</strong>
-        <div class="upload-retry-actions">
-          <button type="button" :disabled="uploadRetryLoading || uploadRetryRows.length === 0" @click="toggleUploadRetryAll">
-            {{ uploadRetryAllSelected ? '取消全选' : '全选' }}
-          </button>
-          <button type="button" :disabled="uploadRetryLoading || uploadRetryBusy" @click="loadUploadRetryRows">
-            刷新
-          </button>
-          <button
-            type="button"
-            class="primary"
-            :disabled="uploadRetryBusy || uploadRetrySelectedIds.length === 0"
-            @click="retrySelectedUploadSubmissions"
-          >
-            {{ uploadRetryBusy ? '提交中' : `重试选中 ${uploadRetrySelectedIds.length}` }}
-          </button>
-        </div>
-      </div>
-      <div v-if="!uploadRetryLoading && uploadRetryRows.length === 0" class="upload-retry-empty">
-        当前平台暂无失败上传任务
-      </div>
-      <div v-else class="upload-retry-list">
-        <label
-          v-for="row in uploadRetryRows"
-          :key="row.id"
-          :class="['upload-retry-row', { blocked: row.retryBlockedReason }]"
-        >
-          <input
-            type="checkbox"
-            :checked="uploadRetrySelectedSet.has(row.id)"
-            :disabled="Boolean(row.retryBlockedReason)"
-            @change="toggleUploadRetryRow(row)"
-          />
-          <span class="upload-retry-main">
-            <span class="upload-retry-title">{{ row.title || row.taskId }}</span>
-            <span class="upload-retry-meta">
-              {{ row.taskId }} · {{ row.accountKey }} · {{ formatDateTime(row.completedAt || row.updatedAt) }}
-            </span>
-            <span v-if="row.retryBlockedReason" class="upload-retry-error">{{ row.retryBlockedReason }}</span>
-            <span v-else class="upload-retry-error">{{ row.errorMessage || '无失败原因' }}</span>
-          </span>
-        </label>
-      </div>
-    </div>
-
-    <div v-if="downloaderFailuresOpen" class="upload-retry-panel downloader-failure-panel">
-      <div class="upload-retry-head">
-        <strong>
-          {{ downloaderFailureLoading ? '正在加载失败任务' : `失败任务 ${downloaderFailureRows.length} 个` }}
-        </strong>
-        <div class="upload-retry-actions">
-          <select
-            class="upload-retry-type-select"
-            :value="downloaderFailureTypeFilter"
-            aria-label="按任务 type 批量选择失败任务"
-            :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
-            @change="setDownloaderFailureTypeFilter($event.target.value)"
-          >
-            <option value="all">全部 type</option>
-            <option v-for="type in downloaderFailureTypeOptions" :key="type" :value="type">{{ type }}</option>
-          </select>
-          <button
-            type="button"
-            :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
-            @click="toggleDownloaderFailureType"
-          >
-            {{ downloaderFailureTypeSelected ? '取消该 type' : '选择该 type' }}
-          </button>
-          <button
-            type="button"
-            :disabled="downloaderFailureLoading || downloaderFailureRows.length === 0"
-            @click="toggleDownloaderFailureAll"
-          >
-            {{ downloaderFailureAllSelected ? '取消全选' : '全选' }}
-          </button>
-          <button
-            type="button"
-            :disabled="downloaderFailureLoading || downloaderFailureBusy"
-            @click="loadDownloaderFailures"
-          >
-            刷新
-          </button>
-          <button
-            type="button"
-            class="primary"
-            :disabled="downloaderFailureBusy || downloaderFailureSelectedIds.length === 0"
-            @click="rollbackSelectedDownloaderFailures"
-          >
-            {{ downloaderFailureBusy ? '执行中' : `稍后执行选中 ${downloaderFailureSelectedIds.length}` }}
-          </button>
-        </div>
-      </div>
-      <div v-if="!downloaderFailureLoading && downloaderFailureRows.length === 0" class="upload-retry-empty">
-        暂无失败任务
-      </div>
-      <div v-else class="upload-retry-list">
-        <label
-          v-for="row in downloaderFailureRows"
-          :key="row.submissionId"
-          class="upload-retry-row"
-        >
-          <input
-            type="checkbox"
-            :checked="downloaderFailureSelectedSet.has(row.submissionId)"
-            @change="toggleDownloaderFailureRow(row)"
-          />
-          <span class="upload-retry-main">
-            <span class="upload-retry-title">{{ row.title || row.taskId }}</span>
-            <span class="upload-retry-meta">
-              {{ row.taskId }} · {{ row.type || '-' }} · {{ formatDateTime(row.completedAt) }}
-            </span>
-            <span class="upload-retry-error">{{ row.errorMessage || '无失败原因' }}</span>
-          </span>
-        </label>
-      </div>
     </div>
 
     <div v-if="!loading && !hasTaskFilter && tasks.length === 0" class="empty-state">
