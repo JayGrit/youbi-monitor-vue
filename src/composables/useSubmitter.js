@@ -352,6 +352,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           draftCoverOrientation: coverOrientation,
           fetchNewVideos: item?.fetchNewVideos === true,
           draftFetchNewVideos: item?.fetchNewVideos === true,
+          bilibiliExists: item?.bilibiliExists === true,
+          draftBilibiliExists: item?.bilibiliExists === true,
           sourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           draftSourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
           targetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
@@ -404,6 +406,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       && row.draftResetCover === row.resetCover
       && row.draftCoverOrientation === row.coverOrientation
       && row.draftFetchNewVideos === row.fetchNewVideos
+      && row.draftBilibiliExists === row.bilibiliExists
       && sourceLanguage === row.sourceLanguage
       && targetLanguage === row.targetLanguage
     ) return
@@ -416,7 +419,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       const resetCover = row.draftResetCover === true
       const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
       const fetchNewVideos = row.draftFetchNewVideos === true
-      const payload = await submitterApi.saveAuthorType(row.author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos)
+      const bilibiliExists = row.draftBilibiliExists === true
+      const payload = await submitterApi.saveAuthorType(row.author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists)
       row.type = String(payload?.type || type)
       row.draftType = row.type
       row.taskType = String(payload?.taskType || payload?.task_type || taskType)
@@ -429,6 +433,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       row.draftCoverOrientation = row.coverOrientation
       row.fetchNewVideos = payload?.fetchNewVideos === true
       row.draftFetchNewVideos = row.fetchNewVideos
+      row.bilibiliExists = payload?.bilibiliExists === true
+      row.draftBilibiliExists = row.bilibiliExists
       row.sourceLanguage = String(payload?.sourceLanguage || payload?.source_language || sourceLanguage)
       row.draftSourceLanguage = row.sourceLanguage
       row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)
@@ -514,11 +520,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterActiveBatch.value = payload.batch || ''
       submitterFocusedBatch.value = payload.batch || ''
       submitterActiveStatus.value = payload
-      submitterListDetail.value = true
-      submitterMessage.value = payload.source_url ? `已开始扫描：${payload.source_url}` : '已开始后台扫描。'
+      submitterListDetail.value = Boolean(payload.batch)
+      submitterMessage.value = payload.source_url ? `已加入后台扫描队列：${payload.source_url}` : '已加入后台扫描队列。'
       await loadSubmitterVideos(true)
       await loadSubmitterAuthors()
-      await refreshSubmitterImportStatus()
+      if (payload.batch) {
+        await refreshSubmitterImportStatus()
+      }
       updateSubmitterPolling()
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)

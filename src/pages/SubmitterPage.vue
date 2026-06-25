@@ -113,7 +113,7 @@ const emit = defineEmits([
             @input="emit('update:submitterAuthor', $event.target.value)"
           />
         </label>
-        <button type="submit" :disabled="submitterAuthorBusy">{{ submitterAuthorBusy ? '导入中' : '导入作者全部视频' }}</button>
+        <button type="submit" :disabled="submitterAuthorBusy">{{ submitterAuthorBusy ? '排队中' : '加入作者扫描' }}</button>
       </form>
     </section>
 

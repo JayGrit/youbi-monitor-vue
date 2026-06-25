@@ -84,6 +84,7 @@ function taskTypeLabel(value) {
               <th>横向封面</th>
               <th>竖向封面</th>
               <th>拉取新视频</th>
+              <th>B站已有人发</th>
               <th v-if="editMode">原语言</th>
               <th v-if="editMode">目标语言</th>
               <th v-if="editMode">操作</th>
@@ -91,7 +92,7 @@ function taskTypeLabel(value) {
           </thead>
           <tbody>
             <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td :colspan="editMode ? 11 : 8" class="submitter-empty">暂无作者</td>
+              <td :colspan="editMode ? 12 : 9" class="submitter-empty">暂无作者</td>
             </tr>
             <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
               <td>
@@ -178,6 +179,17 @@ function taskTypeLabel(value) {
                   />
                 </label>
                 <span v-else class="submitter-author-bool">{{ boolMark(row.draftFetchNewVideos) }}</span>
+              </td>
+              <td>
+                <label v-if="editMode" class="submitter-author-type-check">
+                  <input
+                    v-model="row.draftBilibiliExists"
+                    type="checkbox"
+                    :disabled="submitterAuthorTypeSaving === row.author"
+                    @change="autosaveSubmitterAuthorType(row)"
+                  />
+                </label>
+                <span v-else class="submitter-author-bool">{{ boolMark(row.draftBilibiliExists) }}</span>
               </td>
               <td v-if="editMode" class="submitter-author-language-cell">
                 <input
