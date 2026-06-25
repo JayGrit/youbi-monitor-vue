@@ -979,7 +979,7 @@ h1 {
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 78px 78px 78px 86px 132px;
+  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
 }
 
 .account-table.editing .account-row,
@@ -5743,12 +5743,12 @@ a.submitter-cell:hover {
 
   .account-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 72px 72px 72px 78px 120px;
+    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
   }
 
   .account-row.account-platform-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 72px 72px 72px 72px 72px 72px 78px 120px;
+    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
   }
 
   .account-table.editing .account-row,

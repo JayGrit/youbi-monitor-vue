@@ -606,7 +606,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
             <span>账号</span>
             <span v-if="!accountEditMode">今日已发</span>
             <span v-if="!accountEditMode">冷却等待</span>
-            <span v-if="!accountEditMode">进行中</span>
+            <span v-if="!accountEditMode">生产中</span>
+            <span v-if="!accountEditMode">上传中</span>
             <span v-if="!accountEditMode">生产失败</span>
             <span v-if="!accountEditMode">待拉取</span>
             <span v-if="!accountEditMode">失败任务</span>
@@ -656,7 +657,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               </span>
               <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
               <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="进行中">{{ item.configured ? accountCountText(item.row.stagedRunningCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="生产中">{{ item.configured ? accountCountText(item.row.stagedRunningCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="上传中">{{ item.configured ? accountCountText(item.row.uploadRunningCount) : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && stagedFailedCount(item.row) > 0 }" data-label="生产失败">
                 {{ item.configured ? accountCountText(item.row.stagedFailedCount) : '-' }}
               </span>

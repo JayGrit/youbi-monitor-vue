@@ -134,9 +134,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   async function refreshPlatformRow(platform, row) {
     if (!row?.accountKey) return
     try {
-      const account = await accountsApi[platform].refresh(row.accountKey)
-      mergePlatformRow(platform, account)
-      platformState[platform].account.value = account
+      await accountsApi[platform].refresh(row.accountKey)
+      await loadAccountOverview()
       platformState[platform].error.value = ''
     } catch (err) {
       platformState[platform].error.value = err instanceof Error ? err.message : String(err)
@@ -169,8 +168,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     row.enabled = nextEnabled
     setPlatformBusy(platform, rowKey(row), 'enabled')
     try {
-      const account = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
-      mergePlatformRow(platform, account, row.slot)
+      await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       row.enabled = previousEnabled
@@ -191,12 +190,12 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'cooldown')
     try {
-      const account = await accountsApi[platform].setCooldown(
+      await accountsApi[platform].setCooldown(
         row.accountKey,
         Math.round(minMinutes * 60),
         Math.round(maxMinutes * 60),
       )
-      mergePlatformRow(platform, account, row.slot)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -214,8 +213,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'downloaderMaxStagedCount')
     try {
-      const account = await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
-      mergePlatformRow(platform, account, row.slot)
+      await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -229,8 +228,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
     setPlatformBusy(platform, rowKey(row), 'nextUploadAllowedAt')
     try {
-      const account = await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
-      mergePlatformRow(platform, account, row.slot)
+      await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -249,8 +248,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'quietTime')
     try {
-      const account = await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
-      mergePlatformRow(platform, account, row.slot)
+      await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
+      await loadAccountOverview()
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
