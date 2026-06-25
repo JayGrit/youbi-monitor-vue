@@ -458,14 +458,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function uploadSubmissionRows(stage) {
-    return [
-      ...tableRows(stage, 'uploader_task_bilibili'),
-      ...tableRows(stage, 'uploader_task_douyin'),
-      ...tableRows(stage, 'uploader_task_xiaohongshu'),
-      ...tableRows(stage, 'uploader_task_shipinhao'),
-      ...tableRows(stage, 'uploader_task_kuaishou'),
-      ...tableRows(stage, 'uploader_task_jinritoutiao'),
-    ]
+    return tableRows(stage, 'uploader_task')
   }
 
   function publisherResultRows(stage) {
