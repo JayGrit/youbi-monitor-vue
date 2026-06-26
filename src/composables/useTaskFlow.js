@@ -154,8 +154,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     }
     try {
       const needsWhisperMetrics = ['demucs', 'whisper', SPEECH_STAGE_KEY].includes(detailStage)
+      const flowDetailStage = detailStage === 'whisper' ? SPEECH_STAGE_KEY : detailStage
       const [flow, words, processing] = await Promise.all([
-        monitorApi.loadTaskFlow(taskId, detailStage),
+        monitorApi.loadTaskFlow(taskId, flowDetailStage),
         needsWhisperMetrics ? monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []) : Promise.resolve(null),
         needsWhisperMetrics ? monitorApi.loadWhisperProcessing(taskId).catch(() => null) : Promise.resolve(null),
       ])
