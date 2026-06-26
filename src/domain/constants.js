@@ -53,6 +53,12 @@ export const SUBMITTER_PUBLISHED_FILTERS = [
   { value: 'month', label: '一个月内' },
 ]
 
+export const SUBMITTER_BILIBILI_FILTERS = [
+  { value: 'all', label: '全部B站状态' },
+  { value: 'exists', label: 'B站有人发' },
+  { value: 'missing', label: 'B站没人发' },
+]
+
 export const statusText = {
   pending: '未开始',
   ready: '排队中',

@@ -1,6 +1,7 @@
 <script setup>
 import {
   SUBMITTER_DURATION_FILTERS,
+  SUBMITTER_BILIBILI_FILTERS,
   SUBMITTER_PUBLISHED_FILTERS,
   SUBMITTER_SORT_OPTIONS,
   SUBMITTER_UPLOAD_FILTERS,
@@ -27,6 +28,7 @@ defineProps({
   submitterDurationFilter: { type: String, default: 'all' },
   submitterPublishedFilter: { type: String, default: 'all' },
   submitterManualSubtitleFilter: { type: String, default: 'all' },
+  submitterBilibiliFilter: { type: String, default: 'all' },
   submitterSort: { type: String, default: 'published_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
   submitterFilteredVideos: { type: Array, default: () => [] },
@@ -65,6 +67,7 @@ const emit = defineEmits([
   'update:submitterDurationFilter',
   'update:submitterPublishedFilter',
   'update:submitterManualSubtitleFilter',
+  'update:submitterBilibiliFilter',
   'update:submitterSort',
   'update:submitterUploadFilter',
 ])
@@ -180,6 +183,17 @@ const emit = defineEmits([
             <option value="all">全部</option>
             <option value="en">人工英文字幕</option>
             <option value="zh">人工中文字幕</option>
+          </select>
+        </label>
+        <label>
+          <span>B站</span>
+          <select
+            :value="submitterBilibiliFilter"
+            @change="emit('update:submitterBilibiliFilter', $event.target.value); applySubmitterFilters()"
+          >
+            <option v-for="option in SUBMITTER_BILIBILI_FILTERS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
         <label>

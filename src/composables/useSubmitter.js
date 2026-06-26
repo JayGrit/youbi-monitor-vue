@@ -18,6 +18,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterDurationFilter = ref('all')
   const submitterPublishedFilter = ref('all')
   const submitterManualSubtitleFilter = ref('all')
+  const submitterBilibiliFilter = ref('all')
   const submitterUploadFilter = ref('unuploaded')
   const submitterSort = ref('published_desc')
   const submitterAuthors = ref([])
@@ -124,6 +125,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         publishedTo: publishedRange.to,
         submissionStatus: submitterUploadFilter.value,
         manualSubtitle: submitterManualSubtitleFilter.value,
+        bilibiliExists: submitterBilibiliFilter.value,
       })
       submitterVideos.value = payload?.items || []
       submitterTotal.value = Number(payload?.total || 0)
@@ -167,6 +169,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterDurationFilter.value = 'all'
     submitterPublishedFilter.value = 'all'
     submitterManualSubtitleFilter.value = 'all'
+    submitterBilibiliFilter.value = 'all'
     submitterUploadFilter.value = 'unuploaded'
     submitterSort.value = 'published_desc'
     submitterFocusedBatch.value = ''
@@ -645,6 +648,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterDurationFilter,
     submitterPublishedFilter,
     submitterManualSubtitleFilter,
+    submitterBilibiliFilter,
     submitterUploadFilter,
     submitterSort,
     submitterAuthors,
