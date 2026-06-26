@@ -1,0 +1,386 @@
+.failure-log-page {
+  display: grid;
+  gap: 14px;
+}
+
+.failure-log-header,
+.failure-log-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.failure-log-header {
+  justify-content: space-between;
+}
+
+.failure-log-header p {
+  margin-top: 5px;
+  color: #607086;
+  font-size: 13px;
+}
+
+.failure-log-header button,
+.failure-log-reset {
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.failure-log-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.failure-log-header button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.failure-log-header button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.failure-log-filters {
+  flex-wrap: wrap;
+}
+
+.failure-log-filters label {
+  display: grid;
+  gap: 5px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.failure-log-filters select {
+  min-width: 160px;
+  height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 0 32px 0 10px;
+}
+
+.failure-log-platform-filter {
+  position: relative;
+}
+
+.failure-log-platform-menu {
+  position: relative;
+  min-width: 180px;
+}
+
+.failure-log-platform-menu summary {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 0 28px 0 10px;
+  cursor: pointer;
+  list-style: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure-log-platform-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.failure-log-platform-menu summary::after {
+  position: absolute;
+  right: 10px;
+  content: '▾';
+  color: #64748b;
+}
+
+.failure-log-platform-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 6px;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 12%);
+}
+
+.failure-log-platform-options label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  border-radius: 4px;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.failure-log-platform-options label:hover {
+  background: #f1f5f9;
+}
+
+.failure-log-reset {
+  align-self: flex-end;
+}
+
+.failure-log-bulk-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: 12px 16px;
+}
+
+.failure-log-bulk-panel strong {
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.failure-log-bulk-panel p {
+  margin-top: 4px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.failure-log-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.failure-log-bulk-actions button {
+  min-height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.failure-log-bulk-actions button.primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.failure-log-bulk-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.failure-log-message {
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  padding: 28px;
+  text-align: center;
+}
+
+.failure-log-message.error {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.failure-log-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.failure-log-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.failure-log-table th,
+.failure-log-table td {
+  border-bottom: 1px solid #e8edf3;
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.failure-log-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.failure-log-table th:nth-child(1) { width: 130px; }
+.failure-log-table th:nth-child(2) { width: 120px; }
+.failure-log-table th:nth-child(3) { width: 90px; }
+.failure-log-table th:nth-child(4) { width: 280px; }
+.failure-log-table th:nth-child(5) { width: 160px; }
+
+.failure-log-select-column {
+  width: 64px;
+}
+
+.failure-log-table th.failure-log-select-column,
+.failure-log-table td.failure-log-select-column {
+  width: 64px;
+}
+
+.failure-log-select-column input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.failure-log-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.failure-log-time {
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.failure-log-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.failure-log-platform-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.failure-log-task {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.failure-log-task-title,
+.failure-log-task-id {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.failure-log-task-title {
+  max-width: 100%;
+  overflow: hidden;
+  color: #1d4ed8;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure-log-task-id {
+  max-width: 100%;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failure-log-table pre {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  color: #991b1b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.failure-log-published-button {
+  min-height: 32px;
+  border: 1px solid #16a34a;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #ffffff;
+  padding: 0 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.failure-log-published-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 720px) {
+  .top-bar::before {
+    display: none;
+  }
+
+  .page-tabs {
+    width: 100%;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .page-tabs button {
+    font-size: 15px;
+  }
+
+  .failure-log-filters label,
+  .failure-log-filters select {
+    width: 100%;
+  }
+
+  .failure-log-bulk-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .failure-log-bulk-actions button {
+    flex: 1 1 auto;
+    min-height: 38px;
+  }
+}
