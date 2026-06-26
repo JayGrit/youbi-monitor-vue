@@ -1,4 +1,35 @@
-import { postJson, requestJson } from './http'
+import { apiErrorMessage, postJson, readJsonResponse, requestJson } from './http'
+
+const RETRYABLE_SUBMITTER_ERROR = /deadlock|lock wait timeout|try restarting transaction/i
+
+function wait(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms))
+}
+
+async function postSubmitterJson(url, body, { acceptAlreadySubmitted = false } = {}) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const payload = await readJsonResponse(response)
+  if (response.ok) return payload
+  if (acceptAlreadySubmitted && response.status === 409 && payload?.already_submitted) {
+    return payload
+  }
+  throw new Error(apiErrorMessage(payload, response.status))
+}
+
+async function postSubmitterJsonWithRetry(url, body, options) {
+  try {
+    return await postSubmitterJson(url, body, options)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!RETRYABLE_SUBMITTER_ERROR.test(message)) throw err
+    await wait(500)
+    return postSubmitterJson(url, body, options)
+  }
+}
 
 export function createSubmitterApi(submitterApiBase, apiBase) {
   return {
@@ -42,17 +73,19 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
     },
 
     submitVideo(rowId, type) {
-      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`, {
-        type,
-      })
+      return postSubmitterJsonWithRetry(
+        `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
+        { type },
+        { acceptAlreadySubmitted: true },
+      )
     },
 
     rejectVideo(rowId) {
-      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {})
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {})
     },
 
     withdrawVideo(rowId) {
-      return postJson(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {})
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {})
     },
 
     createVideo(url) {
