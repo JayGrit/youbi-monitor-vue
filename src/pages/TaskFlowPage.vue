@@ -184,6 +184,33 @@ function seekVocalsPlayback(ms) {
           @vocals-playback="vocalsPlayback = $event"
         />
 
+        <SpeechJoinedTable
+          v-if="selectedStage.key === 'whisper'"
+          :speech-edit-draft="speechEditDraft"
+          :speech-edit-saving="speechEditSaving"
+          :speech-edit-error="speechEditError"
+          :speech-columns="speechColumns"
+          :speech-rows="speechRows"
+          :show-speech-column="showSpeechColumn"
+          :speech-audio-asset="speechAudioAsset"
+          :log-audio-event="logAudioEvent"
+          :speech-more-rows="speechMoreRows"
+          :is-editing-speech-dst-text="isEditingSpeechDstText"
+          :save-speech-dst-text="saveSpeechDstText"
+          :cancel-speech-edit="cancelSpeechEdit"
+          :can-edit-speech-dst-text="canEditSpeechDstText"
+          :begin-speech-edit="beginSpeechEdit"
+          :table-cell-text="tableCellText"
+          :table-cell-summary="tableCellSummary"
+          :words="whisperWordTimestamps"
+          :processing="whisperProcessing"
+          :vocals-playback="vocalsPlayback"
+          :seek-vocals-playback="seekVocalsPlayback"
+          speech-view="whisper"
+          :show-speech-view-toggle="false"
+          @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
+        />
+
         <DownloaderPanel
           v-else-if="selectedStage.key === 'downloader'"
           :flow="selectedTaskFlow"
@@ -194,7 +221,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
+          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader', 'demucs', 'whisper', 'downloader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />
@@ -221,6 +248,8 @@ function seekVocalsPlayback(ms) {
           :processing="whisperProcessing"
           :vocals-playback="vocalsPlayback"
           :seek-vocals-playback="seekVocalsPlayback"
+          speech-view="translator-chunk"
+          :show-speech-view-toggle="false"
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
 

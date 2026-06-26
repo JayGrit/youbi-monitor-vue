@@ -23,13 +23,15 @@ const props = defineProps({
   processing: { type: Object, default: null },
   vocalsPlayback: { type: Object, default: () => ({ currentMs: 0, playing: false }) },
   seekVocalsPlayback: { type: Function, default: null },
+  speechView: { type: String, default: 'whisper' },
+  showSpeechViewToggle: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['update:speechEditDraft'])
 
 const playingAudioKey = ref('')
 const gapThresholdText = ref('')
-const speechView = ref('whisper')
+const speechView = ref(props.speechView)
 const audioByKey = new Map()
 
 const transcriptWords = computed(() => props.words
@@ -43,7 +45,9 @@ const transcriptWords = computed(() => props.words
   .filter(word => word.text && Number.isFinite(word.startTime) && Number.isFinite(word.endTime))
   .sort((left, right) => left.startTime - right.startTime || left.endTime - right.endTime))
 
-const rows = computed(() => props.speechRows(speechView.value))
+const activeSpeechView = computed(() => (props.showSpeechViewToggle ? speechView.value : props.speechView))
+
+const rows = computed(() => props.speechRows(activeSpeechView.value))
 
 const gapThresholdMs = computed(() => {
   const text = String(gapThresholdText.value || '').trim().replace(/秒$/u, 's')
@@ -382,8 +386,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flow-section">
-    <h4>Demucs / Whisper / Translator / Speaker Joined Rows</h4>
-    <div class="speech-gap-toolbar">
+    <div v-if="showSpeechViewToggle" class="speech-gap-toolbar">
       <div class="speech-view-toggle" aria-label="表格视角">
         <button
           type="button"
