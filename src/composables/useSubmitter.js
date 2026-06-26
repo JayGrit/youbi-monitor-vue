@@ -609,7 +609,26 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   }
 
   function submitterVideoThumb(item) {
-    return submitterFieldValue(item, 'thumbnail') || ''
+    return normalizeSubmitterThumbnailUrl(submitterFieldValue(item, 'thumbnail') || '')
+  }
+
+  function normalizeSubmitterThumbnailUrl(url) {
+    const text = String(url || '').trim()
+    if (!text) return ''
+    try {
+      const parsed = new URL(text)
+      if (parsed.hostname === 'i.ytimg.com') {
+        const match = parsed.pathname.match(/^\/vi_lc\/([^/]+)\/([^/]+)$/)
+        if (match) {
+          const [, videoId, fileName] = match
+          parsed.pathname = `/vi/${videoId}/${fileName.replace(/_en(?=\.)/, '')}`
+          return parsed.toString()
+        }
+      }
+    } catch {
+      return text
+    }
+    return text
   }
 
   function submitterCachedThumb(item) {
