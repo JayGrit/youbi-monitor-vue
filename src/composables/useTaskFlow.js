@@ -432,7 +432,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
           end_time: segment.end_time ?? translation.end_time ?? row.end_time,
           asr_text: row.text || '',
           src_text: segment.src_text || translation.src_text || row.text || '',
-          source_text: row.text || segment.src_text || translation.src_text || '',
+          source_text: segment.src_text || translation.src_text || row.text || '',
           dst_text: segment.dst_text || translation.dst_text || '',
           speaker: segment.speaker || translation.speaker || '',
           status: segment.status || '',
