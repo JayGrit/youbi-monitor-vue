@@ -25,27 +25,14 @@ export function normalizeResourceUrl(url) {
   if (!text) return ''
   if (text.startsWith('db://') || text.startsWith('local:')) return text
 
-  if (text.startsWith('s3://')) {
-    const withoutScheme = text.replace(/^s3:\/\//, '')
-    const objectPath = withoutScheme.startsWith(`${MINIO_BUCKET}/`) ? withoutScheme : `${MINIO_BUCKET}/${withoutScheme}`
-    return proxiedMinioPath(objectPath)
-  }
-
-  if (text.startsWith('/minio/')) {
-    return proxiedMinioPath(text.replace(/^\/minio\/+/, ''))
-  }
-
-  if (text.startsWith(`/${MINIO_BUCKET}/`) || text.startsWith(`${MINIO_BUCKET}/`)) {
-    return proxiedMinioPath(text)
-  }
-
   try {
     const parsed = new URL(text, window.location.origin)
-    const isKnownMinioPath = parsed.pathname.startsWith(`/${MINIO_BUCKET}/`)
-      || parsed.pathname.startsWith(`/minio/${MINIO_BUCKET}/`)
-    if (parsed.origin !== window.location.origin && isKnownMinioPath) {
-      const path = parsed.pathname.replace(/^\/minio\/+/, '')
-      return proxiedMinioPath(path, parsed.search)
+    const isTargetMinioUrl = parsed.protocol === 'http:'
+      && parsed.hostname === '120.53.92.66'
+      && parsed.port === '9000'
+      && parsed.pathname.startsWith(`/${MINIO_BUCKET}/`)
+    if (isTargetMinioUrl) {
+      return proxiedMinioPath(parsed.pathname.replace(/^\/+/, ''), parsed.search)
     }
     return parsed.href
   } catch {
