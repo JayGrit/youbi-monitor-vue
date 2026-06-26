@@ -73,19 +73,19 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
 
     getAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`)
+      return requestJson(`${apiBase}/submitter-author-types?${params}`)
     },
 
     listAuthorTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/all`)
+      return requestJson(`${apiBase}/submitter-author-types/all`)
     },
 
     listTaskTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`)
+      return requestJson(`${apiBase}/submitter-author-types/task-types`)
     },
 
     saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
-      return postJson(`${submitterApiBase}/submitter-author-types`, {
+      return postJson(`${apiBase}/submitter-author-types`, {
         author,
         type,
         taskType,
@@ -101,7 +101,7 @@ export function createSubmitterApi(submitterApiBase, apiBase) {
 
     deleteAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' })
+      return requestJson(`${apiBase}/submitter-author-types?${params}`, { method: 'DELETE' })
     },
   }
 }
