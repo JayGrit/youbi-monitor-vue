@@ -80,7 +80,7 @@ function demucsStage(flow) {
 }
 
 function vocalsOnlyMedia(stage) {
-  return demucsAudioMedia(stage).filter(asset => asset.key === 'vocals')
+  return props.demucsAudioMedia(stage).filter(asset => asset.key === 'vocals')
 }
 
 function seekVocalsPlayback(ms) {

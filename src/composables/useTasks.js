@@ -11,6 +11,7 @@ import {
 } from '../utils/format'
 import {
   isWatchUrl,
+  normalizeResourceUrl,
   youtubeThumbnailUrl,
 } from '../utils/media'
 
@@ -333,7 +334,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
   }
 
   function taskPrimaryThumbnailUrl(task) {
-    return String(task?.sourceThumbnailUrl || '').trim()
+    return normalizeResourceUrl(task?.sourceThumbnailUrl || '')
   }
 
   function taskThumbnailUrl(task) {

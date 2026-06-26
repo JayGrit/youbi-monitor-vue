@@ -27,10 +27,12 @@ export function normalizeResourceUrl(url) {
 
   try {
     const parsed = new URL(text, window.location.origin)
-    const isTargetMinioUrl = parsed.protocol === 'http:'
-      && parsed.hostname === '120.53.92.66'
-      && parsed.port === '9000'
+    const isTargetMinioUrl = parsed.origin !== window.location.origin
       && parsed.pathname.startsWith(`/${MINIO_BUCKET}/`)
+      && (
+        parsed.hostname === '120.53.92.66'
+        || parsed.port === '9000'
+      )
     if (isTargetMinioUrl) {
       return proxiedMinioPath(parsed.pathname.replace(/^\/+/, ''), parsed.search)
     }
