@@ -403,6 +403,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const translator = stages.find(stage => stage.key === 'translator')
     const speaker = stages.find(stage => stage.key === 'speaker') || translator
     const chunkRows = tableRows(translator, 'translator-chunk')
+    const translatorByIndex = rowsByIndex(tableRows(translator, 'translator_segment'))
     const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
     return [...chunkRows]
       .filter(row => {
@@ -418,26 +419,28 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       })
       .map(row => {
         const itemIndex = Number(row.item_index)
+        const translation = translatorByIndex[itemIndex] || {}
         const segment = speakerByIndex[itemIndex] || {}
         return {
           row_key: `translator-chunk:${row.chunk_index}:${row.row_order}:${itemIndex}`,
           speech_view: 'translator-chunk',
           segment_id: segment.id || '',
+          translation_item_index: itemIndex,
           item_index: itemIndex,
-          start_time: row.start_time,
-          end_time: row.end_time,
+          start_time: segment.start_time ?? translation.start_time ?? row.start_time,
+          end_time: segment.end_time ?? translation.end_time ?? row.end_time,
           asr_text: row.text || '',
-          src_text: segment.src_text || row.text || '',
-          source_text: row.text || segment.src_text || '',
-          dst_text: segment.dst_text || '',
-          speaker: segment.speaker || '',
+          src_text: segment.src_text || translation.src_text || row.text || '',
+          source_text: row.text || segment.src_text || translation.src_text || '',
+          dst_text: segment.dst_text || translation.dst_text || '',
+          speaker: segment.speaker || translation.speaker || '',
           status: segment.status || '',
           attempt_count: segment.attempt_count ?? '',
           speed_ratio: formatRatio(segment.speed_ratio),
           actual_start_time: segment.actual_start_time ?? '',
           actual_end_time: segment.actual_end_time ?? '',
-          src_lang: segment.src_lang || '',
-          dst_lang: segment.dst_lang || '',
+          src_lang: segment.src_lang || translation.src_lang || '',
+          dst_lang: segment.dst_lang || translation.dst_lang || '',
           reference_wav_url: segment.reference_wav_url || '',
           tts_wav_url: segment.tts_wav_url || '',
           error_message: segment.error_message || '',
@@ -560,7 +563,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function canEditSpeechDstText(row) {
-    return Boolean(selectedTaskFlow.value?.task?.id && row?.segment_id)
+    return Boolean(selectedTaskFlow.value?.task?.id && (row?.segment_id || row?.translation_item_index != null))
   }
 
   function isEditingSpeechDstText(row) {
@@ -582,11 +585,17 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   async function saveSpeechDstText(row) {
     const taskId = selectedTaskFlow.value?.task?.id
-    if (!taskId || !row?.segment_id || speechEditSaving.value) return
+    if (!taskId || speechEditSaving.value) return
     speechEditSaving.value = true
     speechEditError.value = ''
     try {
-      await monitorApi.saveSpeakerSegmentDstText(taskId, row.segment_id, speechEditDraft.value)
+      if (row?.segment_id) {
+        await monitorApi.saveSpeakerSegmentDstText(taskId, row.segment_id, speechEditDraft.value)
+      } else if (row?.translation_item_index != null) {
+        await monitorApi.saveTranslatorSegmentDstText(taskId, row.translation_item_index, speechEditDraft.value)
+      } else {
+        return
+      }
       cancelSpeechEdit()
       await loadTaskFlow(taskId, true)
     } catch (err) {

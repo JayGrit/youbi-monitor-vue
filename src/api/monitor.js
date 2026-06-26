@@ -77,5 +77,13 @@ export function createMonitorApi(apiBase) {
         body: JSON.stringify({ dstText }),
       })
     },
+
+    saveTranslatorSegmentDstText(taskId, itemIndex, dstText) {
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/translator-segments/${encodeURIComponent(itemIndex)}/dst-text`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dstText }),
+      })
+    },
   }
 }

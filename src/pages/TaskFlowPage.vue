@@ -175,7 +175,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <DemucsAudioPanel
-          v-else-if="selectedStage.key === 'whisper'"
+          v-if="selectedStage.key === 'whisper'"
           ref="demucsAudioPanel"
           :media="vocalsOnlyMedia(demucsStage(selectedTaskFlow))"
           :words="whisperWordTimestamps"
@@ -212,7 +212,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <DownloaderPanel
-          v-else-if="selectedStage.key === 'downloader'"
+          v-if="selectedStage.key === 'downloader'"
           :flow="selectedTaskFlow"
           :stage="selectedStage"
           :media="stageMedia(selectedStage)"
@@ -221,7 +221,7 @@ function seekVocalsPlayback(ms) {
         />
 
         <StageMediaGrid
-          v-else-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader', 'demucs', 'whisper', 'downloader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
+          v-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader', 'demucs', 'whisper', 'downloader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
           :media="stageMedia(selectedStage)"
           :log-audio-event="logAudioEvent"
         />
