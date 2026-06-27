@@ -388,10 +388,8 @@ function waitingDurationText(row) {
   return formatDuration((started.getTime() - created.getTime()) / 1000)
 }
 
-function startedTimeText(row) {
-  const started = row?.startedAt
-  if (!started) return '-'
-  return relativeTime(started)
+function canOpenScreenshotDialog(task) {
+  return Boolean(queueOpId(task))
 }
 
 function positiveNumber(value, fallback) {
@@ -430,21 +428,25 @@ function positiveNumber(value, fallback) {
               <th>任务</th>
               <th>任务类型</th>
               <th>accountkey</th>
+              <th>创建时间</th>
               <th>等待时长</th>
-              <th>执行时间</th>
               <th>耗时</th>
               <th>priority</th>
-              <th>截图</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td colspan="9" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
+              <td colspan="8" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
               :key="task.opId || task.runId || task.id"
-              :class="['operator-queue-row', `operator-queue-${task.status || 'unknown'}`]"
+              :class="[
+                'operator-queue-row',
+                `operator-queue-${task.status || 'unknown'}`,
+                { 'operator-queue-clickable': canOpenScreenshotDialog(task) },
+              ]"
+              @click="canOpenScreenshotDialog(task) && openScreenshotDialog(task)"
             >
               <td class="operator-queue-platform">
                 <button
@@ -452,7 +454,7 @@ function positiveNumber(value, fallback) {
                   class="operator-queue-platform-button"
                   :disabled="!queueOpId(task)"
                   :title="queueOpId(task) ? `复制 opid：${queueOpId(task)}` : '无 opid'"
-                  @click="copyText(queueOpId(task))"
+                  @click.stop="copyText(queueOpId(task))"
                 >
                   <PlatformIcon
                     :src="platformIconUrl(task.platform)"
@@ -468,7 +470,7 @@ function positiveNumber(value, fallback) {
                   type="button"
                   class="operator-queue-task-id"
                   :title="`复制 taskid：${queueTaskId(task)}`"
-                  @click="copyText(queueTaskId(task))"
+                  @click.stop="copyText(queueTaskId(task))"
                 >
                   {{ queueTaskId(task) }}
                 </button>
@@ -476,20 +478,10 @@ function positiveNumber(value, fallback) {
               </td>
               <td>{{ queueTaskType(task) }}</td>
               <td>{{ task.accountKey || '-' }}</td>
+              <td>{{ relativeTime(task.createdAt) }}</td>
               <td>{{ waitingDurationText(task) }}</td>
-              <td>{{ startedTimeText(task) }}</td>
               <td>{{ durationText(task) }}</td>
               <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
-              <td>
-                <button
-                  type="button"
-                  class="operator-queue-screenshot-button"
-                  :disabled="!(task.opId || task.op_id || task.runId || task.run_id)"
-                  @click="openScreenshotDialog(task)"
-                >
-                  查看
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -729,6 +721,10 @@ function positiveNumber(value, fallback) {
   background: #f1f5f9;
 }
 
+.operator-queue-clickable {
+  cursor: pointer;
+}
+
 .operator-queue-success {
   background: #fff;
 }
@@ -772,21 +768,6 @@ function positiveNumber(value, fallback) {
 
 .operator-queue-priority {
   font-weight: 760;
-}
-
-.operator-queue-screenshot-button {
-  min-height: 28px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #334155;
-  padding: 0 9px;
-  cursor: pointer;
-}
-
-.operator-queue-screenshot-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .operator-queue-empty {
