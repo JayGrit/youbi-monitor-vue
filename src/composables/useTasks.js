@@ -365,10 +365,10 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
   }
 
   function uploadAccountText(task) {
-    const name = String(task.bilibiliUploadAccountName || '').trim()
-    const uid = String(task.bilibiliUploadUid || '').trim()
-    if (name && uid) return `${name} · UID ${uid}`
-    return name || (uid ? `UID ${uid}` : '')
+    const name = String(task?.bilibiliUploadAccountName || '').trim()
+    const key = String(task?.bilibiliUploadAccountKey || '').trim()
+    if (name && key && name !== key) return `${name} · ${key}`
+    return name || key
   }
 
   function taskTypeText(task) {
