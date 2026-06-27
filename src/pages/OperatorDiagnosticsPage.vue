@@ -276,7 +276,7 @@ function syncPolling() {
   pollTimer = window.setInterval(() => {
     loadQueue({ silent: true })
     loadExecutions({ silent: true })
-  }, 5000)
+  }, 10000)
 }
 
 function stopPolling() {
