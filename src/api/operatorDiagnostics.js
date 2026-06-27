@@ -17,6 +17,9 @@ export function createOperatorDiagnosticsApi(apiBase) {
   }
 
   return {
+    listQueue(params) {
+      return requestJson(`${base}/queue${queryString(params)}`)
+    },
     listTasks(params) {
       return requestJson(`${base}/tasks${queryString(params)}`)
     },

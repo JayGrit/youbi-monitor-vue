@@ -29,6 +29,11 @@ const filters = reactive({
 const page = ref(1)
 const limit = 10
 const diagnosticLimit = 12
+const queueLimit = 50
+const queueTasks = ref([])
+const queueTotal = ref(0)
+const queueLoading = ref(false)
+const queueError = ref('')
 const executions = ref([])
 const total = ref(0)
 const pageCount = ref(0)
@@ -46,8 +51,10 @@ const pageVisible = ref(typeof document === 'undefined' || document.visibilitySt
 let pollTimer = null
 let filterTimer = null
 let requestToken = 0
+let queueRequestToken = 0
 
 const hasRunning = computed(() => executions.value.some(item => ['ready', 'running'].includes(item.status)))
+const hasActiveQueue = computed(() => queueTasks.value.some(item => ['ready', 'running'].includes(item.status)))
 const platformOptions = computed(() => Object.entries(props.platformIconUrls).map(([type, iconUrl]) => ({
   type,
   label: uploadPlatformText[type] || type,
@@ -62,6 +69,7 @@ const timeRanges = [
 
 onMounted(() => {
   restoreQuery()
+  loadQueue()
   loadExecutions()
   document.addEventListener('visibilitychange', handleVisibility)
 })
@@ -126,6 +134,27 @@ async function loadExecutions({ silent = false } = {}) {
     if (token === requestToken) error.value = err instanceof Error ? err.message : String(err)
   } finally {
     if (token === requestToken) loading.value = false
+  }
+}
+
+async function loadQueue({ silent = false } = {}) {
+  const token = ++queueRequestToken
+  if (!silent) queueLoading.value = true
+  queueError.value = ''
+  try {
+    const response = await props.api.listQueue({
+      page: 1,
+      limit: queueLimit,
+      ...timeRangeParams('recent'),
+    })
+    if (token !== queueRequestToken) return
+    queueTasks.value = response.items || []
+    queueTotal.value = Number(response.total || 0)
+    syncPolling()
+  } catch (err) {
+    if (token === queueRequestToken) queueError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    if (token === queueRequestToken) queueLoading.value = false
   }
 }
 
@@ -222,8 +251,9 @@ function handleVisibility() {
 
 function syncPolling() {
   stopPolling()
-  if (!pageVisible.value || !hasRunning.value) return
+  if (!pageVisible.value || (!hasRunning.value && !hasActiveQueue.value)) return
   pollTimer = window.setInterval(() => {
+    loadQueue({ silent: true })
     loadExecutions({ silent: true })
   }, 5000)
 }
@@ -269,6 +299,29 @@ function localDateTime(date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 }
 
+function platformIconUrl(platform) {
+  return props.platformIconUrls?.[platform] || ''
+}
+
+function queueTaskType(row) {
+  return row?.taskType || row?.action || '-'
+}
+
+function statusLabel(status) {
+  return ({
+    ready: '排队中',
+    running: '执行中',
+    success: '成功',
+    failed: '失败',
+  })[String(status || '').toLowerCase()] || status || '未知'
+}
+
+function dateText(value) {
+  if (!value) return '-'
+  const text = String(value).replace('T', ' ')
+  return text.length > 19 ? text.slice(0, 19) : text
+}
+
 function positiveNumber(value, fallback) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback
@@ -284,13 +337,82 @@ function positiveNumber(value, fallback) {
       </div>
     </header>
 
+    <section class="operator-queue-panel">
+      <header class="operator-queue-head">
+        <div>
+          <h2>Operator 队列</h2>
+          <p>近 3 小时 operator_task，按 priority 逆序排列。</p>
+        </div>
+        <div class="operator-queue-status">
+          <span v-if="queueLoading">正在加载</span>
+          <span v-else>共 {{ queueTotal }} 条</span>
+          <button type="button" :disabled="queueLoading" @click="loadQueue">刷新</button>
+        </div>
+      </header>
+      <div v-if="queueError" class="operator-page-error">{{ queueError }}</div>
+      <div class="operator-queue-table-wrap">
+        <table class="operator-queue-table">
+          <thead>
+            <tr>
+              <th>平台</th>
+              <th>任务类型</th>
+              <th>accountkey</th>
+              <th>status</th>
+              <th>上传时间</th>
+              <th>执行时间</th>
+              <th>结束时间</th>
+              <th>priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="!queueLoading && !queueTasks.length">
+              <td colspan="8" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
+            </tr>
+            <tr
+              v-for="task in queueTasks"
+              :key="task.opId || task.runId || task.id"
+              :class="['operator-queue-row', `operator-queue-${task.status || 'unknown'}`]"
+            >
+              <td class="operator-queue-platform">
+                <PlatformIcon
+                  :src="platformIconUrl(task.platform)"
+                  :label="uploadPlatformText[task.platform] || task.platform"
+                  :platform="task.platform"
+                  :size="28"
+                />
+              </td>
+              <td>{{ queueTaskType(task) }}</td>
+              <td>{{ task.accountKey || '-' }}</td>
+              <td>
+                <span :class="['operator-queue-badge', `operator-queue-badge-${task.status || 'unknown'}`]">
+                  {{ statusLabel(task.status) }}
+                </span>
+              </td>
+              <td>{{ dateText(task.createdAt) }}</td>
+              <td>{{ dateText(task.startedAt) }}</td>
+              <td>{{ dateText(task.completedAt) }}</td>
+              <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <div class="operator-filter-bar">
-      <label>
-        状态
-        <select v-model="filters.status" @change="filterChanged">
-          <option v-for="item in statuses" :key="item.value || 'all'" :value="item.value">{{ item.label }}</option>
-        </select>
-      </label>
+      <div class="operator-segment-filter">
+        <span>状态</span>
+        <div class="operator-segment-row">
+          <button
+            v-for="item in statuses"
+            :key="item.value || 'all'"
+            type="button"
+            :class="{ active: filters.status === item.value }"
+            @click="filters.status = item.value; filterChanged()"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </div>
       <div class="operator-platform-filter" aria-label="平台筛选">
         <span>平台</span>
         <div class="operator-platform-icons">
@@ -300,7 +422,7 @@ function positiveNumber(value, fallback) {
             title="全部平台"
             @click="setPlatformFilter('')"
           >
-            全部
+            <span>全部</span>
           </button>
           <button
             v-for="platform in platformOptions"
@@ -314,24 +436,34 @@ function positiveNumber(value, fallback) {
           </button>
         </div>
       </div>
-      <label>
-        时间
-        <select v-model="filters.timeRange" @change="filterChanged">
-          <option v-for="item in timeRanges" :key="item.value" :value="item.value">{{ item.label }}</option>
-        </select>
-      </label>
-      <label>
-        account_key
-        <input v-model.trim="filters.accountKey" type="search" @input="filterChangedDebounced" />
-      </label>
-      <label>
-        op_id
-        <input v-model.trim="filters.opId" type="search" @input="filterChangedDebounced" />
-      </label>
-      <label>
-        task_id
-        <input v-model.trim="filters.taskId" type="search" @input="filterChangedDebounced" />
-      </label>
+      <div class="operator-segment-filter">
+        <span>时间</span>
+        <div class="operator-segment-row">
+          <button
+            v-for="item in timeRanges"
+            :key="item.value"
+            type="button"
+            :class="{ active: filters.timeRange === item.value }"
+            @click="filters.timeRange = item.value; filterChanged()"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </div>
+      <div class="operator-search-row">
+        <label>
+          account_key
+          <input v-model.trim="filters.accountKey" type="search" @input="filterChangedDebounced" />
+        </label>
+        <label>
+          op_id
+          <input v-model.trim="filters.opId" type="search" @input="filterChangedDebounced" />
+        </label>
+        <label>
+          task_id
+          <input v-model.trim="filters.taskId" type="search" @input="filterChangedDebounced" />
+        </label>
+      </div>
     </div>
 
     <div class="operator-page-status">
@@ -405,28 +537,187 @@ function positiveNumber(value, fallback) {
   cursor: pointer;
 }
 
+.operator-queue-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #dde6f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
+.operator-queue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.operator-queue-head h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.operator-queue-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.operator-queue-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.operator-queue-status button {
+  min-height: 30px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.operator-queue-status button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.operator-queue-table-wrap {
+  overflow-x: auto;
+}
+
+.operator-queue-table {
+  width: 100%;
+  min-width: 940px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.operator-queue-table th,
+.operator-queue-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.operator-queue-table th {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.operator-queue-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.operator-queue-row {
+  border-left: 3px solid #748093;
+}
+
+.operator-queue-success {
+  border-left-color: #16a34a;
+}
+
+.operator-queue-failed {
+  border-left-color: #dc2626;
+}
+
+.operator-queue-running {
+  border-left-color: #2563eb;
+}
+
+.operator-queue-platform {
+  width: 48px;
+}
+
+.operator-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 6px;
+  padding: 0 9px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.operator-queue-badge-success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.operator-queue-badge-failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.operator-queue-badge-running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.operator-queue-priority {
+  font-weight: 760;
+}
+
+.operator-queue-empty {
+  color: #64748b;
+  text-align: center;
+}
+
 .operator-filter-bar {
   display: grid;
-  grid-template-columns: minmax(120px, 0.7fr) minmax(260px, 1.6fr) minmax(120px, 0.8fr) repeat(3, minmax(140px, 1fr));
-  gap: 10px;
-  align-items: end;
+  gap: 12px;
 }
 
 .operator-filter-bar label,
-.operator-platform-filter {
+.operator-platform-filter,
+.operator-segment-filter {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   color: #64748b;
   font-size: 12px;
+}
+
+.operator-segment-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.operator-segment-row button {
+  min-height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-weight: 680;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.operator-segment-row button.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
 }
 
 .operator-platform-icons {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
   min-height: 34px;
-  overflow-x: auto;
-  padding-bottom: 1px;
 }
 
 .operator-platform-icons button {
@@ -434,23 +725,28 @@ function positiveNumber(value, fallback) {
   place-items: center;
   min-width: 34px;
   height: 34px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: #334155;
   font-size: 12px;
   font-weight: 680;
-  padding: 0 7px;
+  padding: 0 3px;
   cursor: pointer;
 }
 
 .operator-platform-icons button.active {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
-.operator-filter-bar input,
-.operator-filter-bar select {
+.operator-search-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.operator-filter-bar input {
   min-height: 34px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -487,22 +783,15 @@ function positiveNumber(value, fallback) {
 }
 
 @media (max-width: 1100px) {
-  .operator-filter-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .operator-platform-filter {
-    grid-column: 1 / -1;
+  .operator-search-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 700px) {
-  .operator-diagnostics-header {
+  .operator-diagnostics-header,
+  .operator-queue-head {
     flex-direction: column;
-  }
-
-  .operator-filter-bar {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
