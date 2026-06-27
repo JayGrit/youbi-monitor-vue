@@ -38,7 +38,7 @@ function genericPlatformAccountApi(apiBase, platform) {
   }
 }
 
-export function createAccountsApi(apiBase) {
+export function createAccountsApi(apiBase, distributorApiBase = apiBase) {
   const managedAccountApi = platform => genericPlatformAccountApi(apiBase, platform)
 
   return {
@@ -50,10 +50,10 @@ export function createAccountsApi(apiBase) {
     },
     uploadBackfillCandidates(platform, accountKey, type) {
       const params = new URLSearchParams({ platform, accountKey, type })
-      return requestJson(`${apiBase}/upload-backfill/candidates?${params.toString()}`)
+      return requestJson(`${distributorApiBase}/upload-backfill/candidates?${params.toString()}`)
     },
     registerUploadBackfill(platform, accountKey, type, taskIds) {
-      return postJson(`${apiBase}/upload-backfill/register`, { platform, accountKey, type, taskIds })
+      return postJson(`${distributorApiBase}/upload-backfill/register`, { platform, accountKey, type, taskIds })
     },
     uploaderPhones() {
       return requestJson(`${apiBase}/uploader-phones`)

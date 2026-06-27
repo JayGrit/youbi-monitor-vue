@@ -34,10 +34,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/monitor\/minio/, ''),
       },
-      '/health': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
     },
   },
 })
