@@ -7,5 +7,8 @@ defineProps({
 </script>
 
 <template>
-  <OperatorDiagnosticsPage :api="app.operatorDiagnosticsApi" />
+  <OperatorDiagnosticsPage
+    :api="app.operatorDiagnosticsApi"
+    :platform-icon-urls="app.platformIconUrls"
+  />
 </template>

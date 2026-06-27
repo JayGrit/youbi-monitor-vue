@@ -1,11 +1,14 @@
 <script setup>
 import { computed } from 'vue'
+import PlatformIcon from '../PlatformIcon.vue'
 import DiagnosticScreenshotGrid from '../task-flow/DiagnosticScreenshotGrid.vue'
+import { uploadPlatformText } from '../../domain/constants'
 import { formatTime, isSameDate, parseLocalDateTime } from '../../utils/format'
 import OperatorStatusBadge from './OperatorStatusBadge.vue'
 
 const props = defineProps({
   execution: { type: Object, required: true },
+  platformIconUrls: { type: Object, default: () => ({}) },
   diagnostics: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
@@ -33,6 +36,41 @@ const errorText = computed(() => {
   if (typeof error === 'string') return error
   return [error.code, error.message].filter(Boolean).join(' ')
 })
+
+const platformKey = computed(() => normalizePlatform(props.execution.platform))
+const platformLabel = computed(() => uploadPlatformText[platformKey.value] || props.execution.platform || '-')
+const platformIconUrl = computed(() => props.platformIconUrls[platformKey.value] || '')
+const actionLabel = computed(() => readableAction(props.execution.action, platformKey.value))
+
+function normalizePlatform(value) {
+  const text = String(value || '').trim().toLowerCase()
+  if (!text) return ''
+  if (props.platformIconUrls[text]) return text
+  return Object.keys(props.platformIconUrls).find(key => text === key || text.startsWith(`${key}-`)) || text
+}
+
+function readableAction(value, platform) {
+  const raw = String(value || '').trim()
+  if (!raw) return '-'
+  const normalized = raw
+    .toLowerCase()
+    .replace(new RegExp(`^${escapeRegExp(platform)}[-_/]*`), '')
+  if (/(^|[-_/])upload($|[-_/])/.test(normalized)) return '上传'
+  if (/(^|[-_/])login($|[-_/])/.test(normalized)) return '登录'
+  if (/(^|[-_/])renew($|[-_/])/.test(normalized)) return '续期'
+  if (/(^|[-_/])open($|[-_/])/.test(normalized)) return '打开账号'
+  if (/(^|[-_/])new($|[-_/])/.test(normalized)) return '新增账号'
+  if (/generate.*image|image.*generate/.test(normalized)) return '生成图片'
+  return normalized
+    .split(/[-_/]+/)
+    .filter(part => part && part !== 'playwright' && part !== 'cloakbrowser')
+    .join(' ')
+    || raw
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 function timestamp(value) {
   const parsed = Date.parse(value || '')
@@ -65,7 +103,11 @@ function relativeTime(value) {
   <article class="operator-card">
     <header class="operator-card-header">
       <div class="operator-card-title">
-        <strong>{{ execution.platform || '-' }} / {{ execution.action || '-' }}</strong>
+        <div class="operator-title-platform">
+          <PlatformIcon :src="platformIconUrl" :label="platformLabel" :platform="platformKey" :size="30" />
+          <strong>{{ platformLabel }}</strong>
+        </div>
+        <span v-if="actionLabel" class="operator-action-label" :title="execution.action || ''">{{ actionLabel }}</span>
         <OperatorStatusBadge :status="execution.status" />
       </div>
       <div class="operator-card-actions">
@@ -147,6 +189,25 @@ function relativeTime(value) {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.operator-title-platform {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.operator-action-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 680;
+  padding: 0 10px;
 }
 
 .operator-card-header {

@@ -5,6 +5,7 @@ import { pad2 } from '../utils/format'
 
 const props = defineProps({
   api: { type: Object, required: true },
+  platformIconUrls: { type: Object, default: () => ({}) },
 })
 
 const statuses = [
@@ -296,6 +297,7 @@ function positiveNumber(value, fallback) {
         v-for="execution in executions"
         :key="execution.opId"
         :execution="execution"
+        :platform-icon-urls="platformIconUrls"
         :expanded="Boolean(expanded[execution.opId])"
         :diagnostics="diagnostics[execution.opId] || []"
         :diagnostic-page="diagnosticPages[execution.opId] || 1"

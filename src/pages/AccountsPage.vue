@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import PlatformIcon from '../components/PlatformIcon.vue'
 import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
@@ -631,7 +632,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
               :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item), saving: accountRowSaving(item) }]"
             >
               <span class="platform-mark" :class="{ saving: accountRowSaving(item) }">
-                <img :src="item.iconUrl" :alt="item.label" loading="lazy" decoding="async" />
+                <PlatformIcon :src="item.iconUrl" :label="item.label" :platform="item.type" />
               </span>
               <span data-label="头像">
                 <label
@@ -895,7 +896,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
           :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
         >
           <span class="uploader-phone-platform-cell">
-            <img :src="platform.iconUrl" :alt="platform.label" loading="lazy" decoding="async" />
+            <PlatformIcon :src="platform.iconUrl" :label="platform.label" :platform="platform.type" />
           </span>
           <span
             v-for="phone in phoneRows"
