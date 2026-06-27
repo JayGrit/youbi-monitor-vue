@@ -290,6 +290,14 @@ async function copyText(text) {
   await navigator.clipboard?.writeText(String(text || ''))
 }
 
+function queueTaskId(row) {
+  return row?.taskId || row?.task_id || ''
+}
+
+function queueOpId(row) {
+  return row?.opId || row?.op_id || row?.runId || row?.run_id || ''
+}
+
 function openScreenshotDialog(task) {
   screenshotDialogTask.value = task
 }
@@ -361,11 +369,29 @@ function relativeTime(value) {
 }
 
 function durationText(row) {
-  if (!['success', 'failed'].includes(String(row?.status || '').toLowerCase())) return '-'
-  const completed = parseLocalDateTime(row?.completedAt)
+  const status = String(row?.status || '').toLowerCase()
   const started = parseLocalDateTime(row?.startedAt || row?.createdAt)
+  if (status === 'running') {
+    if (!started) return '-'
+    return formatDuration((Date.now() - started.getTime()) / 1000)
+  }
+  if (!['success', 'failed'].includes(status)) return '-'
+  const completed = parseLocalDateTime(row?.completedAt)
   if (!completed || !started) return '-'
   return formatDuration((completed.getTime() - started.getTime()) / 1000)
+}
+
+function waitingDurationText(row) {
+  const created = parseLocalDateTime(row?.createdAt)
+  const started = parseLocalDateTime(row?.startedAt)
+  if (!created || !started) return '-'
+  return formatDuration((started.getTime() - created.getTime()) / 1000)
+}
+
+function startedTimeText(row) {
+  const started = row?.startedAt
+  if (!started) return '-'
+  return relativeTime(started)
 }
 
 function positiveNumber(value, fallback) {
@@ -401,9 +427,10 @@ function positiveNumber(value, fallback) {
           <thead>
             <tr>
               <th>平台</th>
+              <th>任务</th>
               <th>任务类型</th>
               <th>accountkey</th>
-              <th>上传时间</th>
+              <th>等待时长</th>
               <th>执行时间</th>
               <th>耗时</th>
               <th>priority</th>
@@ -412,7 +439,7 @@ function positiveNumber(value, fallback) {
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td colspan="8" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
+              <td colspan="9" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
@@ -420,17 +447,37 @@ function positiveNumber(value, fallback) {
               :class="['operator-queue-row', `operator-queue-${task.status || 'unknown'}`]"
             >
               <td class="operator-queue-platform">
-                <PlatformIcon
-                  :src="platformIconUrl(task.platform)"
-                  :label="uploadPlatformText[task.platform] || task.platform"
-                  :platform="task.platform"
-                  :size="28"
-                />
+                <button
+                  type="button"
+                  class="operator-queue-platform-button"
+                  :disabled="!queueOpId(task)"
+                  :title="queueOpId(task) ? `复制 opid：${queueOpId(task)}` : '无 opid'"
+                  @click="copyText(queueOpId(task))"
+                >
+                  <PlatformIcon
+                    :src="platformIconUrl(task.platform)"
+                    :label="uploadPlatformText[task.platform] || task.platform"
+                    :platform="task.platform"
+                    :size="28"
+                  />
+                </button>
+              </td>
+              <td>
+                <button
+                  v-if="queueTaskId(task)"
+                  type="button"
+                  class="operator-queue-task-id"
+                  :title="`复制 taskid：${queueTaskId(task)}`"
+                  @click="copyText(queueTaskId(task))"
+                >
+                  {{ queueTaskId(task) }}
+                </button>
+                <span v-else>-</span>
               </td>
               <td>{{ queueTaskType(task) }}</td>
               <td>{{ task.accountKey || '-' }}</td>
-              <td>{{ relativeTime(task.createdAt) }}</td>
-              <td>{{ relativeTime(task.startedAt) }}</td>
+              <td>{{ waitingDurationText(task) }}</td>
+              <td>{{ startedTimeText(task) }}</td>
               <td>{{ durationText(task) }}</td>
               <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
               <td>
@@ -696,6 +743,31 @@ function positiveNumber(value, fallback) {
 
 .operator-queue-platform {
   width: 48px;
+}
+
+.operator-queue-platform-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.operator-queue-platform-button:disabled {
+  cursor: default;
+}
+
+.operator-queue-task-id {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: copy;
 }
 
 .operator-queue-priority {
