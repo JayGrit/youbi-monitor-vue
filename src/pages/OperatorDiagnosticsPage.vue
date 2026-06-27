@@ -307,15 +307,6 @@ function queueTaskType(row) {
   return row?.taskType || row?.action || '-'
 }
 
-function statusLabel(status) {
-  return ({
-    ready: '排队中',
-    running: '执行中',
-    success: '成功',
-    failed: '失败',
-  })[String(status || '').toLowerCase()] || status || '未知'
-}
-
 function dateText(value) {
   if (!value) return '-'
   const text = String(value).replace('T', ' ')
@@ -341,7 +332,7 @@ function positiveNumber(value, fallback) {
       <header class="operator-queue-head">
         <div>
           <h2>Operator 队列</h2>
-          <p>近 3 小时 operator_task，按 priority 逆序排列。</p>
+          <p>近 3 小时 operator_task，排队任务按 priority 排序，已有结论按时间排序。</p>
         </div>
         <div class="operator-queue-status">
           <span v-if="queueLoading">正在加载</span>
@@ -357,7 +348,6 @@ function positiveNumber(value, fallback) {
               <th>平台</th>
               <th>任务类型</th>
               <th>accountkey</th>
-              <th>status</th>
               <th>上传时间</th>
               <th>执行时间</th>
               <th>结束时间</th>
@@ -366,7 +356,7 @@ function positiveNumber(value, fallback) {
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td colspan="8" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
+              <td colspan="7" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
@@ -383,11 +373,6 @@ function positiveNumber(value, fallback) {
               </td>
               <td>{{ queueTaskType(task) }}</td>
               <td>{{ task.accountKey || '-' }}</td>
-              <td>
-                <span :class="['operator-queue-badge', `operator-queue-badge-${task.status || 'unknown'}`]">
-                  {{ statusLabel(task.status) }}
-                </span>
-              </td>
               <td>{{ dateText(task.createdAt) }}</td>
               <td>{{ dateText(task.startedAt) }}</td>
               <td>{{ dateText(task.completedAt) }}</td>
@@ -595,7 +580,7 @@ function positiveNumber(value, fallback) {
 
 .operator-queue-table {
   width: 100%;
-  min-width: 940px;
+  min-width: 820px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -620,50 +605,23 @@ function positiveNumber(value, fallback) {
 }
 
 .operator-queue-row {
-  border-left: 3px solid #748093;
+  background: #f1f5f9;
 }
 
 .operator-queue-success {
-  border-left-color: #16a34a;
+  background: #dcfce7;
 }
 
 .operator-queue-failed {
-  border-left-color: #dc2626;
+  background: #fee2e2;
 }
 
 .operator-queue-running {
-  border-left-color: #2563eb;
+  background: #dbeafe;
 }
 
 .operator-queue-platform {
   width: 48px;
-}
-
-.operator-queue-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  border-radius: 6px;
-  padding: 0 9px;
-  background: #eef2f7;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 760;
-}
-
-.operator-queue-badge-success {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.operator-queue-badge-failed {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.operator-queue-badge-running {
-  background: #dbeafe;
-  color: #1d4ed8;
 }
 
 .operator-queue-priority {
