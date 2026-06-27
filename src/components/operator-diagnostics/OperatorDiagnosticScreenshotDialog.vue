@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { formatTime, isSameDate, parseLocalDateTime } from '../../utils/format'
+import { isSameDate, pad2, parseLocalDateTime } from '../../utils/format'
 import { normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
@@ -12,13 +12,10 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-const pageSize = 80
+const pageSize = 10000
 const rows = ref([])
-const page = ref(1)
-const pageCount = ref(0)
 const total = ref(0)
 const loading = ref(false)
-const loadingMore = ref(false)
 const error = ref('')
 const previewIndex = ref(-1)
 const screenshotObjectUrls = ref({})
@@ -29,7 +26,6 @@ let requestToken = 0
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
 const sortedRows = computed(() => [...rows.value].sort(compareDiagnostics))
 const previewRow = computed(() => sortedRows.value[previewIndex.value] || null)
-const canLoadMore = computed(() => page.value < pageCount.value && !loading.value && !loadingMore.value)
 
 watch(
   () => props.open,
@@ -64,8 +60,6 @@ onUnmounted(() => {
 
 async function loadFirstPage() {
   rows.value = []
-  page.value = 1
-  pageCount.value = 0
   total.value = 0
   previewIndex.value = -1
   if (!opId.value) {
@@ -75,30 +69,20 @@ async function loadFirstPage() {
   await loadPage(1)
 }
 
-async function loadNextPage() {
-  if (!canLoadMore.value) return
-  await loadPage(page.value + 1, { append: true })
-}
-
-async function loadPage(nextPage, { append = false } = {}) {
+async function loadPage(nextPage) {
   const token = ++requestToken
-  if (append) loadingMore.value = true
-  else loading.value = true
+  loading.value = true
   error.value = ''
   try {
     const response = await props.api.getDiagnostics(opId.value, { page: nextPage, limit: pageSize })
     if (token !== requestToken) return
-    const nextRows = response.items || []
-    rows.value = append ? [...rows.value, ...nextRows] : nextRows
-    page.value = Number(response.page || nextPage)
-    pageCount.value = Number(response.pageCount || 0)
+    rows.value = response.items || []
     total.value = Number(response.total || 0)
   } catch (err) {
     if (token === requestToken) error.value = err instanceof Error ? err.message : String(err)
   } finally {
     if (token === requestToken) {
       loading.value = false
-      loadingMore.value = false
     }
   }
 }
@@ -124,21 +108,14 @@ function diagnosticTitle(row) {
 }
 
 function diagnosticMeta(row) {
-  const width = row.screenshotWidth || row.screenshot_width
-  const height = row.screenshotHeight || row.screenshot_height
   return [
     row.pageTitle || row.page_title || '',
     relativeTime(row.createdAt || row.created_at),
-    width && height ? `${width}x${height}` : '',
   ].filter(Boolean).join(' · ')
 }
 
 function screenshotUrl(row) {
   return normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
-}
-
-function htmlUrl(row) {
-  return normalizeResourceUrl(row.htmlUrl || row.html_url || '')
 }
 
 function diagnosticError(row) {
@@ -222,10 +199,11 @@ function relativeTime(value) {
   yesterday.setDate(yesterday.getDate() - 1)
   const beforeYesterday = new Date(today)
   beforeYesterday.setDate(beforeYesterday.getDate() - 2)
-  if (isSameDate(date, today)) return `今天 ${formatTime(date)}`
-  if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
-  if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
-  return formatTime(date)
+  const timeText = `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
+  if (isSameDate(date, today)) return `今天 ${timeText}`
+  if (isSameDate(date, yesterday)) return `昨天 ${timeText}`
+  if (isSameDate(date, beforeYesterday)) return `前天 ${timeText}`
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${timeText}`
 }
 </script>
 
@@ -261,7 +239,7 @@ function relativeTime(value) {
                 <img :src="renderedScreenshotUrl(row)" loading="lazy" alt="" />
               </button>
               <div v-else class="operator-screenshot-thumb operator-screenshot-thumb-state">
-                <span v-if="screenshotLoading(row)">正在下载</span>
+                <span v-if="screenshotLoading(row)" class="operator-screenshot-spinner" aria-label="正在加载"></span>
                 <span v-else-if="screenshotError(row)">下载失败</span>
                 <span v-else>无截图</span>
               </div>
@@ -270,15 +248,9 @@ function relativeTime(value) {
                 <p>{{ diagnosticMeta(row) }}</p>
                 <p v-if="screenshotError(row)">图片下载失败：{{ screenshotError(row) }}</p>
                 <p v-if="diagnosticError(row)" class="operator-screenshot-row-error">{{ diagnosticError(row) }}</p>
-                <a v-if="htmlUrl(row)" :href="htmlUrl(row)" target="_blank" rel="noreferrer">HTML</a>
               </div>
             </article>
           </div>
-          <footer v-if="canLoadMore" class="operator-screenshot-load-more">
-            <button type="button" :disabled="loadingMore" @click="loadNextPage">
-              {{ loadingMore ? '正在加载' : '加载更多' }}
-            </button>
-          </footer>
         </div>
 
         <div v-if="previewRow" class="operator-screenshot-preview" @click.self="closePreview">
@@ -353,7 +325,6 @@ function relativeTime(value) {
 }
 
 .operator-screenshot-head button,
-.operator-screenshot-load-more button,
 .operator-screenshot-preview-close {
   flex: 0 0 auto;
   border: 1px solid #cbd5e1;
@@ -436,24 +407,23 @@ function relativeTime(value) {
   overflow-wrap: anywhere;
 }
 
-.operator-screenshot-card-body a {
-  color: #1d4ed8;
-  font-size: 12px;
-}
-
 .operator-screenshot-row-error {
   color: #b91c1c;
 }
 
-.operator-screenshot-load-more {
-  display: flex;
-  justify-content: center;
-  padding-top: 14px;
+.operator-screenshot-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgb(203 213 225 / 0.45);
+  border-top-color: #ffffff;
+  border-radius: 999px;
+  animation: operator-screenshot-spin 0.8s linear infinite;
 }
 
-.operator-screenshot-load-more button:disabled {
-  cursor: wait;
-  opacity: 0.65;
+@keyframes operator-screenshot-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .operator-screenshot-preview {
