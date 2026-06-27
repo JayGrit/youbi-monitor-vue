@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import PlatformIcon from '../components/PlatformIcon.vue'
 import OperatorExecutionCard from '../components/operator-diagnostics/OperatorExecutionCard.vue'
+import { uploadPlatformText } from '../domain/constants'
 import { pad2 } from '../utils/format'
 
 const props = defineProps({
@@ -20,9 +22,10 @@ const filters = reactive({
   status: '',
   platform: '',
   accountKey: '',
+  opId: '',
+  taskId: '',
   timeRange: 'recent',
 })
-const textDrafts = reactive({ accountKey: '' })
 const page = ref(1)
 const limit = 10
 const diagnosticLimit = 12
@@ -41,9 +44,15 @@ const diagnosticLoading = ref({})
 const diagnosticErrors = ref({})
 const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 let pollTimer = null
+let filterTimer = null
 let requestToken = 0
 
 const hasRunning = computed(() => executions.value.some(item => ['ready', 'running'].includes(item.status)))
+const platformOptions = computed(() => Object.entries(props.platformIconUrls).map(([type, iconUrl]) => ({
+  type,
+  label: uploadPlatformText[type] || type,
+  iconUrl,
+})))
 const timeRanges = [
   { value: 'recent', label: '近3小时' },
   { value: 'today', label: '今天' },
@@ -59,6 +68,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPolling()
+  clearFilterTimer()
   document.removeEventListener('visibilitychange', handleVisibility)
 })
 
@@ -69,7 +79,6 @@ function restoreQuery() {
     filters[key] = query.get(key) || ''
   }
   if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'recent'
-  textDrafts.accountKey = filters.accountKey
 }
 
 function syncQuery() {
@@ -95,6 +104,8 @@ async function loadExecutions({ silent = false } = {}) {
       status: filters.status,
       platform: filters.platform,
       accountKey: filters.accountKey,
+      opId: filters.opId,
+      taskId: filters.taskId,
       ...timeRangeParams(filters.timeRange),
       sort: 'created_desc',
     })
@@ -131,8 +142,20 @@ function filterChanged() {
   loadExecutions()
 }
 
-function applyTextFilters() {
-  filters.accountKey = textDrafts.accountKey.trim()
+function filterChangedDebounced() {
+  clearFilterTimer()
+  filterTimer = window.setTimeout(() => {
+    filterChanged()
+  }, 300)
+}
+
+function clearFilterTimer() {
+  if (filterTimer) window.clearTimeout(filterTimer)
+  filterTimer = null
+}
+
+function setPlatformFilter(platform) {
+  filters.platform = filters.platform === platform ? '' : platform
   filterChanged()
 }
 
@@ -261,17 +284,36 @@ function positiveNumber(value, fallback) {
       </div>
     </header>
 
-    <form class="operator-filter-bar" @submit.prevent="applyTextFilters">
+    <div class="operator-filter-bar">
       <label>
         状态
         <select v-model="filters.status" @change="filterChanged">
           <option v-for="item in statuses" :key="item.value || 'all'" :value="item.value">{{ item.label }}</option>
         </select>
       </label>
-      <label>
-        平台
-        <input v-model.trim="filters.platform" type="text" @change="filterChanged" />
-      </label>
+      <div class="operator-platform-filter" aria-label="平台筛选">
+        <span>平台</span>
+        <div class="operator-platform-icons">
+          <button
+            type="button"
+            :class="{ active: !filters.platform }"
+            title="全部平台"
+            @click="setPlatformFilter('')"
+          >
+            全部
+          </button>
+          <button
+            v-for="platform in platformOptions"
+            :key="platform.type"
+            type="button"
+            :class="{ active: filters.platform === platform.type }"
+            :title="platform.label"
+            @click="setPlatformFilter(platform.type)"
+          >
+            <PlatformIcon :src="platform.iconUrl" :label="platform.label" :platform="platform.type" :size="28" />
+          </button>
+        </div>
+      </div>
       <label>
         时间
         <select v-model="filters.timeRange" @change="filterChanged">
@@ -279,11 +321,18 @@ function positiveNumber(value, fallback) {
         </select>
       </label>
       <label>
-        账号
-        <input v-model="textDrafts.accountKey" type="text" />
+        account_key
+        <input v-model.trim="filters.accountKey" type="search" @input="filterChangedDebounced" />
       </label>
-      <button type="submit">查询</button>
-    </form>
+      <label>
+        op_id
+        <input v-model.trim="filters.opId" type="search" @input="filterChangedDebounced" />
+      </label>
+      <label>
+        task_id
+        <input v-model.trim="filters.taskId" type="search" @input="filterChangedDebounced" />
+      </label>
+    </div>
 
     <div class="operator-page-status">
       <span v-if="loading">正在加载</span>
@@ -346,7 +395,6 @@ function positiveNumber(value, fallback) {
   color: #64748b;
 }
 
-.operator-filter-bar button,
 .operator-pagination button {
   min-height: 34px;
   border: 1px solid #cbd5e1;
@@ -359,16 +407,46 @@ function positiveNumber(value, fallback) {
 
 .operator-filter-bar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(120px, 0.7fr) minmax(260px, 1.6fr) minmax(120px, 0.8fr) repeat(3, minmax(140px, 1fr));
   gap: 10px;
   align-items: end;
 }
 
-.operator-filter-bar label {
+.operator-filter-bar label,
+.operator-platform-filter {
   display: grid;
   gap: 4px;
   color: #64748b;
   font-size: 12px;
+}
+
+.operator-platform-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  overflow-x: auto;
+  padding-bottom: 1px;
+}
+
+.operator-platform-icons button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 680;
+  padding: 0 7px;
+  cursor: pointer;
+}
+
+.operator-platform-icons button.active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
 }
 
 .operator-filter-bar input,
@@ -410,7 +488,11 @@ function positiveNumber(value, fallback) {
 
 @media (max-width: 1100px) {
   .operator-filter-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operator-platform-filter {
+    grid-column: 1 / -1;
   }
 }
 

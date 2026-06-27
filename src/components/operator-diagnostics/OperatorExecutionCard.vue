@@ -24,9 +24,9 @@ const durationText = computed(() => {
   const created = timestamp(props.execution.createdAt)
   const started = timestamp(props.execution.startedAt)
   const completed = timestamp(props.execution.completedAt)
-  if (started && completed) return `执行 ${secondsText(completed - started)}`
-  if (created && started) return `排队 ${secondsText(started - created)}`
-  if (created && completed) return `总计 ${secondsText(completed - created)}`
+  if (started && completed) return secondsText(completed - started)
+  if (created && started) return secondsText(started - created)
+  if (created && completed) return secondsText(completed - created)
   return ''
 })
 
@@ -41,6 +41,9 @@ const platformKey = computed(() => normalizePlatform(props.execution.platform))
 const platformLabel = computed(() => uploadPlatformText[platformKey.value] || props.execution.platform || '-')
 const platformIconUrl = computed(() => props.platformIconUrls[platformKey.value] || '')
 const actionLabel = computed(() => readableAction(props.execution.action, platformKey.value))
+const timeSummary = computed(() => {
+  return `(${relativeTime(props.execution.createdAt)} - ${relativeTime(props.execution.startedAt)} - ${relativeTime(props.execution.completedAt)})(${durationText.value || '-'})`
+})
 
 function normalizePlatform(value) {
   const text = String(value || '').trim().toLowerCase()
@@ -127,20 +130,8 @@ function relativeTime(value) {
         <dd>{{ execution.diagnosticCount || 0 }}</dd>
       </div>
       <div>
-        <dt>创建</dt>
-        <dd>{{ relativeTime(execution.createdAt) }}</dd>
-      </div>
-      <div>
-        <dt>开始</dt>
-        <dd>{{ relativeTime(execution.startedAt) }}</dd>
-      </div>
-      <div>
-        <dt>完成</dt>
-        <dd>{{ relativeTime(execution.completedAt) }}</dd>
-      </div>
-      <div>
-        <dt>耗时</dt>
-        <dd>{{ durationText || '-' }}</dd>
+        <dt>时间</dt>
+        <dd>{{ timeSummary }}</dd>
       </div>
     </dl>
 
@@ -228,7 +219,7 @@ function relativeTime(value) {
 
 .operator-meta-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(120px, 0.9fr) minmax(80px, 0.4fr) minmax(260px, 2fr);
   gap: 10px 16px;
   margin: 0;
 }

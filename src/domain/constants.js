@@ -97,6 +97,9 @@ export const uploadPlatformText = {
   jinritoutiao: '今日头条',
   x: 'X',
   youtube: 'YouTube',
+  doubao: '豆包',
+  notebooklm: 'NotebookLM',
+  chatgpt: 'ChatGPT',
 }
 
 export function createPlatformIconUrls(baseUrl) {
@@ -109,7 +112,9 @@ export function createPlatformIconUrls(baseUrl) {
     jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
     x: `${baseUrl}platform-icons/x-official-appstore-512.png`,
     youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.png`,
-    doubao: `${baseUrl}platform-icons/doubao-official-appstore-512.svg`,
+    doubao: `${baseUrl}platform-icons/doubao-official-appstore-512.png`,
+    notebooklm: `${baseUrl}platform-icons/notebooklm-official-appstore-512.png`,
+    chatgpt: `${baseUrl}platform-icons/chatgpt-official-appstore-512.png`,
   }
 }
 
@@ -124,5 +129,7 @@ export function createAccountPlatforms(platformIconUrls) {
     { type: 'x', label: 'X', iconUrl: platformIconUrls.x },
     { type: 'youtube', label: 'YouTube', iconUrl: platformIconUrls.youtube },
     { type: 'doubao', label: '豆包', iconUrl: platformIconUrls.doubao },
+    { type: 'notebooklm', label: 'NotebookLM', iconUrl: platformIconUrls.notebooklm },
+    { type: 'chatgpt', label: 'ChatGPT', iconUrl: platformIconUrls.chatgpt },
   ]
 }
