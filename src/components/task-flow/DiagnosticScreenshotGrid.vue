@@ -13,6 +13,10 @@ const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
 const previewRow = ref(null)
+const previewIndex = computed(() => {
+  if (!previewRow.value) return -1
+  return visibleRows.value.findIndex(row => screenshotKey(row) === screenshotKey(previewRow.value))
+})
 
 const visibleRows = computed(() => [...props.rows].sort(compareDiagnostics))
 
@@ -105,7 +109,18 @@ function screenshotError(row) {
 function handleKeydown(event) {
   if (event.key === 'Escape') {
     previewRow.value = null
+  } else if (event.key === 'ArrowLeft') {
+    movePreview(-1)
+  } else if (event.key === 'ArrowRight') {
+    movePreview(1)
   }
+}
+
+function movePreview(offset) {
+  if (!previewRow.value || !visibleRows.value.length) return
+  const current = previewIndex.value >= 0 ? previewIndex.value : 0
+  const next = (current + offset + visibleRows.value.length) % visibleRows.value.length
+  previewRow.value = visibleRows.value[next]
 }
 
 async function downloadScreenshot(row) {
@@ -184,10 +199,13 @@ function relativeTime(value) {
       <section class="diagnostic-preview-modal" role="dialog" aria-modal="true" aria-label="诊断截图大图">
         <header>
           <strong>{{ diagnosticTitle(previewRow) }}</strong>
+          <span>{{ previewIndex + 1 }} / {{ visibleRows.length }}</span>
           <button type="button" @click="previewRow = null">关闭</button>
         </header>
         <div class="diagnostic-preview-body">
+          <button type="button" class="diagnostic-preview-nav diagnostic-preview-prev" @click="movePreview(-1)">&lsaquo;</button>
           <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
+          <button type="button" class="diagnostic-preview-nav diagnostic-preview-next" @click="movePreview(1)">&rsaquo;</button>
         </div>
       </section>
     </div>

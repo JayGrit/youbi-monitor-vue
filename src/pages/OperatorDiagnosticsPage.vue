@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
+import OperatorDiagnosticScreenshotDialog from '../components/operator-diagnostics/OperatorDiagnosticScreenshotDialog.vue'
 import OperatorExecutionCard from '../components/operator-diagnostics/OperatorExecutionCard.vue'
 import { uploadPlatformText } from '../domain/constants'
 import { formatDuration, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
@@ -55,6 +56,7 @@ const queueTasks = ref([])
 const queueTotal = ref(0)
 const queueLoading = ref(false)
 const queueError = ref('')
+const screenshotDialogTask = ref(null)
 const executions = ref([])
 const total = ref(0)
 const pageCount = ref(0)
@@ -288,6 +290,21 @@ async function copyText(text) {
   await navigator.clipboard?.writeText(String(text || ''))
 }
 
+function openScreenshotDialog(task) {
+  screenshotDialogTask.value = task
+}
+
+function closeScreenshotDialog() {
+  screenshotDialogTask.value = null
+}
+
+function screenshotDialogTitle(task) {
+  return [
+    queueTaskType(task),
+    task?.accountKey,
+  ].filter(Boolean).join(' / ') || '诊断截图'
+}
+
 function timeRangeParams(range) {
   const now = new Date()
   if (range === 'today') return dayRange(now)
@@ -390,11 +407,12 @@ function positiveNumber(value, fallback) {
               <th>执行时间</th>
               <th>耗时</th>
               <th>priority</th>
+              <th>截图</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td colspan="7" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
+              <td colspan="8" class="operator-queue-empty">没有近 3 小时 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
@@ -415,6 +433,16 @@ function positiveNumber(value, fallback) {
               <td>{{ relativeTime(task.startedAt) }}</td>
               <td>{{ durationText(task) }}</td>
               <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="operator-queue-screenshot-button"
+                  :disabled="!(task.opId || task.op_id || task.runId || task.run_id)"
+                  @click="openScreenshotDialog(task)"
+                >
+                  查看
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -523,6 +551,14 @@ function positiveNumber(value, fallback) {
       <button type="button" :disabled="page >= (pageCount || 1)" @click="setPage(page + 1)">下一页</button>
       <button type="button" :disabled="page >= (pageCount || 1)" @click="setPage(pageCount || 1)">末页</button>
     </footer>
+
+    <OperatorDiagnosticScreenshotDialog
+      :api="api"
+      :open="Boolean(screenshotDialogTask)"
+      :task="screenshotDialogTask"
+      :title="screenshotDialogTitle(screenshotDialogTask)"
+      @close="closeScreenshotDialog"
+    />
   </section>
 </template>
 
@@ -664,6 +700,21 @@ function positiveNumber(value, fallback) {
 
 .operator-queue-priority {
   font-weight: 760;
+}
+
+.operator-queue-screenshot-button {
+  min-height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  padding: 0 9px;
+  cursor: pointer;
+}
+
+.operator-queue-screenshot-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .operator-queue-empty {
