@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
 import OperatorExecutionCard from '../components/operator-diagnostics/OperatorExecutionCard.vue'
 import { uploadPlatformText } from '../domain/constants'
-import { pad2 } from '../utils/format'
+import { formatDuration, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
   api: { type: Object, required: true },
@@ -17,6 +17,27 @@ const statuses = [
   { value: 'success', label: '成功' },
   { value: 'failed', label: '失败' },
 ]
+
+const taskTypeText = {
+  'xiaohongshu-upload-video': '小红书上传',
+  'bilibili-upload-video': 'B站上传',
+  'douyin-upload-video': '抖音上传',
+  'shipinhao-upload-video': '视频号上传',
+  'kuaishou-upload-video': '快手上传',
+  'jinritoutiao-upload-video': '今日头条上传',
+  'youtube-upload-video': 'YouTube上传',
+  'x-post': 'X发帖',
+  'x-post-text': 'X发文本',
+  'notebooklm-create-note': 'NotebookLM创建笔记',
+  'notebooklm-download-assets': 'NotebookLM下载素材',
+  'doubao-generate-cover': '豆包生成封面',
+  'doubao-generate-image': '豆包生图',
+  'doubao-generate-video-submit': '豆包提交视频生成',
+  'doubao-generate-video-query': '豆包查询视频生成',
+  'chatgpt-chat': 'ChatGPT对话',
+  'chatgpt-generate-image-submit': 'ChatGPT提交生图',
+  'chatgpt-generate-image-query': 'ChatGPT查询生图',
+}
 
 const filters = reactive({
   status: '',
@@ -304,13 +325,30 @@ function platformIconUrl(platform) {
 }
 
 function queueTaskType(row) {
-  return row?.taskType || row?.action || '-'
+  const type = row?.taskType || ''
+  return row?.taskTypeDisplayName || taskTypeText[type] || row?.action || type || '-'
 }
 
-function dateText(value) {
-  if (!value) return '-'
-  const text = String(value).replace('T', ' ')
-  return text.length > 19 ? text.slice(0, 19) : text
+function relativeTime(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return '-'
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const beforeYesterday = new Date(today)
+  beforeYesterday.setDate(beforeYesterday.getDate() - 2)
+  if (isSameDate(date, today)) return `今天 ${formatTime(date)}`
+  if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
+  if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`
+}
+
+function durationText(row) {
+  if (!['success', 'failed'].includes(String(row?.status || '').toLowerCase())) return '-'
+  const completed = parseLocalDateTime(row?.completedAt)
+  const started = parseLocalDateTime(row?.startedAt || row?.createdAt)
+  if (!completed || !started) return '-'
+  return formatDuration((completed.getTime() - started.getTime()) / 1000)
 }
 
 function positiveNumber(value, fallback) {
@@ -332,7 +370,7 @@ function positiveNumber(value, fallback) {
       <header class="operator-queue-head">
         <div>
           <h2>Operator 队列</h2>
-          <p>近 3 小时 operator_task，排队任务按 priority 排序，已有结论按时间排序。</p>
+          <p>近 3 小时 operator_task，排队任务按 priority 排序，其余任务按创建时间排序。</p>
         </div>
         <div class="operator-queue-status">
           <span v-if="queueLoading">正在加载</span>
@@ -350,7 +388,7 @@ function positiveNumber(value, fallback) {
               <th>accountkey</th>
               <th>上传时间</th>
               <th>执行时间</th>
-              <th>结束时间</th>
+              <th>耗时</th>
               <th>priority</th>
             </tr>
           </thead>
@@ -373,9 +411,9 @@ function positiveNumber(value, fallback) {
               </td>
               <td>{{ queueTaskType(task) }}</td>
               <td>{{ task.accountKey || '-' }}</td>
-              <td>{{ dateText(task.createdAt) }}</td>
-              <td>{{ dateText(task.startedAt) }}</td>
-              <td>{{ dateText(task.completedAt) }}</td>
+              <td>{{ relativeTime(task.createdAt) }}</td>
+              <td>{{ relativeTime(task.startedAt) }}</td>
+              <td>{{ durationText(task) }}</td>
               <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
             </tr>
           </tbody>
@@ -589,7 +627,7 @@ function positiveNumber(value, fallback) {
 .operator-queue-table td {
   border-bottom: 1px solid #e2e8f0;
   padding: 8px 10px;
-  text-align: left;
+  text-align: center;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -609,11 +647,11 @@ function positiveNumber(value, fallback) {
 }
 
 .operator-queue-success {
-  background: #dcfce7;
+  background: #fff;
 }
 
 .operator-queue-failed {
-  background: #fee2e2;
+  background: #fecaca;
 }
 
 .operator-queue-running {
