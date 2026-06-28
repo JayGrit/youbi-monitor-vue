@@ -50,14 +50,14 @@ const emit = defineEmits(['openPage'])
         :class="{ active: activePage === 'ffmpeger' && !flowPageOpen }"
         @click="emit('openPage', 'ffmpeger')"
       >
-        FFmpeger
+        合成
       </button>
       <button
         type="button"
         :class="{ active: activePage === 'airouter' && !flowPageOpen }"
         @click="emit('openPage', 'airouter')"
       >
-        AIRouter
+        中转
       </button>
       <button
         type="button"

@@ -6,12 +6,21 @@ defineProps({
 })
 
 const textFilters = [
-  { key: 'caller', label: 'caller' },
   { key: 'upstreamTaskId', label: 'upstream_task_id' },
   { key: 'taskType', label: 'task_type' },
   { key: 'requestKey', label: 'request_key' },
   { key: 'operator', label: 'operator' },
 ]
+
+const sourceFilter = {
+  label: '调用方',
+  paramKey: 'caller',
+  options: [
+    { value: 'translator', label: 'Translator', icon: '译', tone: 'translator' },
+    { value: 'publisher', label: 'Publisher', icon: '发', tone: 'publisher' },
+    { value: 'uploader', label: 'Uploader', icon: '传', tone: 'uploader' },
+  ],
+}
 
 const columns = [
   { key: 'caller', label: '调用方' },
@@ -33,8 +42,9 @@ const columns = [
   <QueueMonitorPage
     :api="api"
     page-key="airouter"
-    title="AIRouter"
+    title="中转"
     waiting-status="pending"
+    :source-filter="sourceFilter"
     :text-filters="textFilters"
     :columns="columns"
   />

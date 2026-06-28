@@ -7,12 +7,14 @@ const props = defineProps({
   pageKey: { type: String, required: true },
   title: { type: String, required: true },
   waitingStatus: { type: String, required: true },
+  sourceFilter: { type: Object, default: null },
   textFilters: { type: Array, default: () => [] },
   columns: { type: Array, default: () => [] },
 })
 
 const filters = reactive({
   status: '',
+  source: '',
   timeRange: 'recent',
 })
 const page = ref(1)
@@ -31,8 +33,8 @@ let requestToken = 0
 
 const statusFilters = computed(() => [
   { value: '', label: '全部' },
-  { value: props.waitingStatus, label: '等待' },
-  { value: 'running', label: '运行中' },
+  { value: props.waitingStatus, label: '排队中' },
+  { value: 'running', label: '执行中' },
   { value: 'success', label: '成功' },
   { value: 'failed', label: '失败' },
 ])
@@ -60,7 +62,9 @@ onUnmounted(() => {
 function restoreQuery() {
   const query = new URLSearchParams(window.location.search)
   filters.status = query.get('status') || ''
+  filters.source = query.get('source') || ''
   filters.timeRange = query.get('timeRange') || 'recent'
+  if (props.sourceFilter && !sourceOptions().some(item => item.value === filters.source)) filters.source = ''
   if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'recent'
   for (const filter of props.textFilters) {
     filters[filter.key] = query.get(filter.key) || ''
@@ -72,7 +76,7 @@ function syncQuery() {
   const query = new URLSearchParams(window.location.search)
   query.set('page', props.pageKey)
   query.set('queuePage', String(page.value))
-  for (const key of ['status', 'timeRange', ...props.textFilters.map(item => item.key)]) {
+  for (const key of ['status', 'source', 'timeRange', ...props.textFilters.map(item => item.key)]) {
     const value = filters[key]
     if (value) query.set(key, value)
     else query.delete(key)
@@ -91,6 +95,7 @@ async function loadQueue({ silent = false } = {}) {
       limit,
       status: filters.status,
       ...textFilterParams(),
+      ...sourceFilterParams(),
       ...timeRangeParams(filters.timeRange),
     })
     if (token !== requestToken) return
@@ -109,6 +114,11 @@ async function loadQueue({ silent = false } = {}) {
 
 function textFilterParams() {
   return Object.fromEntries(props.textFilters.map(filter => [filter.key, filters[filter.key] || '']))
+}
+
+function sourceFilterParams() {
+  if (!props.sourceFilter || !filters.source) return {}
+  return { [props.sourceFilter.paramKey]: filters.source }
 }
 
 function filterChanged() {
@@ -194,11 +204,20 @@ function clearCopyToastTimer() {
 }
 
 function statusText(status) {
-  if (status === props.waitingStatus) return '等待'
-  if (status === 'running') return '运行中'
+  if (status === props.waitingStatus) return '排队中'
+  if (status === 'running') return '执行中'
   if (status === 'success') return '成功'
   if (status === 'failed') return '失败'
   return status || '-'
+}
+
+function sourceOptions() {
+  return props.sourceFilter?.options || []
+}
+
+function setSourceFilter(value) {
+  filters.source = filters.source === value ? '' : value
+  filterChanged()
 }
 
 function cellText(row, column) {
@@ -323,6 +342,29 @@ function positiveInt(value, fallback) {
     </header>
 
     <div class="queue-filter-bar">
+      <div v-if="sourceFilter" class="queue-source-filter" aria-label="来源筛选">
+        <span>{{ sourceFilter.label || '来源' }}</span>
+        <div class="queue-source-icons">
+          <button
+            type="button"
+            :class="{ active: !filters.source }"
+            title="全部"
+            @click="setSourceFilter('')"
+          >
+            <span>全部</span>
+          </button>
+          <button
+            v-for="item in sourceOptions()"
+            :key="item.value"
+            type="button"
+            :class="{ active: filters.source === item.value }"
+            :title="item.label"
+            @click="setSourceFilter(item.value)"
+          >
+            <span class="queue-source-icon" :data-tone="item.tone || 'default'">{{ item.icon || item.label }}</span>
+          </button>
+        </div>
+      </div>
       <div class="queue-segment-filter">
         <span>时间</span>
         <div class="queue-segment-row">
@@ -458,11 +500,74 @@ function positiveInt(value, fallback) {
 }
 
 .queue-filter-bar label,
+.queue-source-filter,
 .queue-segment-filter {
   display: grid;
   gap: 6px;
   color: #64748b;
   font-size: 12px;
+}
+
+.queue-source-icons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.queue-source-icons button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 680;
+  padding: 0 3px;
+  cursor: pointer;
+}
+
+.queue-source-icons button.active {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.queue-source-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.queue-source-icon[data-tone="combiner"],
+.queue-source-icon[data-tone="uploader"] {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.queue-source-icon[data-tone="translator"],
+.queue-source-icon[data-tone="asseter"] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.queue-source-icon[data-tone="publisher"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.queue-source-icon[data-tone="downloader"] {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .queue-segment-row {
@@ -560,7 +665,7 @@ function positiveInt(value, fallback) {
 
 .queue-ready,
 .queue-pending {
-  background: #fef3c7;
+  background: #f1f5f9;
 }
 
 .queue-copy-button {
@@ -581,6 +686,10 @@ function positiveInt(value, fallback) {
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
+}
+
+.queue-cell-number {
+  font-weight: 760;
 }
 
 .queue-copy-toast {

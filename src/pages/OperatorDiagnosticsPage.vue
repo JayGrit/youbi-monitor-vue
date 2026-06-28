@@ -10,27 +10,6 @@ const props = defineProps({
   platformIconUrls: { type: Object, default: () => ({}) },
 })
 
-const taskTypeText = {
-  'xiaohongshu-upload-video': '小红书上传',
-  'bilibili-upload-video': 'B站上传',
-  'douyin-upload-video': '抖音上传',
-  'shipinhao-upload-video': '视频号上传',
-  'kuaishou-upload-video': '快手上传',
-  'jinritoutiao-upload-video': '今日头条上传',
-  'youtube-upload-video': 'YouTube上传',
-  'x-post': 'X发帖',
-  'x-post-text': 'X发文本',
-  'notebooklm-create-note': 'NotebookLM创建笔记',
-  'notebooklm-download-assets': 'NotebookLM下载素材',
-  'doubao-generate-cover': '豆包生成封面',
-  'doubao-generate-image': '豆包生图',
-  'doubao-generate-video-submit': '豆包提交视频生成',
-  'doubao-generate-video-query': '豆包查询视频生成',
-  'chatgpt-chat': 'ChatGPT对话',
-  'chatgpt-generate-image-submit': 'ChatGPT提交生图',
-  'chatgpt-generate-image-query': 'ChatGPT查询生图',
-}
-
 const filters = reactive({
   platform: '',
   accountKey: '',
@@ -263,7 +242,7 @@ function platformIconUrl(platform) {
 
 function queueTaskType(row) {
   const type = row?.taskType || ''
-  return row?.taskTypeDisplayName || taskTypeText[type] || row?.action || type || '-'
+  return row?.taskTypeDisplayName || row?.action || type || '-'
 }
 
 function relativeTime(value) {
