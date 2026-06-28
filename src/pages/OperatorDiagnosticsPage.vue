@@ -369,8 +369,8 @@ function canOpenScreenshotDialog(task) {
                 <button
                   type="button"
                   class="operator-queue-platform-button"
-                  :title="`筛选平台：${uploadPlatformText[task.platform] || task.platform || '-'}`"
-                  @click.stop="setPlatformFilter(task.platform)"
+                  :title="`复制 opid：${queueOpId(task) || '-'}`"
+                  @click.stop="copyText(queueOpId(task))"
                 >
                   <PlatformIcon
                     :src="platformIconUrl(task.platform)"
@@ -542,7 +542,7 @@ function canOpenScreenshotDialog(task) {
   border-radius: 6px;
   background: transparent;
   padding: 0;
-  cursor: pointer;
+  cursor: copy;
 }
 
 .operator-queue-task-id {
