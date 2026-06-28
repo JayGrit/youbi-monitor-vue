@@ -47,6 +47,20 @@ const emit = defineEmits(['openPage'])
       </button>
       <button
         type="button"
+        :class="{ active: activePage === 'ffmpeger' && !flowPageOpen }"
+        @click="emit('openPage', 'ffmpeger')"
+      >
+        FFmpeger
+      </button>
+      <button
+        type="button"
+        :class="{ active: activePage === 'airouter' && !flowPageOpen }"
+        @click="emit('openPage', 'airouter')"
+      >
+        AIRouter
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'failure-logs' && !flowPageOpen }"
         @click="emit('openPage', 'failure-logs')"
       >

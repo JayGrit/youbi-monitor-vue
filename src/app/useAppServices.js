@@ -3,6 +3,7 @@ import { createAgentApi } from '../api/agent'
 import { createDistributorApi } from '../api/distributor'
 import { createMonitorApi } from '../api/monitor'
 import { createOperatorDiagnosticsApi } from '../api/operatorDiagnostics'
+import { createQueueMonitorApi } from '../api/queueMonitor'
 import { createSubmitterApi } from '../api/submitter'
 import { createAccountPlatforms, createPlatformIconUrls } from '../domain/constants'
 import { useImageCache } from '../composables/useImageCache'
@@ -14,6 +15,8 @@ export function useAppServices() {
   const monitorApi = createMonitorApi(apiBase)
   const distributorApi = createDistributorApi(distributorApiBase)
   const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase)
+  const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger')
+  const airouterApi = createQueueMonitorApi(apiBase, 'airouter')
   const accountsApi = createAccountsApi(apiBase, distributorApiBase)
   const agentApi = createAgentApi()
   const submitterApi = createSubmitterApi(submitterApiBase)
@@ -25,6 +28,8 @@ export function useAppServices() {
     monitorApi,
     distributorApi,
     operatorDiagnosticsApi,
+    ffmpegerApi,
+    airouterApi,
     accountsApi,
     agentApi,
     submitterApi,

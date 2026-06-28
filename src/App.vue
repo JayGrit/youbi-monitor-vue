@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { useMonitorApp } from './app/useMonitorApp'
 import PageTabs from './components/PageTabs.vue'
 import AccountsContainer from './containers/AccountsContainer.vue'
+import AirouterQueueContainer from './containers/AirouterQueueContainer.vue'
 import FailureLogsContainer from './containers/FailureLogsContainer.vue'
+import FfmpegerQueueContainer from './containers/FfmpegerQueueContainer.vue'
 import MonitorContainer from './containers/MonitorContainer.vue'
 import OperatorDiagnosticsContainer from './containers/OperatorDiagnosticsContainer.vue'
 import SubmitterAuthorsContainer from './containers/SubmitterAuthorsContainer.vue'
@@ -27,6 +29,8 @@ const pageShellClass = computed(() => ['page-shell', app.flowPageOpen ? 'flow-pa
       <SubmitterContainer v-else-if="app.activePage === 'submitter'" :app="app" />
       <SubmitterAuthorsContainer v-else-if="app.activePage === 'submitter-authors'" :app="app" />
       <AccountsContainer v-else-if="app.activePage === 'accounts'" :app="app" />
+      <FfmpegerQueueContainer v-else-if="app.activePage === 'ffmpeger'" :app="app" />
+      <AirouterQueueContainer v-else-if="app.activePage === 'airouter'" :app="app" />
       <FailureLogsContainer v-else-if="app.activePage === 'failure-logs'" :app="app" />
       <OperatorDiagnosticsContainer v-else-if="app.activePage === 'operator-diagnostics'" :app="app" />
     </template>
