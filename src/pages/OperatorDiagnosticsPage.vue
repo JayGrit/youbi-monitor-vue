@@ -42,10 +42,12 @@ const queueLimit = 50
 const queueTasks = ref([])
 const queueLoading = ref(false)
 const queueError = ref('')
+const copyToastVisible = ref(false)
 const screenshotDialogTask = ref(null)
 const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 let pollTimer = null
 let filterTimer = null
+let copyToastTimer = null
 let queueRequestToken = 0
 
 const hasActiveQueue = computed(() => queueTasks.value.some(item => ['ready', 'running'].includes(item.status)))
@@ -70,6 +72,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopPolling()
   clearFilterTimer()
+  clearCopyToastTimer()
   document.removeEventListener('visibilitychange', handleVisibility)
 })
 
@@ -158,7 +161,45 @@ function stopPolling() {
 }
 
 async function copyText(text) {
-  await navigator.clipboard?.writeText(String(text || ''))
+  const value = String(text || '').trim()
+  if (!value) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value)
+    } else {
+      copyTextFallback(value)
+    }
+    showCopyToast()
+  } catch {
+    copyTextFallback(value)
+    showCopyToast()
+  }
+}
+
+function copyTextFallback(text) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
+
+function showCopyToast() {
+  copyToastVisible.value = true
+  clearCopyToastTimer()
+  copyToastTimer = window.setTimeout(() => {
+    copyToastVisible.value = false
+    copyToastTimer = null
+  }, 1400)
+}
+
+function clearCopyToastTimer() {
+  if (copyToastTimer) window.clearTimeout(copyToastTimer)
+  copyToastTimer = null
 }
 
 function queueTaskId(row) {
@@ -266,6 +307,8 @@ function canOpenScreenshotDialog(task) {
 
 <template>
   <section class="operator-diagnostics-page">
+    <div v-if="copyToastVisible" class="operator-copy-toast" role="status" aria-live="polite">成功复制</div>
+
     <header class="operator-diagnostics-header">
       <div>
         <h1>诊断</h1>
@@ -369,7 +412,6 @@ function canOpenScreenshotDialog(task) {
                 <button
                   type="button"
                   class="operator-queue-platform-button"
-                  :title="`复制 opid：${queueOpId(task) || '-'}`"
                   @click.stop="copyText(queueOpId(task))"
                 >
                   <PlatformIcon
@@ -385,7 +427,6 @@ function canOpenScreenshotDialog(task) {
                   v-if="queueTaskId(task)"
                   type="button"
                   class="operator-queue-task-id"
-                  :title="`复制 taskid：${queueTaskId(task)}`"
                   @click.stop="copyText(queueTaskId(task))"
                 >
                   {{ queueTaskId(task) }}
@@ -542,7 +583,7 @@ function canOpenScreenshotDialog(task) {
   border-radius: 6px;
   background: transparent;
   padding: 0;
-  cursor: copy;
+  cursor: default;
 }
 
 .operator-queue-task-id {
@@ -551,7 +592,23 @@ function canOpenScreenshotDialog(task) {
   color: inherit;
   font: inherit;
   padding: 0;
-  cursor: copy;
+  cursor: default;
+}
+
+.operator-copy-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 16px;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 12%);
 }
 
 .operator-queue-priority {
