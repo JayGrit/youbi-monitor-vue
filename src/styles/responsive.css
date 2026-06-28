@@ -678,9 +678,20 @@
   }
 
   .submitter-submit-row button,
-  .submitter-filter-actions button {
+  .submitter-filter-actions button,
+  .submitter-batch-bar button {
     width: 100%;
     min-height: 40px;
+  }
+
+  .submitter-batch-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submitter-batch-bar > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .submitter-filter-actions {
@@ -742,13 +753,13 @@
     padding: 9px 10px;
   }
 
-  .submitter-table td:not(.submitter-fixed-col):not(.submitter-action-col) {
+  .submitter-table td:not(.submitter-select-col):not(.submitter-fixed-col):not(.submitter-action-col) {
     display: grid;
     grid-template-columns: minmax(82px, 30%) minmax(0, 1fr);
     gap: 10px;
   }
 
-  .submitter-table td:not(.submitter-fixed-col):not(.submitter-action-col)::before,
+  .submitter-table td:not(.submitter-select-col):not(.submitter-fixed-col):not(.submitter-action-col)::before,
   .submitter-action-col::before {
     content: attr(data-label);
     color: #64748b;
@@ -756,6 +767,7 @@
     font-weight: 720;
   }
 
+  .submitter-select-col,
   .submitter-fixed-col,
   .submitter-action-col {
     position: static;
@@ -766,6 +778,11 @@
     border-left: 0;
     border-right: 0;
     box-shadow: none;
+  }
+
+  .submitter-select-col {
+    display: flex;
+    justify-content: flex-end;
   }
 
   .submitter-video-card {

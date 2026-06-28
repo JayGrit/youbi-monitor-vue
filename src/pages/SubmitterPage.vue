@@ -37,6 +37,11 @@ defineProps({
   submitterPageCount: { type: Number, default: 1 },
   submitterSubmittingId: { type: String, default: '' },
   submitterRejectingId: { type: String, default: '' },
+  submitterBatchSubmitting: { type: Boolean, default: false },
+  submitterSelectedIds: { type: Array, default: () => [] },
+  submitterSelectedCount: { type: Number, default: 0 },
+  submitterPageSelectableIds: { type: Array, default: () => [] },
+  submitterPageAllSelected: { type: Boolean, default: false },
   submitterJsonPayload: { type: Object, default: null },
   submitterJsonTitle: { type: String, default: '' },
   createSubmitterVideo: { type: Function, required: true },
@@ -50,6 +55,11 @@ defineProps({
   submitterVideoTitle: { type: Function, required: true },
   submitterFieldValue: { type: Function, required: true },
   submitVideoToYoubi: { type: Function, required: true },
+  submitSelectedVideosToYoubi: { type: Function, required: true },
+  setSubmitterRowSelected: { type: Function, required: true },
+  toggleSubmitterPageSelection: { type: Function, required: true },
+  selectAllSubmitterFilteredVideos: { type: Function, required: true },
+  clearSubmitterSelection: { type: Function, required: true },
   rejectSubmitterVideo: { type: Function, required: true },
   withdrawSubmitterVideo: { type: Function, required: true },
   submitterSubmissionStatus: { type: Function, required: true },
@@ -226,21 +236,75 @@ const emit = defineEmits([
     </section>
 
     <section class="submitter-table-panel">
+      <div class="submitter-batch-bar">
+        <div>
+          <strong>批量提交</strong>
+          <span>已选择 {{ formatNumber(submitterSelectedCount) }} 条</span>
+        </div>
+        <div>
+          <button
+            type="button"
+            :disabled="submitterLoading || submitterBatchSubmitting || submitterPageSelectableIds.length === 0"
+            @click="toggleSubmitterPageSelection"
+          >
+            {{ submitterPageAllSelected ? '取消当前页' : '选择当前页' }}
+          </button>
+          <button
+            type="button"
+            :disabled="submitterLoading || submitterBatchSubmitting || submitterFilteredTotal === 0"
+            @click="selectAllSubmitterFilteredVideos"
+          >
+            全选筛选结果
+          </button>
+          <button
+            type="button"
+            :disabled="submitterBatchSubmitting || submitterSelectedCount === 0 || Boolean(submitterRejectingId)"
+            @click="submitSelectedVideosToYoubi"
+          >
+            {{ submitterBatchSubmitting ? '批量提交中' : '提交已选' }}
+          </button>
+          <button
+            type="button"
+            :disabled="submitterBatchSubmitting || submitterSelectedCount === 0"
+            @click="clearSubmitterSelection"
+          >
+            清空
+          </button>
+        </div>
+      </div>
       <div class="submitter-table-wrap">
         <table class="submitter-table">
           <thead>
             <tr>
+              <th class="submitter-select-col">
+                <input
+                  type="checkbox"
+                  :checked="submitterPageAllSelected"
+                  :disabled="submitterPageSelectableIds.length === 0 || submitterBatchSubmitting"
+                  aria-label="选择当前页未上传素材"
+                  @change="toggleSubmitterPageSelection"
+                />
+              </th>
               <th class="submitter-fixed-col">视频</th>
               <th class="submitter-action-col">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!submitterLoading && submitterFilteredVideos.length === 0">
-              <td colspan="2" class="submitter-empty">
+              <td colspan="3" class="submitter-empty">
                 {{ submitterFocusedBatch ? '当前批次暂无记录，频道扫描完成后会自动刷新。' : '暂无匹配记录' }}
               </td>
             </tr>
             <tr v-for="item in submitterFilteredVideos" :key="item.id || item.video_id || item.webpage_url">
+              <td class="submitter-select-col">
+                <input
+                  type="checkbox"
+                  :checked="submitterSelectedIds.includes(String(submitterFieldValue(item, 'id')))"
+                  :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterBatchSubmitting"
+                  aria-label="选择素材"
+                  @change="setSubmitterRowSelected(item, $event.target.checked)"
+                />
+              </td>
               <td class="submitter-fixed-col">
                 <div class="submitter-video-card">
                   <a
@@ -289,8 +353,8 @@ const emit = defineEmits([
                     type="button"
                     :class="['submitter-upload-button', { submitted: submitterSubmissionStatus(item) === 'uploaded' }]"
                     :disabled="submitterUploadFilter === 'pending'
-                      ? submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)
-                      : submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId)"
+                      ? submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId) || submitterBatchSubmitting
+                      : submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterRejectingId) || submitterBatchSubmitting"
                     @click="submitterUploadFilter === 'pending' ? withdrawSubmitterVideo(item) : submitVideoToYoubi(item)"
                   >
                     <span v-if="submitterUploadFilter === 'pending' && submitterSubmittingId === String(submitterFieldValue(item, 'id'))">撤稿中</span>
@@ -305,7 +369,7 @@ const emit = defineEmits([
                   <button
                     type="button"
                     class="submitter-reject-button"
-                    :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterRejectingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterSubmittingId)"
+                    :disabled="submitterSubmissionStatus(item) !== 'unuploaded' || submitterRejectingId === String(submitterFieldValue(item, 'id')) || Boolean(submitterSubmittingId) || submitterBatchSubmitting"
                     @click="rejectSubmitterVideo(item)"
                   >
                     <span v-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>

@@ -31,6 +31,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterThumbUrls = ref({})
   const submitterSubmittingId = ref('')
   const submitterRejectingId = ref('')
+  const submitterBatchSubmitting = ref(false)
+  const submitterSelectedIds = ref([])
+  const submitterSelectedRows = ref({})
   const submitterPage = ref(1)
   const submitterTotal = ref(0)
   const submitterAuthorTypeRows = ref([])
@@ -96,6 +99,22 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       .join(' · ')
   })
 
+  const submitterPageSelectableIds = computed(() => {
+    return submitterVideos.value
+      .filter(item => submitterSubmissionStatus(item) === 'unuploaded')
+      .map(item => String(submitterFieldValue(item, 'id') || '').trim())
+      .filter(Boolean)
+  })
+
+  const submitterSelectedCount = computed(() => submitterSelectedIds.value.length)
+
+  const submitterPageAllSelected = computed(() => {
+    const ids = submitterPageSelectableIds.value
+    if (!ids.length) return false
+    const selected = new Set(submitterSelectedIds.value)
+    return ids.every(id => selected.has(id))
+  })
+
   function submitterSource(item) {
     return item?.raw_info_json || item?.info_json || item || {}
   }
@@ -108,25 +127,9 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   async function loadSubmitterVideos(quiet = false) {
     if (!quiet) submitterLoading.value = true
     try {
-      const durationRange = submitterDurationRange()
-      const publishedRange = submitterPublishedRange()
-      const payload = await submitterApi.listVideos({
-        detail: submitterListDetail.value,
-        batch: submitterFocusedBatch.value,
-        type: submitterTypeFilter.value,
-        uploader: submitterUploader.value,
-        videoName: submitterVideoName.value.trim(),
-        sort: submitterSort.value,
-        limit: SUBMITTER_PAGE_SIZE,
-        offset: (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE,
-        durationMin: durationRange.min,
-        durationMax: durationRange.max,
-        publishedFrom: publishedRange.from,
-        publishedTo: publishedRange.to,
-        submissionStatus: submitterUploadFilter.value,
-        manualSubtitle: submitterManualSubtitleFilter.value,
-        bilibiliExists: submitterBilibiliFilter.value,
-      })
+      const payload = await submitterApi.listVideos(
+        submitterListRequest(SUBMITTER_PAGE_SIZE, (submitterPage.value - 1) * SUBMITTER_PAGE_SIZE),
+      )
       submitterVideos.value = payload?.items || []
       submitterTotal.value = Number(payload?.total || 0)
       if (submitterPage.value > submitterPageCount.value) {
@@ -146,6 +149,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function applySubmitterFilters() {
     submitterPage.value = 1
+    clearSubmitterSelection()
     await loadSubmitterVideos()
   }
 
@@ -174,6 +178,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterSort.value = 'published_desc'
     submitterFocusedBatch.value = ''
     submitterPage.value = 1
+    clearSubmitterSelection()
     await loadSubmitterVideos()
   }
 
@@ -217,12 +222,40 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   async function clearSubmitterBatchFocus() {
     submitterFocusedBatch.value = ''
     submitterPage.value = 1
+    clearSubmitterSelection()
     await loadSubmitterVideos()
+  }
+
+  function submitterListRequest(limit, offset = 0) {
+    const durationRange = submitterDurationRange()
+    const publishedRange = submitterPublishedRange()
+    return {
+      detail: submitterListDetail.value,
+      batch: submitterFocusedBatch.value,
+      type: submitterTypeFilter.value,
+      uploader: submitterUploader.value,
+      videoName: submitterVideoName.value.trim(),
+      sort: submitterSort.value,
+      limit,
+      offset,
+      durationMin: durationRange.min,
+      durationMax: durationRange.max,
+      publishedFrom: publishedRange.from,
+      publishedTo: publishedRange.to,
+      submissionStatus: submitterUploadFilter.value,
+      manualSubtitle: submitterManualSubtitleFilter.value,
+      bilibiliExists: submitterBilibiliFilter.value,
+    }
+  }
+
+  async function loadSubmitterMatchingVideos() {
+    const payload = await submitterApi.listVideos(submitterListRequest(null, 0))
+    return payload?.items || []
   }
 
   async function submitVideoToYoubi(item) {
     const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value) return
+    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
     submitterSubmittingId.value = String(rowId)
     submitterError.value = ''
     try {
@@ -255,9 +288,138 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
+  function setSubmitterRowSelected(item, selected) {
+    const rowId = String(submitterFieldValue(item, 'id') || '').trim()
+    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterBatchSubmitting.value) return
+    const ids = new Set(submitterSelectedIds.value)
+    const rows = { ...submitterSelectedRows.value }
+    if (selected) {
+      ids.add(rowId)
+      rows[rowId] = item
+    } else {
+      ids.delete(rowId)
+      delete rows[rowId]
+    }
+    submitterSelectedIds.value = [...ids]
+    submitterSelectedRows.value = rows
+  }
+
+  function toggleSubmitterPageSelection() {
+    if (submitterBatchSubmitting.value) return
+    const selected = new Set(submitterSelectedIds.value)
+    const rows = { ...submitterSelectedRows.value }
+    const shouldSelect = !submitterPageAllSelected.value
+    for (const item of submitterVideos.value) {
+      const rowId = String(submitterFieldValue(item, 'id') || '').trim()
+      if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded') continue
+      if (shouldSelect) {
+        selected.add(rowId)
+        rows[rowId] = item
+      } else {
+        selected.delete(rowId)
+        delete rows[rowId]
+      }
+    }
+    submitterSelectedIds.value = [...selected]
+    submitterSelectedRows.value = rows
+  }
+
+  async function selectAllSubmitterFilteredVideos() {
+    if (submitterBatchSubmitting.value) return
+    submitterError.value = ''
+    try {
+      const rows = (await loadSubmitterMatchingVideos())
+        .filter(item => submitterSubmissionStatus(item) === 'unuploaded')
+      const nextRows = {}
+      const ids = []
+      for (const item of rows) {
+        const rowId = String(submitterFieldValue(item, 'id') || '').trim()
+        if (!rowId) continue
+        ids.push(rowId)
+        nextRows[rowId] = item
+      }
+      submitterSelectedIds.value = ids
+      submitterSelectedRows.value = nextRows
+      submitterMessage.value = ids.length
+        ? `已选择当前筛选结果中的 ${formatNumber(ids.length)} 条未上传素材。`
+        : '当前筛选结果没有可提交的未上传素材。'
+    } catch (err) {
+      submitterError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  function clearSubmitterSelection() {
+    submitterSelectedIds.value = []
+    submitterSelectedRows.value = {}
+  }
+
+  async function submitSelectedVideosToYoubi() {
+    if (submitterBatchSubmitting.value || submitterSubmittingId.value || submitterRejectingId.value) return
+    const selectedIds = submitterSelectedIds.value.slice()
+    if (!selectedIds.length) return
+    submitterBatchSubmitting.value = true
+    submitterSubmittingId.value = 'batch'
+    submitterError.value = ''
+    submitterMessage.value = `正在批量提交 ${formatNumber(selectedIds.length)} 条素材...`
+    const authorConfigByName = new Map()
+    const submittedIds = new Set()
+    const failedMessages = []
+    let skipped = 0
+    try {
+      for (const rowId of selectedIds) {
+        const item = submitterSelectedRows.value[rowId]
+        if (!item || submitterSubmissionStatus(item) !== 'unuploaded') {
+          skipped += 1
+          continue
+        }
+        try {
+          const author = submitterAuthorName(item)
+          let authorConfig = authorConfigByName.get(author)
+          if (!authorConfig) {
+            authorConfig = await loadSubmitterAuthorType(author)
+            authorConfigByName.set(author, authorConfig)
+          }
+          if (!authorConfig.type) {
+            failedMessages.push(author
+              ? `作者 ${author} 未配置投稿 type`
+              : `素材 ${rowId} 没有作者信息`)
+            continue
+          }
+          const payload = await submitterApi.submitVideo(rowId, authorConfig.type)
+          Object.assign(item, {
+            ydbi_submitted: 1,
+            ydbi_submission_status: 'pending',
+            ydbi_submission_id: payload.submission_id,
+            ydbi_submitted_at: new Date().toISOString(),
+            ydbi_rejected_at: null,
+          })
+          submittedIds.add(rowId)
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          failedMessages.push(`素材 ${rowId}: ${message}`)
+        }
+      }
+      if (submittedIds.size) {
+        submitterSelectedIds.value = submitterSelectedIds.value.filter(id => !submittedIds.has(id))
+        const rows = { ...submitterSelectedRows.value }
+        for (const rowId of submittedIds) delete rows[rowId]
+        submitterSelectedRows.value = rows
+      }
+      await loadSubmitterVideos(true)
+      const parts = [`已提交 ${formatNumber(submittedIds.size)} 条到 YouBi 待执行队列`]
+      if (skipped) parts.push(`跳过 ${formatNumber(skipped)} 条`)
+      if (failedMessages.length) parts.push(`失败 ${formatNumber(failedMessages.length)} 条`)
+      submitterMessage.value = `${parts.join('，')}。`
+      submitterError.value = failedMessages.slice(0, 3).join('；')
+    } finally {
+      submitterSubmittingId.value = ''
+      submitterBatchSubmitting.value = false
+    }
+  }
+
   async function rejectSubmitterVideo(item) {
     const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value) return
+    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
     submitterRejectingId.value = String(rowId)
     submitterError.value = ''
     try {
@@ -279,7 +441,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   async function withdrawSubmitterVideo(item) {
     const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId.value || submitterRejectingId.value) return
+    if (!rowId || submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
     submitterSubmittingId.value = String(rowId)
     submitterError.value = ''
     try {
@@ -677,6 +839,11 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterThumbUrls,
     submitterSubmittingId,
     submitterRejectingId,
+    submitterBatchSubmitting,
+    submitterSelectedIds,
+    submitterSelectedCount,
+    submitterPageSelectableIds,
+    submitterPageAllSelected,
     submitterPage,
     submitterTotal,
     submitterAuthorTypeRows,
@@ -696,6 +863,11 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,
+    submitSelectedVideosToYoubi,
+    setSubmitterRowSelected,
+    toggleSubmitterPageSelection,
+    selectAllSubmitterFilteredVideos,
+    clearSubmitterSelection,
     rejectSubmitterVideo,
     withdrawSubmitterVideo,
     submitterSubmissionStatus,

@@ -51,8 +51,8 @@ export function createSubmitterApi(submitterApiBase) {
       bilibiliExists,
     } = {}) {
       const params = new URLSearchParams()
-      params.set('limit', String(limit || 50))
-      params.set('offset', String(offset || 0))
+      if (limit !== undefined && limit !== null) params.set('limit', String(limit))
+      if (offset !== undefined && offset !== null) params.set('offset', String(offset))
       if (detail || batch) params.set('detail', '1')
       if (batch) params.set('batch', batch)
       if (type) params.set('type', type)

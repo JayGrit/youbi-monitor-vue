@@ -81,6 +81,7 @@
 .submitter-submit-row button,
 .submitter-columns-head button,
 .submitter-filter-actions button,
+.submitter-batch-bar button,
 .submitter-fields-toggle,
 .submitter-json-button,
 .submitter-modal header button {
@@ -109,6 +110,7 @@
 
 .submitter-filter-actions button:hover:not(:disabled),
 .submitter-columns-head button:hover:not(:disabled),
+.submitter-batch-bar button:hover:not(:disabled),
 .submitter-fields-toggle:hover,
 .submitter-json-button:hover,
 .submitter-modal header button:hover {
@@ -117,7 +119,8 @@
 
 .submitter-submit-row button:disabled,
 .submitter-filter-actions button:disabled,
-.submitter-columns-head button:disabled {
+.submitter-columns-head button:disabled,
+.submitter-batch-bar button:disabled {
   cursor: wait;
   opacity: 0.62;
 }
@@ -236,6 +239,47 @@
   overflow: hidden;
 }
 
+.submitter-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #edf0f4;
+  background: #ffffff;
+}
+
+.submitter-batch-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.submitter-batch-bar strong {
+  color: #1f2a3a;
+  font-size: 13px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.submitter-batch-bar span {
+  color: #607086;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.submitter-batch-bar button:nth-child(3) {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+.submitter-batch-bar button:nth-child(3):hover:not(:disabled) {
+  background: #243044;
+}
+
 .submitter-table-wrap {
   min-height: 360px;
   max-height: calc(100vh - 390px);
@@ -280,9 +324,35 @@
   background: #f8fbff;
 }
 
-.submitter-fixed-col {
+.submitter-select-col {
   position: sticky;
   left: 0;
+  z-index: 3;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  text-align: center;
+  border-right: 1px solid #d9dee7;
+}
+
+th.submitter-select-col {
+  z-index: 5;
+}
+
+.submitter-select-col input {
+  width: 16px;
+  height: 16px;
+  accent-color: #111827;
+  cursor: pointer;
+}
+
+.submitter-select-col input:disabled {
+  cursor: not-allowed;
+}
+
+.submitter-fixed-col {
+  position: sticky;
+  left: 44px;
   z-index: 2;
   min-width: 430px;
   max-width: 430px;
