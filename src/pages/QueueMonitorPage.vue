@@ -241,6 +241,7 @@ function cellText(row, column) {
   if (column.format === 'error') return errorText(row)
   if (column.format === 'taskType') return row.taskTypeDisplayName || row.taskType || '-'
   if (column.format === 'number') return formatNumber(row[column.key])
+  if (column.format === 'detail') return '查看'
   return row[column.key] || '-'
 }
 
@@ -468,6 +469,14 @@ function positiveInt(value, fallback) {
                   @click.stop="copyText(row[column.copy] || row[column.key])"
                 >
                   {{ cellText(row, column) }}
+                </button>
+                <button
+                  v-else-if="column.format === 'detail'"
+                  type="button"
+                  class="queue-detail-button"
+                  @click.stop="openDetailDialog(row)"
+                >
+                  查看
                 </button>
                 <span v-else>{{ cellText(row, column) }}</span>
               </td>
@@ -741,6 +750,23 @@ function positiveInt(value, fallback) {
   padding: 0;
   text-overflow: ellipsis;
   cursor: pointer;
+}
+
+.queue-detail-button {
+  min-height: 26px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 680;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.queue-detail-button:hover {
+  border-color: #60a5fa;
+  background: #dbeafe;
 }
 
 .queue-cell-error span {

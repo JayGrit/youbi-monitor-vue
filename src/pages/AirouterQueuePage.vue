@@ -35,9 +35,12 @@ const columns = [
   { key: 'operator', label: 'operator', copy: 'operator' },
   { key: 'inputChars', label: '字符量', format: 'chars' },
   { key: 'errorMessage', label: '错误', format: 'error' },
+  { key: 'detail', label: '详情', format: 'detail' },
 ]
 
 const detailFields = [
+  { key: 'promptVersion', label: '提示词版本' },
+  { key: 'renderedMessagesJson', label: '提示词（渲染 messages）', format: 'json' },
   { key: 'requestJson', label: 'API 请求参数', format: 'json' },
   { key: 'responseJson', label: 'API 响应参数', format: 'json' },
   { key: 'rawResponseJson', label: 'API 原始响应', format: 'json' },
