@@ -36,6 +36,12 @@ const columns = [
   { key: 'inputChars', label: '字符量', format: 'chars' },
   { key: 'errorMessage', label: '错误', format: 'error' },
 ]
+
+const detailFields = [
+  { key: 'requestJson', label: 'API 请求参数', format: 'json' },
+  { key: 'responseJson', label: 'API 响应参数', format: 'json' },
+  { key: 'rawResponseJson', label: 'API 原始响应', format: 'json' },
+]
 </script>
 
 <template>
@@ -47,5 +53,6 @@ const columns = [
     :source-filter="sourceFilter"
     :text-filters="textFilters"
     :columns="columns"
+    :detail-fields="detailFields"
   />
 </template>

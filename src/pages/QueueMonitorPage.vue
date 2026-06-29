@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { formatDuration, formatNumber, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
+import { formatJson } from '../utils/jsonDisplay'
 
 const props = defineProps({
   api: { type: Object, required: true },
@@ -10,6 +11,7 @@ const props = defineProps({
   sourceFilter: { type: Object, default: null },
   textFilters: { type: Array, default: () => [] },
   columns: { type: Array, default: () => [] },
+  detailFields: { type: Array, default: () => [] },
 })
 
 const filters = reactive({
@@ -25,6 +27,7 @@ const pageCount = ref(0)
 const loading = ref(false)
 const error = ref('')
 const copyToastVisible = ref(false)
+const detailRow = ref(null)
 const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 let pollTimer = null
 let filterTimer = null
@@ -45,6 +48,14 @@ const timeRanges = [
   { value: 'beforeYesterday', label: '前天' },
 ]
 const hasActiveQueue = computed(() => rows.value.some(item => [props.waitingStatus, 'running'].includes(item.status)))
+const hasDetailDialog = computed(() => props.detailFields.length > 0)
+const visibleDetailFields = computed(() => {
+  if (!detailRow.value) return []
+  return props.detailFields.map(field => ({
+    ...field,
+    text: detailFieldText(detailRow.value, field),
+  }))
+})
 
 onMounted(() => {
   restoreQuery()
@@ -233,6 +244,31 @@ function cellText(row, column) {
   return row[column.key] || '-'
 }
 
+function openDetailDialog(row) {
+  if (!hasDetailDialog.value) return
+  detailRow.value = row
+}
+
+function closeDetailDialog() {
+  detailRow.value = null
+}
+
+function detailDialogTitle(row) {
+  if (!row) return '任务详情'
+  return [row.caller, row.upstreamTaskId || row.taskId, row.taskTypeDisplayName || row.taskType]
+    .filter(Boolean)
+    .join(' / ') || '任务详情'
+}
+
+function detailFieldText(row, field) {
+  const value = row?.[field.key]
+  if (field.format === 'json') {
+    return formatJson(value) || '-'
+  }
+  if (value === null || value === undefined || value === '') return '-'
+  return String(value)
+}
+
 function waitingText(row, column) {
   if (column.nextRunKey && row[column.nextRunKey]) {
     return relativeTime(row[column.nextRunKey])
@@ -417,18 +453,19 @@ function positiveInt(value, fallback) {
             <tr
               v-for="row in rows"
               :key="row.id || row.opId || row.runId || row.requestKey"
-              :class="['queue-row', `queue-${row.status || 'unknown'}`]"
+              :class="['queue-row', `queue-${row.status || 'unknown'}`, { 'queue-clickable': hasDetailDialog }]"
+              @click="openDetailDialog(row)"
             >
               <td
                 v-for="column in columns"
-                :key="column.key"
+                :key="`${column.key}-${column.label}`"
                 :class="[`queue-cell-${column.format || 'text'}`, column.copy ? 'queue-copy-cell' : '']"
               >
                 <button
                   v-if="column.copy && cellText(row, column) !== '-'"
                   type="button"
                   class="queue-copy-button"
-                  @click="copyText(row[column.copy] || row[column.key])"
+                  @click.stop="copyText(row[column.copy] || row[column.key])"
                 >
                   {{ cellText(row, column) }}
                 </button>
@@ -445,6 +482,24 @@ function positiveInt(value, fallback) {
         <button type="button" :disabled="page >= (pageCount || 1) || loading" @click="setPage(page + 1)">下一页</button>
       </footer>
     </section>
+
+    <div v-if="detailRow" class="queue-modal-backdrop" @click.self="closeDetailDialog">
+      <section class="queue-detail-modal" role="dialog" aria-modal="true" aria-labelledby="queue-detail-title">
+        <header>
+          <div>
+            <h2 id="queue-detail-title">API 参数</h2>
+            <p>{{ detailDialogTitle(detailRow) }}</p>
+          </div>
+          <button type="button" @click="closeDetailDialog">关闭</button>
+        </header>
+        <div class="queue-detail-body">
+          <article v-for="field in visibleDetailFields" :key="field.key" class="queue-detail-section">
+            <h3>{{ field.label }}</h3>
+            <pre>{{ field.text }}</pre>
+          </article>
+        </div>
+      </section>
+    </div>
   </section>
 </template>
 
@@ -651,6 +706,14 @@ function positiveInt(value, fallback) {
   background: #f1f5f9;
 }
 
+.queue-clickable {
+  cursor: pointer;
+}
+
+.queue-clickable:hover td {
+  background: rgb(37 99 235 / 6%);
+}
+
 .queue-success {
   background: #fff;
 }
@@ -721,6 +784,94 @@ function positiveInt(value, fallback) {
   justify-content: flex-end;
 }
 
+.queue-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 42%);
+}
+
+.queue-detail-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1040px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 24%);
+}
+
+.queue-detail-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 18px;
+}
+
+.queue-detail-modal h2,
+.queue-detail-modal h3,
+.queue-detail-modal p {
+  margin: 0;
+}
+
+.queue-detail-modal h2 {
+  font-size: 18px;
+}
+
+.queue-detail-modal p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.queue-detail-modal header button {
+  min-height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.queue-detail-body {
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding: 16px 18px 18px;
+}
+
+.queue-detail-section {
+  display: grid;
+  gap: 8px;
+}
+
+.queue-detail-section h3 {
+  color: #334155;
+  font-size: 13px;
+}
+
+.queue-detail-section pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 1100px) {
   .queue-search-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -734,6 +885,14 @@ function positiveInt(value, fallback) {
 
   .queue-search-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .queue-modal-backdrop {
+    padding: 12px;
+  }
+
+  .queue-detail-modal header {
+    flex-direction: column;
   }
 }
 </style>
