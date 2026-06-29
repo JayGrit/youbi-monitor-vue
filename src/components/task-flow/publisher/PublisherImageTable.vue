@@ -9,10 +9,26 @@ const props = defineProps({
 })
 
 const fileInputs = new Map()
-const busy = ref('')
+const busyByKind = ref({})
 const copied = ref('')
-const message = ref('')
-const error = ref('')
+const messages = ref({})
+const errors = ref({})
+
+function isBusy(kind) {
+  return Boolean(busyByKind.value[kind])
+}
+
+function setBusy(kind, value) {
+  busyByKind.value = { ...busyByKind.value, [kind]: value }
+}
+
+function setMessage(kind, value) {
+  messages.value = { ...messages.value, [kind]: value }
+}
+
+function setError(kind, value) {
+  errors.value = { ...errors.value, [kind]: value }
+}
 
 function setFileInput(kind, element) {
   if (element) fileInputs.set(kind, element)
@@ -29,24 +45,24 @@ async function copyPrompt(item) {
 }
 
 function chooseImage(item) {
-  if (item.url || busy.value) return
+  if (item.url || isBusy(item.kind)) return
   fileInputs.get(item.kind)?.click()
 }
 
 async function upload(item, event) {
   const input = event.target
   const file = input.files?.[0]
-  if (!file || busy.value) return
-  busy.value = item.kind
-  message.value = ''
-  error.value = ''
+  if (!file || isBusy(item.kind)) return
+  setBusy(item.kind, true)
+  setMessage(item.kind, '')
+  setError(item.kind, '')
   try {
     const result = await props.uploadImage(item.kind, file)
-    message.value = `${item.label}已上传：${result.width}x${result.height}`
+    setMessage(item.kind, `${item.label}已上传：${result.width}x${result.height}`)
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err)
+    setError(item.kind, err instanceof Error ? err.message : String(err))
   } finally {
-    busy.value = ''
+    setBusy(item.kind, false)
     input.value = ''
   }
 }
@@ -84,10 +100,10 @@ async function upload(item, event) {
           v-else
           type="button"
           class="publisher-image-upload"
-          :disabled="Boolean(busy)"
+          :disabled="isBusy(item.kind)"
           @click="chooseImage(item)"
         >
-          {{ busy === item.kind ? '上传中…' : '点击上传' }}
+          {{ isBusy(item.kind) ? '上传中…' : '点击上传' }}
         </button>
         <input
           :ref="element => setFileInput(item.kind, element)"
@@ -97,8 +113,8 @@ async function upload(item, event) {
           @change="upload(item, $event)"
         />
       </div>
+      <p v-if="messages[item.kind]" class="publisher-image-feedback narration-manual-success">{{ messages[item.kind] }}</p>
+      <p v-if="errors[item.kind]" class="publisher-image-feedback inline-error">{{ errors[item.kind] }}</p>
     </div>
   </div>
-  <p v-if="message" class="narration-manual-success">{{ message }}</p>
-  <p v-if="error" class="inline-error">{{ error }}</p>
 </template>

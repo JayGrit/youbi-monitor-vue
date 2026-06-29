@@ -912,6 +912,11 @@
   background: #f8fafc;
 }
 
+.publisher-image-row > .publisher-image-feedback {
+  grid-column: 1 / -1;
+  border-left: 0;
+}
+
 .publisher-image-upload {
   width: 100%;
   min-height: 126px;
