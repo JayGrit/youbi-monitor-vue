@@ -103,7 +103,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
         sort: taskSort.value,
       })
       tasks.value = payload.tasks || []
-      pruneTaskProgress(tasks.value.map(task => task.taskId))
+      initializeTaskProgress(tasks.value)
       taskTotalCount.value = Number(payload.totalCount || tasks.value.length)
       if (taskPage.value > taskPageCount.value) taskPage.value = taskPageCount.value
       serverTime.value = payload.serverTime || ''
@@ -124,11 +124,31 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
     }
   }
 
-  function pruneTaskProgress(visibleTaskIds) {
-    const visible = new Set(visibleTaskIds)
-    progressByTaskId.value = Object.fromEntries(
+  function initializeTaskProgress(visibleTasks) {
+    const visible = new Set(visibleTasks.map(task => task.taskId).filter(Boolean))
+    const next = Object.fromEntries(
       Object.entries(progressByTaskId.value).filter(([taskId]) => visible.has(taskId))
     )
+    for (const task of visibleTasks) {
+      const progress = taskProgressFromMonitorItem(task)
+      if (progress) next[task.taskId] = { ...next[task.taskId], ...progress }
+    }
+    progressByTaskId.value = next
+  }
+
+  function taskProgressFromMonitorItem(task) {
+    if (!task?.taskId) return null
+    const nodes = Array.isArray(task.nodes) ? task.nodes : []
+    const routeNodes = Array.isArray(task.routeNodes) ? task.routeNodes : []
+    const routeEdges = Array.isArray(task.routeEdges) ? task.routeEdges : []
+    if (!nodes.length && !routeNodes.length) return null
+    return {
+      taskId: task.taskId,
+      distributorStages: Array.isArray(task.distributorStages) ? task.distributorStages : [],
+      nodes,
+      routeNodes,
+      routeEdges,
+    }
   }
 
   async function loadTaskProgressBatch() {

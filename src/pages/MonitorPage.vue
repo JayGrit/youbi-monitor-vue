@@ -81,6 +81,15 @@ function taskStatusSummary(task) {
     : status
 }
 
+function taskProgress(task) {
+  return props.progressByTaskId?.[task?.taskId] || null
+}
+
+function hasTaskProgressGraph(task) {
+  const progress = taskProgress(task)
+  return Array.isArray(progress?.routeNodes) && progress.routeNodes.length > 0
+}
+
 function onlineDeviceNames(service) {
   return (service?.devices || [])
     .filter(device => device.online)
@@ -265,17 +274,17 @@ function onlineDeviceNames(service) {
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
       </div>
 
-      <div v-if="!taskDetailsExpanded" class="task-progress-summary">
+      <div v-if="!hasTaskProgressGraph(task)" class="task-progress-summary">
         <strong>{{ taskStatusSummary(task) }}</strong>
       </div>
-      <div v-if="taskDetailsExpanded" class="task-progress-detail">
-        <div v-if="!progressByTaskId[task.taskId] && taskProgressLoading" class="task-progress-loading">
+      <div v-else class="task-progress-detail">
+        <div v-if="!taskProgress(task) && taskProgressLoading" class="task-progress-loading">
           正在加载详情
         </div>
         <TaskProgressGraph
-          v-else-if="progressByTaskId[task.taskId]"
+          v-else
           :task="task"
-          :progress="progressByTaskId[task.taskId]"
+          :progress="taskProgress(task)"
           :node-progress="nodeProgress"
           :node-title="nodeTitle"
           :open-task-flow="openTaskFlow"

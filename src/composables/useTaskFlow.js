@@ -403,7 +403,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const stages = selectedTaskFlow.value?.stages || []
     const translator = stages.find(stage => stage.key === 'translator')
     const speaker = stages.find(stage => stage.key === 'speaker') || translator
-    const chunkRows = tableRows(translator, 'translator-chunk')
+    const chunkRows = translatorChunkTableRows(translator)
     const translatorByIndex = rowsByIndex(tableRows(translator, 'translator_segment'))
     const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
     return [...chunkRows]
@@ -457,6 +457,11 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
           gap_after_ms: row.gap_after_ms,
         }
       })
+  }
+
+  function translatorChunkTableRows(stage) {
+    const currentRows = tableRows(stage, 'translator_chunk')
+    return currentRows.length ? currentRows : tableRows(stage, 'translator-chunk')
   }
 
   function tableRows(stage, tableName) {
