@@ -13,13 +13,14 @@ export function useAppServices() {
   const apiBase = `${import.meta.env.BASE_URL}api`
   const distributorApiBase = `${import.meta.env.BASE_URL}distributor-api`
   const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
+  const backupperApiBase = `${import.meta.env.BASE_URL}backupper-api`
   const monitorApi = createMonitorApi(apiBase)
   const distributorApi = createDistributorApi(distributorApiBase)
   const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase)
   const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger')
   const airouterApi = createQueueMonitorApi(apiBase, 'airouter')
   const accountsApi = createAccountsApi(apiBase, distributorApiBase)
-  const serverApi = createServerApi(apiBase)
+  const serverApi = createServerApi(backupperApiBase)
   const agentApi = createAgentApi()
   const submitterApi = createSubmitterApi(submitterApiBase)
   const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
