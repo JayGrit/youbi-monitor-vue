@@ -7,6 +7,18 @@ import {
   rowKey,
 } from './accountUtils'
 
+const ACCOUNT_STATS_FIELDS = [
+  'downloaderPendingCount',
+  'stagedRunningCount',
+  'stagedFailedCount',
+  'todayUploadCount',
+  'cooldownWaitingCount',
+  'uploadRunningTaskId',
+  'uploadRunningCount',
+  'failedUploadCount',
+  'statsLoading',
+]
+
 export function usePlatformAccounts(accountsApi, accountPlatforms) {
   const platformState = Object.fromEntries(ACCOUNT_PLATFORM_TYPES.map(platform => [platform, createPlatformState()]))
   const bilibiliRenewing = ref(false)
@@ -165,7 +177,6 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     try {
       const payload = await accountsApi[platform].saveKey(row.accountKey, nextKey)
       mergePlatformRow(platform, payload, row.slot)
-      await loadAccountOverview()
       platformState[platform].error.value = ''
       return payload
     } catch (err) {
@@ -183,8 +194,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     row.enabled = nextEnabled
     setPlatformBusy(platform, rowKey(row), 'enabled')
     try {
-      await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
-      await loadAccountOverview()
+      const payload = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
+      mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
       row.enabled = previousEnabled
@@ -205,12 +216,12 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'cooldown')
     try {
-      await accountsApi[platform].setCooldown(
+      const payload = await accountsApi[platform].setCooldown(
         row.accountKey,
         Math.round(minMinutes * 60),
         Math.round(maxMinutes * 60),
       )
-      await loadAccountOverview()
+      mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -228,8 +239,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'downloaderMaxStagedCount')
     try {
-      await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
-      await loadAccountOverview()
+      const payload = await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
+      mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -243,8 +254,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
     setPlatformBusy(platform, rowKey(row), 'nextUploadAllowedAt')
     try {
-      await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
-      await loadAccountOverview()
+      const payload = await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
+      mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -263,8 +274,8 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'quietTime')
     try {
-      await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
-      await loadAccountOverview()
+      const payload = await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
+      mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
@@ -318,6 +329,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   function mergePlatformRow(platform, account, preferredSlot) {
+    if (!account?.accountKey) return
     const state = platformState[platform]
     const rows = [...state.rows.value]
     let index = rows.findIndex(row => row.accountKey === account.accountKey)
@@ -330,8 +342,27 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     if (index < 0) {
       index = 0
     }
-    rows[index] = accountRows([{ ...rows[index], ...account }])[0]
-    state.rows.value = accountRows(rows.filter(row => row.accountKey))
+    const previous = rows[index] || {}
+    const nextRow = mergeAccountPayload(previous, account)
+    rows[index] = nextRow
+    state.rows.value = rows.filter(row => row.accountKey)
+    state.accounts.value = state.accounts.value.some(row => row.accountKey === previous.accountKey || row.accountKey === account.accountKey)
+      ? state.accounts.value.map(row => (row.accountKey === previous.accountKey || row.accountKey === account.accountKey ? nextRow : row))
+      : [...state.accounts.value, nextRow]
+    state.account.value = rows.find(row => row.accountKey === state.account.value?.accountKey) || rows.find(row => row.accountKey) || rows[0]
+  }
+
+  function mergeAccountPayload(previous, account) {
+    const row = accountRows([{ ...previous, ...account, slot: previous.slot }])[0]
+    row.slot = previous.slot || row.slot
+    if (account.statsLoading === true && previous.statsLoading === false) {
+      for (const field of ACCOUNT_STATS_FIELDS) {
+        if (Object.prototype.hasOwnProperty.call(previous, field)) {
+          row[field] = previous[field]
+        }
+      }
+    }
+    return row
   }
 
   function mergePlatformStats(platform, statsRows) {
