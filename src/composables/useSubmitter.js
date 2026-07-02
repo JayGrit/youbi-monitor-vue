@@ -279,7 +279,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         ydbi_rejected_at: null,
       })
       await loadSubmitterVideos(true)
-      submitterMessage.value = `已提交到 YouBi 待执行队列，type=${authorConfig.type}。`
+      submitterMessage.value = `已投稿到 YouBi 待执行队列，type=${authorConfig.type}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
       await loadSubmitterVideos(true)
@@ -341,8 +341,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterSelectedIds.value = ids
       submitterSelectedRows.value = nextRows
       submitterMessage.value = ids.length
-        ? `已选择当前筛选结果中的 ${formatNumber(ids.length)} 条未上传素材。`
-        : '当前筛选结果没有可提交的未上传素材。'
+        ? `已选择当前筛选结果中的 ${formatNumber(ids.length)} 条未投稿素材。`
+        : '当前筛选结果没有可投稿的素材。'
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
@@ -360,7 +360,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterBatchSubmitting.value = true
     submitterSubmittingId.value = 'batch'
     submitterError.value = ''
-    submitterMessage.value = `正在批量提交 ${formatNumber(selectedIds.length)} 条素材...`
+    submitterMessage.value = `正在批量投稿 ${formatNumber(selectedIds.length)} 条素材...`
     const authorConfigByName = new Map()
     const submittedIds = new Set()
     const failedMessages = []
@@ -406,7 +406,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         submitterSelectedRows.value = rows
       }
       await loadSubmitterVideos(true)
-      const parts = [`已提交 ${formatNumber(submittedIds.size)} 条到 YouBi 待执行队列`]
+      const parts = [`已投稿 ${formatNumber(submittedIds.size)} 条到 YouBi 待执行队列`]
       if (skipped) parts.push(`跳过 ${formatNumber(skipped)} 条`)
       if (failedMessages.length) parts.push(`失败 ${formatNumber(failedMessages.length)} 条`)
       submitterMessage.value = `${parts.join('，')}。`
@@ -454,7 +454,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         ydbi_rejected_at: null,
       })
       await loadSubmitterVideos(true)
-      submitterMessage.value = '已撤稿，恢复为未上传状态。'
+      submitterMessage.value = '已撤稿，恢复为未投稿状态。'
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
       await loadSubmitterVideos(true)

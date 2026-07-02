@@ -218,7 +218,7 @@ const emit = defineEmits([
           </select>
         </label>
         <label>
-          <span>上传</span>
+          <span>投稿</span>
           <select
             :value="submitterUploadFilter"
             @change="emit('update:submitterUploadFilter', $event.target.value); applySubmitterFilters()"
@@ -238,7 +238,7 @@ const emit = defineEmits([
     <section class="submitter-table-panel">
       <div class="submitter-batch-bar">
         <div>
-          <strong>批量提交</strong>
+          <strong>批量投稿</strong>
           <span>已选择 {{ formatNumber(submitterSelectedCount) }} 条</span>
         </div>
         <div>
@@ -261,7 +261,7 @@ const emit = defineEmits([
             :disabled="submitterBatchSubmitting || submitterSelectedCount === 0 || Boolean(submitterRejectingId)"
             @click="submitSelectedVideosToYoubi"
           >
-            {{ submitterBatchSubmitting ? '批量提交中' : '提交已选' }}
+            {{ submitterBatchSubmitting ? '批量投稿中' : '投稿已选' }}
           </button>
           <button
             type="button"
@@ -281,7 +281,7 @@ const emit = defineEmits([
                   type="checkbox"
                   :checked="submitterPageAllSelected"
                   :disabled="submitterPageSelectableIds.length === 0 || submitterBatchSubmitting"
-                  aria-label="选择当前页未上传素材"
+                  aria-label="选择当前页未投稿素材"
                   @change="toggleSubmitterPageSelection"
                 />
               </th>
@@ -359,12 +359,12 @@ const emit = defineEmits([
                   >
                     <span v-if="submitterUploadFilter === 'pending' && submitterSubmittingId === String(submitterFieldValue(item, 'id'))">撤稿中</span>
                     <span v-else-if="submitterUploadFilter === 'pending' && submitterSubmissionStatus(item) === 'pending'">撤稿</span>
-                    <span v-else-if="submitterSubmissionStatus(item) === 'uploaded'">已上传</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'uploaded'">已投稿</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'pending'">待执行</span>
                     <span v-else-if="submitterSubmissionStatus(item) === 'rejected'">已拒稿</span>
-                    <span v-else-if="submitterSubmissionStatus(item) === 'failed'">提交失败</span>
-                    <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">上传中</span>
-                    <span v-else>上传</span>
+                    <span v-else-if="submitterSubmissionStatus(item) === 'failed'">投稿失败</span>
+                    <span v-else-if="submitterSubmittingId === String(submitterFieldValue(item, 'id'))">投稿中</span>
+                    <span v-else>投稿</span>
                   </button>
                   <button
                     type="button"
