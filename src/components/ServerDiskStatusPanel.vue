@@ -40,8 +40,8 @@ const diskUsageItems = computed(() => {
   return [
     { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0] },
     { label: 'MinIO youbi-diagnostics', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1] },
-    { label: 'Docker 镜像（非 dangling）', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2] },
-    { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[3] },
+    { label: 'Docker 镜像（保留）', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2] },
+    { label: 'Docker dangling 镜像（可清理）', value: danglingBytes, color: DISK_CHART_COLORS[3] },
     { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4] },
     { label: 'YouBi/workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5] },
     { label: 'MySQL', value: mysqlBytes, color: DISK_CHART_COLORS[6] },
