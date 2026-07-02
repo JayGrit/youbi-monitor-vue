@@ -4,6 +4,7 @@ import { createDistributorApi } from '../api/distributor'
 import { createMonitorApi } from '../api/monitor'
 import { createOperatorDiagnosticsApi } from '../api/operatorDiagnostics'
 import { createQueueMonitorApi } from '../api/queueMonitor'
+import { createServerApi } from '../api/server'
 import { createSubmitterApi } from '../api/submitter'
 import { createAccountPlatforms, createPlatformIconUrls } from '../domain/constants'
 import { useImageCache } from '../composables/useImageCache'
@@ -18,6 +19,7 @@ export function useAppServices() {
   const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger')
   const airouterApi = createQueueMonitorApi(apiBase, 'airouter')
   const accountsApi = createAccountsApi(apiBase, distributorApiBase)
+  const serverApi = createServerApi(apiBase)
   const agentApi = createAgentApi()
   const submitterApi = createSubmitterApi(submitterApiBase)
   const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
@@ -31,6 +33,7 @@ export function useAppServices() {
     ffmpegerApi,
     airouterApi,
     accountsApi,
+    serverApi,
     agentApi,
     submitterApi,
     PLATFORM_ICON_URLS,

@@ -12,6 +12,7 @@ export function useAppShell({
   loadTaskTypes,
   loadFailureLogs,
   loadStaticAssets,
+  loadServerStatus,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -24,6 +25,7 @@ export function useAppShell({
   const activePage = ref(initialPage())
   let monitorTimer = null
   let heartbeatTimer = null
+  let serverTimer = null
   const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 
   function clearMonitorPolling() {
@@ -41,6 +43,17 @@ export function useAppShell({
     heartbeatTimer = window.setInterval(loadServiceHeartbeats, 30000)
   }
 
+  function clearServerPolling() {
+    if (serverTimer) window.clearInterval(serverTimer)
+    serverTimer = null
+  }
+
+  function startServerPolling() {
+    clearServerPolling()
+    loadServerStatus()
+    serverTimer = window.setInterval(loadServerStatus, 30000)
+  }
+
   function syncPolling() {
     const visible = pageVisible.value
     const page = activePage.value
@@ -52,6 +65,9 @@ export function useAppShell({
 
     if (visible && !inFlow && page === 'accounts') startAccountPolling()
     else clearAccountPolling()
+
+    if (visible && !inFlow && page === 'server') startServerPolling()
+    else clearServerPolling()
 
     if (visible && !inFlow && page === 'submitter') resumeSubmitterPolling()
     else clearSubmitterPolling()
@@ -80,6 +96,9 @@ export function useAppShell({
     if (page === 'static-assets') {
       loadStaticAssets()
     }
+    if (page === 'server') {
+      loadServerStatus()
+    }
   }
 
   onMounted(() => {
@@ -97,6 +116,7 @@ export function useAppShell({
   onUnmounted(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
     clearMonitorPolling()
+    clearServerPolling()
     clearAccountPolling()
     clearFlowPolling()
     clearSubmitterPolling()

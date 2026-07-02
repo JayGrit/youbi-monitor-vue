@@ -156,7 +156,7 @@
   cursor: pointer;
 }
 
-.disk-status-modal-body {
+.disk-status-panel-body {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   align-items: center;
@@ -226,7 +226,7 @@
 }
 
 @media (max-width: 680px) {
-  .disk-status-modal-body {
+  .disk-status-panel-body {
     grid-template-columns: 1fr;
     justify-items: center;
     gap: 22px;

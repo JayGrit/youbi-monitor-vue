@@ -4,6 +4,7 @@ import { useAppShell } from '../composables/useAppShell'
 import { useFailureLogs } from '../composables/useFailureLogs'
 import { useSubmitter } from '../composables/useSubmitter'
 import { useStaticAssets } from '../composables/useStaticAssets'
+import { useServer } from '../composables/useServer'
 import { useTaskFlow } from '../composables/useTaskFlow'
 import { useTasks } from '../composables/useTasks'
 import { reactive } from 'vue'
@@ -17,6 +18,7 @@ export function useMonitorApp() {
     ffmpegerApi,
     airouterApi,
     accountsApi,
+    serverApi,
     agentApi,
     submitterApi,
     PLATFORM_ICON_URLS,
@@ -179,6 +181,18 @@ export function useMonitorApp() {
     warmPlatformIcons,
     qrImageUrl,
   } = useAccounts(accountsApi, agentApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
+
+  const {
+    backupperDiskStatus: serverBackupperDiskStatus,
+    backupperDiskStatusText: serverBackupperDiskStatusText,
+    loading: serverLoading,
+    error: serverError,
+    actionBusy: serverActionBusy,
+    actionMessage: serverActionMessage,
+    loadServerStatus,
+    clearBuildCache: clearServerBuildCache,
+    clearDiagnostics: clearServerDiagnostics,
+  } = useServer(serverApi)
 
   const {
     selectedTaskFlow,
@@ -352,6 +366,7 @@ export function useMonitorApp() {
     loadTaskTypes,
     loadFailureLogs,
     loadStaticAssets,
+    loadServerStatus,
     clearAccountPolling,
     clearFlowPolling,
     clearSubmitterPolling,
@@ -502,6 +517,15 @@ export function useMonitorApp() {
     accountKeyGroups,
     backupperDiskStatus,
     backupperDiskStatusText,
+    serverBackupperDiskStatus,
+    serverBackupperDiskStatusText,
+    serverLoading,
+    serverError,
+    serverActionBusy,
+    serverActionMessage,
+    loadServerStatus,
+    clearServerBuildCache,
+    clearServerDiagnostics,
     uploadBackfillOpen,
     uploadBackfillContext,
     uploadBackfillRows,

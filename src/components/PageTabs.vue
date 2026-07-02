@@ -47,6 +47,13 @@ const emit = defineEmits(['openPage'])
       </button>
       <button
         type="button"
+        :class="{ active: activePage === 'server' && !flowPageOpen }"
+        @click="emit('openPage', 'server')"
+      >
+        服务器
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'operator-diagnostics' && !flowPageOpen }"
         @click="emit('openPage', 'operator-diagnostics')"
       >

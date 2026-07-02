@@ -5,6 +5,7 @@
 @import './styles/task-flow.css';
 @import './styles/submitter.css';
 @import './styles/static-assets.css';
+@import './styles/server.css';
 @import './styles/failure-logs.css';
 @import './styles/operator-diagnostics.css';
 @import './styles/responsive.css';
