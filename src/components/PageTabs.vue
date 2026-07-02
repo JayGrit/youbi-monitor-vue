@@ -22,6 +22,13 @@ const emit = defineEmits(['openPage'])
         :class="{ active: activePage === 'submitter' && !flowPageOpen }"
         @click="emit('openPage', 'submitter')"
       >
+        稿件
+      </button>
+      <button
+        type="button"
+        :class="{ active: activePage === 'static-assets' && !flowPageOpen }"
+        @click="emit('openPage', 'static-assets')"
+      >
         素材
       </button>
       <button

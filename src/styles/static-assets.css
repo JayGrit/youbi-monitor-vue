@@ -1,0 +1,414 @@
+.static-assets-page {
+  display: grid;
+  gap: 12px;
+}
+
+.static-assets-status {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5e6d80;
+  font-size: 13px;
+}
+
+.static-assets-counts {
+  margin-left: auto;
+  color: #8a96a8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.static-assets-controls,
+.static-assets-upload-panel,
+.static-assets-table-panel {
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.static-assets-controls,
+.static-assets-upload-panel,
+.static-assets-table-panel {
+  padding: 14px;
+}
+
+.static-assets-filter-grid,
+.static-assets-compose-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(190px, 1fr) minmax(220px, 1.2fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.static-assets-compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.static-assets-upload-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.static-assets-panel-head,
+.static-assets-table-head,
+.static-assets-pagination,
+.static-assets-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.static-assets-panel-head strong,
+.static-assets-table-head strong,
+.static-assets-modal header strong {
+  color: #243044;
+  font-size: 14px;
+}
+
+.static-assets-panel-head span,
+.static-assets-table-head span,
+.static-assets-modal header span {
+  color: #718096;
+  font-size: 12px;
+}
+
+.static-assets-filter-grid label,
+.static-assets-compose-grid label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.static-assets-filter-grid label > span,
+.static-assets-compose-grid label > span {
+  color: #516174;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.static-assets-filter-grid input,
+.static-assets-filter-grid select,
+.static-assets-compose-grid input,
+.static-assets-compose-grid select,
+.static-assets-compose-grid textarea,
+.static-assets-content-copy {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  padding: 0 11px;
+  outline: none;
+  font: inherit;
+}
+
+.static-assets-compose-grid textarea {
+  min-height: 92px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.static-assets-compose-grid.text {
+  grid-template-columns: minmax(140px, 0.8fr) minmax(160px, 1fr) minmax(240px, 1.6fr) auto;
+}
+
+.static-assets-filter-grid input:focus,
+.static-assets-filter-grid select:focus,
+.static-assets-compose-grid input:focus,
+.static-assets-compose-grid select:focus,
+.static-assets-compose-grid textarea:focus,
+.static-assets-content-copy:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+}
+
+.static-assets-actions,
+.static-assets-file-button {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.static-assets-actions button,
+.static-assets-compose-grid button,
+.static-assets-file-button span,
+.static-assets-pagination button,
+.static-assets-modal header button {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #243044;
+  padding: 0 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.static-assets-actions button[type="submit"],
+.static-assets-compose-grid button,
+.static-assets-file-button span {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+.static-assets-actions button:hover:not(:disabled),
+.static-assets-pagination button:hover:not(:disabled),
+.static-assets-modal header button:hover {
+  background: #eef3f8;
+}
+
+.static-assets-actions button[type="submit"]:hover:not(:disabled),
+.static-assets-compose-grid button:hover:not(:disabled),
+.static-assets-file-button:hover span {
+  background: #243044;
+}
+
+.static-assets-actions button:disabled,
+.static-assets-compose-grid button:disabled,
+.static-assets-pagination button:disabled,
+.static-assets-file-button input:disabled + span {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.static-assets-file-button {
+  position: relative;
+  align-self: end;
+}
+
+.static-assets-file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.static-assets-file-button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.static-assets-table-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.static-assets-table {
+  display: grid;
+  gap: 8px;
+}
+
+.static-assets-row {
+  display: grid;
+  grid-template-columns: 80px 76px minmax(0, 1fr) 110px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid #e4ebf3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  padding: 9px 11px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.static-assets-row:hover {
+  border-color: #b9c7d8;
+  background: #f8fafc;
+}
+
+.static-assets-id,
+.static-assets-type,
+.static-assets-length {
+  color: #607086;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.static-assets-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border-radius: 6px;
+  background: #eef3f8;
+}
+
+.static-assets-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.static-assets-main strong,
+.static-assets-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.static-assets-main strong {
+  color: #243044;
+  font-size: 13px;
+}
+
+.static-assets-main small {
+  color: #7a8798;
+  font-size: 12px;
+}
+
+.static-assets-empty {
+  min-height: 90px;
+  display: grid;
+  place-items: center;
+  color: #7a8798;
+  font-size: 13px;
+}
+
+.static-assets-pagination {
+  justify-content: flex-end;
+}
+
+.static-assets-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgb(15 23 42 / 0.38);
+  padding: 24px;
+}
+
+.static-assets-modal {
+  width: min(900px, 100%);
+  max-height: min(780px, calc(100vh - 48px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 22px 60px rgb(15 23 42 / 0.26);
+}
+
+.static-assets-modal header {
+  border-bottom: 1px solid #edf0f4;
+  padding-bottom: 12px;
+}
+
+.static-assets-modal header div {
+  display: grid;
+  gap: 4px;
+}
+
+.static-assets-detail-error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.static-assets-detail-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px 160px;
+  gap: 10px;
+  margin: 0;
+}
+
+.static-assets-detail-meta div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.static-assets-detail-meta dt {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.static-assets-detail-meta dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #243044;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.static-assets-preview {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  overflow: auto;
+  border: 1px solid #e4ebf3;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.static-assets-preview img,
+.static-assets-preview video {
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: 6px;
+}
+
+.static-assets-preview audio {
+  width: 100%;
+}
+
+.static-assets-preview pre {
+  width: 100%;
+  margin: 0;
+  color: #243044;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.static-assets-preview a {
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.static-assets-content-copy {
+  min-height: 86px;
+  padding: 10px 11px;
+  resize: vertical;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@media (max-width: 920px) {
+  .static-assets-filter-grid,
+  .static-assets-compose-grid,
+  .static-assets-compose-grid.text,
+  .static-assets-compose {
+    grid-template-columns: 1fr;
+  }
+
+  .static-assets-row {
+    grid-template-columns: 64px 62px minmax(0, 1fr);
+  }
+
+  .static-assets-length {
+    display: none;
+  }
+
+  .static-assets-detail-meta {
+    grid-template-columns: 1fr;
+  }
+}

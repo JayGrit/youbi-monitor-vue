@@ -11,6 +11,7 @@ export function useAppShell({
   loadServiceHeartbeats,
   loadTaskTypes,
   loadFailureLogs,
+  loadStaticAssets,
   clearAccountPolling,
   clearFlowPolling,
   clearSubmitterPolling,
@@ -76,11 +77,17 @@ export function useAppShell({
     if (page === 'failure-logs') {
       loadFailureLogs()
     }
+    if (page === 'static-assets') {
+      loadStaticAssets()
+    }
   }
 
   onMounted(() => {
     warmPlatformIcons()
     loadTaskTypes()
+    if (activePage.value === 'static-assets') {
+      loadStaticAssets()
+    }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     syncPolling()
   })

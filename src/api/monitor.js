@@ -70,6 +70,42 @@ export function createMonitorApi(apiBase) {
       })
     },
 
+    listStaticAssets({ type, taskId, scope, keyword, limit, offset } = {}) {
+      const params = new URLSearchParams()
+      if (type) params.set('type', type)
+      if (taskId) params.set('taskId', taskId)
+      if (scope && scope !== 'all') params.set('scope', scope)
+      if (keyword) params.set('keyword', keyword)
+      if (limit !== undefined && limit !== null) params.set('limit', String(limit))
+      if (offset !== undefined && offset !== null) params.set('offset', String(offset))
+      const query = params.toString()
+      return requestJson(`${apiBase}/assets${query ? `?${query}` : ''}`)
+    },
+
+    getStaticAsset(id) {
+      return requestJson(`${apiBase}/assets/${encodeURIComponent(id)}`)
+    },
+
+    createStaticTextAsset({ taskId, type, content, remark }) {
+      return requestJson(`${apiBase}/assets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, type, content, remark }),
+      })
+    },
+
+    uploadStaticAsset({ type, taskId, remark, file }) {
+      const form = new FormData()
+      form.append('type', type)
+      if (taskId) form.append('taskId', taskId)
+      if (remark) form.append('remark', remark)
+      form.append('file', file)
+      return requestJson(`${apiBase}/assets/upload`, {
+        method: 'POST',
+        body: form,
+      })
+    },
+
     saveSpeakerSegmentDstText(taskId, segmentId, dstText) {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/speaker-segments/${encodeURIComponent(segmentId)}/dst-text`, {
         method: 'PATCH',

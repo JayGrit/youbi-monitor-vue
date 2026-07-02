@@ -8,6 +8,7 @@ import FailureLogsContainer from './containers/FailureLogsContainer.vue'
 import FfmpegerQueueContainer from './containers/FfmpegerQueueContainer.vue'
 import MonitorContainer from './containers/MonitorContainer.vue'
 import OperatorDiagnosticsContainer from './containers/OperatorDiagnosticsContainer.vue'
+import StaticAssetsContainer from './containers/StaticAssetsContainer.vue'
 import SubmitterAuthorsContainer from './containers/SubmitterAuthorsContainer.vue'
 import SubmitterContainer from './containers/SubmitterContainer.vue'
 import TaskFlowContainer from './containers/TaskFlowContainer.vue'
@@ -27,6 +28,7 @@ const pageShellClass = computed(() => ['page-shell', app.flowPageOpen ? 'flow-pa
     <template v-if="!app.flowPageOpen">
       <MonitorContainer v-if="app.activePage === 'monitor'" :app="app" />
       <SubmitterContainer v-else-if="app.activePage === 'submitter'" :app="app" />
+      <StaticAssetsContainer v-else-if="app.activePage === 'static-assets'" :app="app" />
       <SubmitterAuthorsContainer v-else-if="app.activePage === 'submitter-authors'" :app="app" />
       <AccountsContainer v-else-if="app.activePage === 'accounts'" :app="app" />
       <FfmpegerQueueContainer v-else-if="app.activePage === 'ffmpeger'" :app="app" />
