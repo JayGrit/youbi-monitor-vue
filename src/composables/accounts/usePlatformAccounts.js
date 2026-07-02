@@ -49,6 +49,21 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
         state.account.value = state.rows.value.find(row => row.accountKey) || state.rows.value[0]
         state.error.value = ''
       }
+      loadAccountOverviewStats()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      for (const platform of ACCOUNT_PLATFORM_TYPES) {
+        platformState[platform].error.value = message
+      }
+    }
+  }
+
+  async function loadAccountOverviewStats() {
+    try {
+      const payload = await accountsApi.overviewStats()
+      for (const platform of ACCOUNT_PLATFORM_TYPES) {
+        mergePlatformStats(platform, payload?.[platform] || [])
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       for (const platform of ACCOUNT_PLATFORM_TYPES) {
@@ -317,6 +332,21 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     rows[index] = accountRows([{ ...rows[index], ...account }])[0]
     state.rows.value = accountRows(rows.filter(row => row.accountKey))
+  }
+
+  function mergePlatformStats(platform, statsRows) {
+    const state = platformState[platform]
+    const statsByKey = new Map((statsRows || []).map(row => [row.accountKey, row]))
+    const rows = state.rows.value.map(row => {
+      const stats = statsByKey.get(row.accountKey)
+      return stats ? { ...row, ...stats, statsLoading: false } : row
+    })
+    state.rows.value = rows
+    state.accounts.value = state.accounts.value.map(account => {
+      const stats = statsByKey.get(account.accountKey)
+      return stats ? { ...account, ...stats, statsLoading: false } : account
+    })
+    state.account.value = rows.find(row => row.accountKey === state.account.value?.accountKey) || rows.find(row => row.accountKey) || rows[0]
   }
 
   function platformBusyKey(platform) {

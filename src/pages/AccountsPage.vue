@@ -348,6 +348,7 @@ function lastUploadText(value) {
 }
 
 function nextSendDisplay(row) {
+  if (accountStatsLoading(row)) return '加载中'
   const text = props.nextSendText(row)
   if (text !== '可发送') return text
   const next = parseLocalDateTime(row?.nextUploadAllowedAt)
@@ -363,7 +364,7 @@ function runningTaskId(row) {
 }
 
 function nextSendRunning(row) {
-  return nextSendDisplay(row) === '发送中' && Boolean(runningTaskId(row))
+  return !accountStatsLoading(row) && nextSendDisplay(row) === '发送中' && Boolean(runningTaskId(row))
 }
 
 function openRunningTask(row) {
@@ -373,19 +374,29 @@ function openRunningTask(row) {
 }
 
 function nextSendStale(row) {
-  return nextSendDisplay(row).startsWith('超时')
+  return !accountStatsLoading(row) && nextSendDisplay(row).startsWith('超时')
 }
 
 function nextSendReady(row) {
-  return nextSendDisplay(row) === '可发送'
+  return !accountStatsLoading(row) && nextSendDisplay(row) === '可发送'
 }
 
 function failedUploadCount(row) {
+  if (accountStatsLoading(row)) return 0
   return Number(row?.failedUploadCount || 0)
 }
 
 function stagedFailedCount(row) {
+  if (accountStatsLoading(row)) return 0
   return Number(row?.stagedFailedCount || 0)
+}
+
+function accountStatsLoading(row) {
+  return row?.statsLoading === true
+}
+
+function accountMetricText(row, field) {
+  return accountStatsLoading(row) ? '加载中' : props.accountCountText(row?.[field])
 }
 
 function phoneAccountField(platform) {
@@ -656,16 +667,16 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
                 </span>
                 <template v-else>-</template>
               </span>
-              <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountCountText(item.row.todayUploadCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountCountText(item.row.cooldownWaitingCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="生产中">{{ item.configured ? accountCountText(item.row.stagedRunningCount) : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="上传中">{{ item.configured ? accountCountText(item.row.uploadRunningCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="生产中">{{ item.configured ? accountMetricText(item.row, 'stagedRunningCount') : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && stagedFailedCount(item.row) > 0 }" data-label="生产失败">
-                {{ item.configured ? accountCountText(item.row.stagedFailedCount) : '-' }}
+                {{ item.configured ? accountMetricText(item.row, 'stagedFailedCount') : '-' }}
               </span>
-              <span v-if="!accountEditMode" data-label="待拉取">{{ item.configured ? accountCountText(item.row.downloaderPendingCount) : '-' }}</span>
+              <span v-if="!accountEditMode" data-label="待拉取">{{ item.configured ? accountMetricText(item.row, 'downloaderPendingCount') : '-' }}</span>
               <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
-                {{ item.configured ? accountCountText(item.row.failedUploadCount) : '-' }}
+                {{ item.configured ? accountMetricText(item.row, 'failedUploadCount') : '-' }}
               </span>
               <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span

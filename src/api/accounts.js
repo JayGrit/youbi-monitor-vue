@@ -45,6 +45,9 @@ export function createAccountsApi(apiBase, distributorApiBase = apiBase) {
     overview() {
       return requestJson(`${apiBase}/accounts/overview`)
     },
+    overviewStats() {
+      return requestJson(`${apiBase}/accounts/overview/stats`)
+    },
     backupperStatus() {
       return requestJson(`${apiBase}/accounts/backupper-status`)
     },
