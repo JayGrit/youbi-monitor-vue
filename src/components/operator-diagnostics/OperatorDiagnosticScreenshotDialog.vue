@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { isSameDate, pad2, parseLocalDateTime } from '../../utils/format'
-import { normalizeResourceUrl } from '../../utils/media'
+import { diagnosticArtifactUrl, normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
   api: { type: Object, required: true },
@@ -115,7 +115,7 @@ function diagnosticMeta(row) {
 }
 
 function screenshotUrl(row) {
-  return normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
+  return diagnosticArtifactUrl(row, 'screenshot') || normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
 }
 
 function diagnosticError(row) {

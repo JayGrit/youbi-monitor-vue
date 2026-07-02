@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { formatTime, isSameDate, parseLocalDateTime } from '../../utils/format'
-import { normalizeResourceUrl } from '../../utils/media'
+import { diagnosticArtifactUrl, normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -79,11 +79,11 @@ function diagnosticMeta(row) {
 }
 
 function screenshotUrl(row) {
-  return normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
+  return diagnosticArtifactUrl(row, 'screenshot') || normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
 }
 
 function htmlUrl(row) {
-  return normalizeResourceUrl(row.htmlUrl || row.html_url || '')
+  return diagnosticArtifactUrl(row, 'html') || normalizeResourceUrl(row.htmlUrl || row.html_url || '')
 }
 
 function diagnosticError(row) {

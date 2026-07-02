@@ -1,5 +1,6 @@
 const MINIO_PROXY_BASE = `${import.meta.env.BASE_URL}minio`
 const MINIO_BUCKET = 'ydbi'
+const API_BASE = `${import.meta.env.BASE_URL}api`
 
 function encodePath(path) {
   return String(path || '')
@@ -40,6 +41,16 @@ export function normalizeResourceUrl(url) {
   } catch {
     return text
   }
+}
+
+export function diagnosticArtifactUrl(row, kind) {
+  const id = row?.id
+  if (!id) return ''
+  const path = kind === 'html'
+    ? row.htmlProxyPath || row.html_proxy_path
+    : row.screenshotProxyPath || row.screenshot_proxy_path
+  const normalizedPath = String(path || `operator/diagnostics/${encodeURIComponent(id)}/${kind}`).replace(/^\/+/, '')
+  return `${API_BASE}/${normalizedPath}`
 }
 
 export function youtubeThumbnailUrl(sourceUrl) {
