@@ -363,7 +363,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     const stages = selectedTaskFlow.value?.stages || []
     const whisper = stages.find(stage => stage.key === 'whisper')
     const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
-    const asrSegments = tableRows(whisper, 'asr_segment')
+    const asrSegments = tableRows(whisper, 'whisper_asr_segment')
     const asrByIndex = rowsByIndex(asrSegments)
     const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
     const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
