@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { SPEECH_STAGE_KEY } from '../../../domain/constants'
+import { SPEECH_STAGE_KEY, stageNameText, subStageNameText } from '../../../domain/constants'
 import AsseterAudioVisualizationDetail from './AsseterAudioVisualizationDetail.vue'
 import AsseterImageCompositionDetail from './AsseterImageCompositionDetail.vue'
 import CombinerAsmrDetail from './CombinerAsmrDetail.vue'
@@ -102,6 +102,16 @@ const detailComponent = computed(() => {
   if (detailKey.value === SPEECH_STAGE_KEY) return SpeechMainDetail
   return detailComponents[detailKey.value] || NoDetailPage
 })
+const detailTitle = computed(() => {
+  if (detailKey.value === SPEECH_STAGE_KEY) {
+    return `${stageNameText[SPEECH_STAGE_KEY]} - ${subStageNameText.main}`
+  }
+  const [stage, ...subStageParts] = detailKey.value.split(':')
+  const subStage = subStageParts.join(':') || 'main'
+  const stageLabel = stageNameText[stage] || stage || '-'
+  const subStageLabel = subStageNameText[subStage] || subStage || '-'
+  return `${stageLabel} - ${subStageLabel}`
+})
 const context = computed(() => ({
   ...props,
   stage: props.selectedStage,
@@ -113,10 +123,15 @@ const context = computed(() => ({
 </script>
 
 <template>
-  <pre v-if="context.stage?.errorMessage" class="flow-stage-error">{{ context.stage.errorMessage }}</pre>
-  <component
-    :is="detailComponent"
-    :context="context"
-    @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
-  />
+  <div class="substage-detail">
+    <header class="substage-detail-title" aria-label="当前详情阶段">
+      <h3>{{ detailTitle }}</h3>
+    </header>
+    <pre v-if="context.stage?.errorMessage" class="flow-stage-error">{{ context.stage.errorMessage }}</pre>
+    <component
+      :is="detailComponent"
+      :context="context"
+      @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
+    />
+  </div>
 </template>

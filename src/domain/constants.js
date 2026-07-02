@@ -88,6 +88,24 @@ export const stageNameText = {
   uploader: 'Uploader',
 }
 
+export const subStageNameText = {
+  main: 'Main',
+  metadata: 'Metadata',
+  source_transcription: 'Source Transcription',
+  dubbing_alignment: 'Dubbing Alignment',
+  narration: 'Narration',
+  dubbing_multi_segment: 'Dubbing Multi Segment',
+  audio_visualization: 'Audio Visualization',
+  image_composition: 'Image Composition',
+  asmr: 'ASMR',
+  audio_merge: 'Audio Merge',
+  video_render: 'Video Render',
+  segment_plan: 'Segment Plan',
+  image_generation: 'Image Generation',
+  script_generation: 'Script Generation',
+  publish_metadata: 'Publish Metadata',
+}
+
 export const uploadPlatformText = {
   bilibili: 'B站',
   xiaohongshu: '小红书',

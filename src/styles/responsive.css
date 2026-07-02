@@ -572,6 +572,11 @@
     padding: 12px 10px 24px;
   }
 
+  .substage-detail-title {
+    margin: -12px -10px 12px;
+    padding: 9px 10px;
+  }
+
   .flow-stage-head {
     align-items: flex-start;
     flex-direction: column;
