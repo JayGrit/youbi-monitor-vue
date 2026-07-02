@@ -199,6 +199,11 @@
   padding: 14px;
 }
 
+.flow-empty-detail {
+  color: #607086;
+  font-size: 13px;
+}
+
 .flow-section h4 {
   margin: 0 0 12px;
   color: #243044;

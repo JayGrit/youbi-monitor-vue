@@ -66,13 +66,30 @@ const props = defineProps({
 const emit = defineEmits(['update:speechEditDraft'])
 const vocalsPlayback = ref({ currentMs: 0, playing: false })
 const demucsAudioPanel = ref(null)
+const selectedSubStage = computed(() => {
+  const parts = props.selectedStageKey.split(':')
+  return parts.length > 1 ? parts.slice(1).join(':') || 'main' : 'main'
+})
 const publisherSubStage = computed(() => {
   if (!props.selectedStageKey.startsWith('publisher:')) return 'main'
-  return props.selectedStageKey.slice('publisher:'.length) || 'main'
+  return selectedSubStage.value
 })
 const combinerSubStage = computed(() => {
   if (!props.selectedStageKey.startsWith('combiner:')) return 'main'
-  return props.selectedStageKey.slice('combiner:'.length) || 'main'
+  return selectedSubStage.value
+})
+const hasDetailPage = computed(() => {
+  const stage = props.selectedStage?.key
+  const subStage = selectedSubStage.value
+  if (props.selectedStageKey === SPEECH_STAGE_KEY) return true
+  if (subStage === 'main') return true
+  if (stage === 'publisher') {
+    return ['segment_plan', 'image_generation', 'publish_metadata'].includes(subStage)
+  }
+  if (stage === 'combiner') {
+    return ['audio_merge', 'video_render'].includes(subStage)
+  }
+  return false
 })
 
 function demucsStage(flow) {
@@ -111,6 +128,9 @@ function seekVocalsPlayback(ms) {
       />
 
       <section v-if="selectedStage" class="flow-stage">
+        <div v-if="!hasDetailPage" class="flow-section flow-empty-detail">无详情页</div>
+
+        <template v-else>
         <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
 
         <StageMediaGrid
@@ -257,6 +277,7 @@ function seekVocalsPlayback(ms) {
           v-if="selectedStage.key === 'whisper'"
           :processing="whisperProcessing"
         />
+        </template>
 
       </section>
       <div v-else-if="flowLoading" class="flow-loading">Loading stage metrics</div>

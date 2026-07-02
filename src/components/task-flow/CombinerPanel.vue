@@ -16,7 +16,7 @@ defineProps({
 
 <template>
   <CombinerAudioPanel
-    v-if="subStage === 'audio_mix'"
+    v-if="subStage === 'audio_merge'"
     :stage="stage"
     :jobs="jobs"
     :media="media"
@@ -28,7 +28,7 @@ defineProps({
     :jobs="jobs"
   />
   <CombinerFinalVideoPanel
-    v-else-if="subStage === 'final_video'"
+    v-else-if="subStage === 'video_render'"
     :flow="flow"
     :stage="stage"
     :jobs="jobs"

@@ -195,8 +195,10 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function detailStageKey(stageKey, subStage = 'main') {
-    if (SPEECH_STAGE_KEYS.includes(stageKey)) return SPEECH_STAGE_KEY
-    if (['publisher', 'combiner'].includes(stageKey) && subStage && subStage !== 'main') return `${stageKey}:${subStage}`
+    if (stageKey === SPEECH_STAGE_KEY || (SPEECH_STAGE_KEYS.includes(stageKey) && (!subStage || subStage === 'main'))) {
+      return SPEECH_STAGE_KEY
+    }
+    if (subStage && subStage !== 'main') return `${stageKey}:${subStage}`
     return stageKey
   }
 
