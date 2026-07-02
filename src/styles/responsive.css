@@ -207,10 +207,6 @@
     grid-template-columns: 1fr;
   }
 
-  .downloader-info-main h3 {
-    font-size: 16px;
-  }
-
   .status-line {
     min-height: 30px;
     align-items: flex-start;

@@ -189,15 +189,14 @@ function assetText(asset) {
         <div v-else class="downloader-cover downloader-cover-empty">无视频</div>
 
         <div class="downloader-info-main">
-          <h3>{{ videoInfo.title || flow?.task?.title || flow?.task?.id || '-' }}</h3>
           <dl class="downloader-meta-list">
-            <div>
-              <dt>作者</dt>
-              <dd>{{ videoInfo.source_uploader || '-' }}</dd>
-            </div>
-            <div>
-              <dt>视频时长</dt>
-              <dd>{{ formatDuration(videoInfo.source_duration_seconds) }}</dd>
+            <div class="downloader-inline-meta">
+              <dd>
+                <span class="downloader-info-pills">
+                  <span>{{ videoInfo.source_uploader || '-' }}</span>
+                  <span>{{ formatDuration(videoInfo.source_duration_seconds) }}</span>
+                </span>
+              </dd>
             </div>
             <div>
               <dt>字幕文本</dt>
@@ -232,7 +231,6 @@ function assetText(asset) {
     </section>
 
     <section class="flow-section downloader-subtasks">
-      <h4>子任务下载进度</h4>
       <div class="downloader-task-list">
         <article v-for="row in taskRows" :key="row.kind" :class="['downloader-task', `status-${row.status || 'pending'}`]">
           <div class="downloader-task-head">

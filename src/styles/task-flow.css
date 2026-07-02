@@ -263,14 +263,6 @@
   min-width: 0;
 }
 
-.downloader-info-main h3 {
-  margin: 0 0 12px;
-  color: #172033;
-  font-size: 18px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
 .downloader-meta-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -280,6 +272,10 @@
 
 .downloader-meta-list div {
   min-width: 0;
+}
+
+.downloader-inline-meta {
+  grid-column: 1 / -1;
 }
 
 .downloader-description {
@@ -347,6 +343,28 @@
   text-transform: uppercase;
 }
 
+.downloader-info-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.downloader-info-pills span {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 24px;
+  align-items: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.2;
+  padding: 0 8px;
+  overflow-wrap: anywhere;
+}
+
 .downloader-subtitle-row button:hover {
   border-color: #93c5fd;
   background: #dbeafe;
@@ -381,7 +399,7 @@
 
 .downloader-task-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -480,6 +498,11 @@
   margin-top: 12px;
   border-top: 1px solid #edf2f7;
   padding-top: 12px;
+}
+
+.downloader-audio,
+.downloader-video {
+  max-width: 100%;
 }
 
 .downloader-audio audio,
