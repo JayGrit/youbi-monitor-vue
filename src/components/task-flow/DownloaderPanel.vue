@@ -9,6 +9,7 @@ const props = defineProps({
   media: { type: Array, default: () => [] },
   coverUrl: { type: String, default: '' },
   logAudioEvent: { type: Function, required: true },
+  taskKinds: { type: Array, default: () => ['metadata', 'audio', 'video'] },
 })
 
 const videoInfo = computed(() => props.flow?.videoInfo || {})
@@ -41,8 +42,10 @@ const detailRows = computed(() => {
 })
 
 const taskRows = computed(() => {
-  const rows = [...detailRows.value]
-  for (const kind of ['metadata', 'audio', 'video']) {
+  const kinds = props.taskKinds.length ? props.taskKinds : ['metadata', 'audio', 'video']
+  const allowedKinds = new Set(kinds)
+  const rows = detailRows.value.filter(row => allowedKinds.has(row?.kind))
+  for (const kind of kinds) {
     if (!rows.some(row => row?.kind === kind)) {
       rows.push({ kind, status: 'pending', progress_percent: 0 })
     }

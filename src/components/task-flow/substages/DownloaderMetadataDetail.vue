@@ -1,5 +1,5 @@
 <script setup>
-import NoDetailPage from './NoDetailPage.vue'
+import DownloaderPanel from '../DownloaderPanel.vue'
 
 defineProps({
   context: { type: Object, required: true },
@@ -7,5 +7,12 @@ defineProps({
 </script>
 
 <template>
-  <NoDetailPage />
+  <DownloaderPanel
+    :flow="context.flow"
+    :stage="context.stage"
+    :media="context.media"
+    :cover-url="context.coverUrl"
+    :log-audio-event="context.logAudioEvent"
+    :task-kinds="['metadata']"
+  />
 </template>
