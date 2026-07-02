@@ -105,5 +105,6 @@ export function useAppShell({
 function initialPage() {
   if (typeof window === 'undefined') return 'accounts'
   const page = new URLSearchParams(window.location.search).get('page')
+  if (page === 'operator-diagnostics') return 'accounts'
   return page || 'accounts'
 }
