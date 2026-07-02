@@ -153,8 +153,8 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       flowLoading.value = true
     }
     try {
-      const needsWhisperMetrics = ['demucs', 'whisper', SPEECH_STAGE_KEY].includes(detailStage)
-      const flowDetailStage = detailStage === 'whisper' ? SPEECH_STAGE_KEY : detailStage
+      const needsWhisperMetrics = ['demucs', 'whisper', 'translator', 'speaker', SPEECH_STAGE_KEY].includes(detailStage)
+      const flowDetailStage = ['whisper', 'translator', 'speaker'].includes(detailStage) ? SPEECH_STAGE_KEY : detailStage
       const [flow, words, processing] = await Promise.all([
         monitorApi.loadTaskFlow(taskId, flowDetailStage),
         needsWhisperMetrics ? monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []) : Promise.resolve(null),
@@ -195,9 +195,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   }
 
   function detailStageKey(stageKey, subStage = 'main') {
-    if (stageKey === SPEECH_STAGE_KEY || (SPEECH_STAGE_KEYS.includes(stageKey) && (!subStage || subStage === 'main'))) {
-      return SPEECH_STAGE_KEY
-    }
+    if (stageKey === SPEECH_STAGE_KEY) return SPEECH_STAGE_KEY
     if (subStage && subStage !== 'main') return `${stageKey}:${subStage}`
     return stageKey
   }

@@ -1,17 +1,7 @@
 <script setup>
-import DemucsAudioPanel from '../components/task-flow/DemucsAudioPanel.vue'
-import DownloaderPanel from '../components/task-flow/DownloaderPanel.vue'
-import SpeechJoinedTable from '../components/task-flow/SpeechJoinedTable.vue'
-import StageMediaGrid from '../components/task-flow/StageMediaGrid.vue'
-import CombinerPanel from '../components/task-flow/CombinerPanel.vue'
-import PublisherPanel from '../components/task-flow/PublisherPanel.vue'
+import SubStageDetailPanel from '../components/task-flow/substages/SubStageDetailPanel.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
-import UploadSubmissionGrid from '../components/task-flow/UploadSubmissionGrid.vue'
-import WhisperProcessingPanel from '../components/task-flow/WhisperProcessingPanel.vue'
-import AsseterPanel from '../components/task-flow/AsseterPanel.vue'
-import { SPEECH_STAGE_KEY } from '../domain/constants'
-import { computed, ref } from 'vue'
 
 const props = defineProps({
   selectedTaskFlow: { type: Object, default: null },
@@ -64,45 +54,6 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:speechEditDraft'])
-const vocalsPlayback = ref({ currentMs: 0, playing: false })
-const demucsAudioPanel = ref(null)
-const selectedSubStage = computed(() => {
-  const parts = props.selectedStageKey.split(':')
-  return parts.length > 1 ? parts.slice(1).join(':') || 'main' : 'main'
-})
-const publisherSubStage = computed(() => {
-  if (!props.selectedStageKey.startsWith('publisher:')) return 'main'
-  return selectedSubStage.value
-})
-const combinerSubStage = computed(() => {
-  if (!props.selectedStageKey.startsWith('combiner:')) return 'main'
-  return selectedSubStage.value
-})
-const hasDetailPage = computed(() => {
-  const stage = props.selectedStage?.key
-  const subStage = selectedSubStage.value
-  if (props.selectedStageKey === SPEECH_STAGE_KEY) return true
-  if (subStage === 'main') return true
-  if (stage === 'publisher') {
-    return ['segment_plan', 'image_generation', 'publish_metadata'].includes(subStage)
-  }
-  if (stage === 'combiner') {
-    return ['audio_merge', 'video_render'].includes(subStage)
-  }
-  return false
-})
-
-function demucsStage(flow) {
-  return flow?.stages?.find(stage => stage.key === 'demucs') || null
-}
-
-function vocalsOnlyMedia(stage) {
-  return props.demucsAudioMedia(stage).filter(asset => asset.key === 'vocals')
-}
-
-function seekVocalsPlayback(ms) {
-  demucsAudioPanel.value?.seekVocals(ms)
-}
 </script>
 
 <template>
@@ -128,87 +79,26 @@ function seekVocalsPlayback(ms) {
       />
 
       <section v-if="selectedStage" class="flow-stage">
-        <div v-if="!hasDetailPage" class="flow-section flow-empty-detail">无详情页</div>
-
-        <template v-else>
-        <pre v-if="selectedStage.errorMessage" class="flow-stage-error">{{ selectedStage.errorMessage }}</pre>
-
-        <StageMediaGrid
-          v-if="selectedStage.key === 'uploader' && stageMedia(selectedStage).length"
-          :media="stageMedia(selectedStage)"
-          :log-audio-event="logAudioEvent"
-          compact
-        />
-
-        <UploadSubmissionGrid
-          v-if="selectedStage.key === 'uploader' && uploadSubmissionRows(selectedStage).length"
-          :rows="uploadSubmissionRows(selectedStage)"
-          :upload-platform-name="uploadPlatformName"
+        <SubStageDetailPanel
+          :selected-stage-key="selectedStageKey"
+          :selected-task-flow="selectedTaskFlow"
+          :selected-stage="selectedStage"
+          :speech-edit-draft="speechEditDraft"
+          :speech-edit-saving="speechEditSaving"
+          :speech-edit-error="speechEditError"
+          :uploader-diagnostics="uploaderDiagnostics"
+          :uploader-diagnostics-loading="uploaderDiagnosticsLoading"
+          :uploader-diagnostics-error="uploaderDiagnosticsError"
           :platform-icon-urls="platformIconUrls"
-          :diagnostics="uploaderDiagnostics"
-          :loading="uploaderDiagnosticsLoading"
-          :error="uploaderDiagnosticsError"
-          :load-diagnostics="loadSelectedUploaderDiagnostics"
-        />
-
-        <PublisherPanel
-          v-if="selectedStage.key === 'publisher'"
-          :sub-stage="publisherSubStage"
-          :flow="selectedTaskFlow"
-          :rows="publisherResultRows(selectedStage)"
-          :jobs="stageTableRows(selectedStage, 'publisher_jobs')"
-          :narrations="stageTableRows(selectedStage, 'product_narration')"
-          :sentences="stageTableRows(selectedStage, 'product_narration_sentence')"
-          :diagnostics="uploaderDiagnostics"
-          :diagnostics-loading="uploaderDiagnosticsLoading"
-          :diagnostics-error="uploaderDiagnosticsError"
-          :load-diagnostics="loadSelectedUploaderDiagnostics"
+          :whisper-word-timestamps="whisperWordTimestamps"
+          :whisper-processing="whisperProcessing"
+          :flow-cover-url="flowCoverUrl"
+          :stage-media="stageMedia"
+          :demucs-audio-media="demucsAudioMedia"
+          :upload-submission-rows="uploadSubmissionRows"
+          :publisher-result-rows="publisherResultRows"
+          :stage-table-rows="stageTableRows"
           :upload-platform-name="uploadPlatformName"
-          :submit-segments="submitNarrationSegments"
-          :upload-image="uploadNarrationImage"
-        />
-
-        <AsseterPanel
-          v-if="selectedStage.key === 'asseter'"
-          :jobs="stageTableRows(selectedStage, 'asseter_jobs')"
-          :media="stageMedia(selectedStage)"
-          :log-audio-event="logAudioEvent"
-        />
-
-        <CombinerPanel
-          v-if="selectedStage.key === 'combiner'"
-          :sub-stage="combinerSubStage"
-          :flow="selectedTaskFlow"
-          :stage="selectedStage"
-          :jobs="[...stageTableRows(selectedStage, 'combiner_jobs'), ...stageTableRows(selectedStage, 'combiner_job')]"
-          :media="stageMedia(selectedStage)"
-          :log-audio-event="logAudioEvent"
-        />
-
-        <DemucsAudioPanel
-          v-if="selectedStage.key === 'demucs'"
-          ref="demucsAudioPanel"
-          :media="demucsAudioMedia(selectedStage)"
-          :words="whisperWordTimestamps"
-          :log-audio-event="logAudioEvent"
-          @vocals-playback="vocalsPlayback = $event"
-        />
-
-        <DemucsAudioPanel
-          v-if="selectedStage.key === 'whisper'"
-          ref="demucsAudioPanel"
-          :media="vocalsOnlyMedia(demucsStage(selectedTaskFlow))"
-          :words="whisperWordTimestamps"
-          :log-audio-event="logAudioEvent"
-          :show-bgm="false"
-          @vocals-playback="vocalsPlayback = $event"
-        />
-
-        <SpeechJoinedTable
-          v-if="selectedStage.key === 'whisper'"
-          :speech-edit-draft="speechEditDraft"
-          :speech-edit-saving="speechEditSaving"
-          :speech-edit-error="speechEditError"
           :speech-columns="speechColumns"
           :speech-rows="speechRows"
           :show-speech-column="showSpeechColumn"
@@ -222,63 +112,11 @@ function seekVocalsPlayback(ms) {
           :begin-speech-edit="beginSpeechEdit"
           :table-cell-text="tableCellText"
           :table-cell-summary="tableCellSummary"
-          :words="whisperWordTimestamps"
-          :processing="whisperProcessing"
-          :vocals-playback="vocalsPlayback"
-          :seek-vocals-playback="seekVocalsPlayback"
-          speech-view="whisper"
-          :show-speech-view-toggle="false"
+          :load-selected-uploader-diagnostics="loadSelectedUploaderDiagnostics"
+          :submit-narration-segments="submitNarrationSegments"
+          :upload-narration-image="uploadNarrationImage"
           @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
         />
-
-        <DownloaderPanel
-          v-if="selectedStage.key === 'downloader'"
-          :flow="selectedTaskFlow"
-          :stage="selectedStage"
-          :media="stageMedia(selectedStage)"
-          :cover-url="flowCoverUrl(selectedTaskFlow)"
-          :log-audio-event="logAudioEvent"
-        />
-
-        <StageMediaGrid
-          v-if="selectedStageKey !== SPEECH_STAGE_KEY && !['publisher', 'asseter', 'combiner', 'uploader', 'demucs', 'whisper', 'downloader'].includes(selectedStage.key) && stageMedia(selectedStage).length"
-          :media="stageMedia(selectedStage)"
-          :log-audio-event="logAudioEvent"
-        />
-
-        <SpeechJoinedTable
-          v-if="selectedStageKey === SPEECH_STAGE_KEY"
-          :speech-edit-draft="speechEditDraft"
-          :speech-edit-saving="speechEditSaving"
-          :speech-edit-error="speechEditError"
-          :speech-columns="speechColumns"
-          :speech-rows="speechRows"
-          :show-speech-column="showSpeechColumn"
-          :speech-audio-asset="speechAudioAsset"
-          :log-audio-event="logAudioEvent"
-          :speech-more-rows="speechMoreRows"
-          :is-editing-speech-dst-text="isEditingSpeechDstText"
-          :save-speech-dst-text="saveSpeechDstText"
-          :cancel-speech-edit="cancelSpeechEdit"
-          :can-edit-speech-dst-text="canEditSpeechDstText"
-          :begin-speech-edit="beginSpeechEdit"
-          :table-cell-text="tableCellText"
-          :table-cell-summary="tableCellSummary"
-          :words="whisperWordTimestamps"
-          :processing="whisperProcessing"
-          :vocals-playback="vocalsPlayback"
-          :seek-vocals-playback="seekVocalsPlayback"
-          speech-view="translator-chunk"
-          :show-speech-view-toggle="false"
-          @update:speech-edit-draft="emit('update:speechEditDraft', $event)"
-        />
-
-        <WhisperProcessingPanel
-          v-if="selectedStage.key === 'whisper'"
-          :processing="whisperProcessing"
-        />
-        </template>
-
       </section>
       <div v-else-if="flowLoading" class="flow-loading">Loading stage metrics</div>
     </template>
