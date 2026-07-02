@@ -1,6 +1,7 @@
 <script setup>
 import { STATIC_ASSET_TYPES } from '../composables/useStaticAssets'
 import { formatDateTime, formatNumber } from '../utils/format'
+import { normalizeResourceUrl } from '../utils/media'
 
 const props = defineProps({
   assetRows: { type: Array, default: () => [] },
@@ -59,6 +60,10 @@ function handleUpload(event) {
 
 function selectedContentKind() {
   return props.assetContentKind(props.selectedAsset)
+}
+
+function selectedAssetMediaUrl() {
+  return normalizeResourceUrl(props.selectedAsset?.content || '')
 }
 </script>
 
@@ -260,10 +265,10 @@ function selectedContentKind() {
             </div>
           </dl>
           <div class="static-assets-preview">
-            <img v-if="selectedAsset.type === 'image' && selectedContentKind() === 'url'" :src="selectedAsset.content" alt="" />
-            <audio v-else-if="['audio', 'voice'].includes(selectedAsset.type) && selectedContentKind() === 'url'" :src="selectedAsset.content" controls></audio>
-            <video v-else-if="selectedAsset.type === 'video' && selectedContentKind() === 'url'" :src="selectedAsset.content" controls></video>
-            <a v-else-if="selectedContentKind() === 'url'" :href="selectedAsset.content" target="_blank" rel="noreferrer">
+            <img v-if="selectedAsset.type === 'image' && selectedContentKind() === 'url'" :src="selectedAssetMediaUrl()" alt="" />
+            <audio v-else-if="['audio', 'voice'].includes(selectedAsset.type) && selectedContentKind() === 'url'" :src="selectedAssetMediaUrl()" controls></audio>
+            <video v-else-if="selectedAsset.type === 'video' && selectedContentKind() === 'url'" :src="selectedAssetMediaUrl()" controls></video>
+            <a v-else-if="selectedContentKind() === 'url'" :href="selectedAssetMediaUrl()" target="_blank" rel="noreferrer">
               打开素材链接
             </a>
             <pre v-else>{{ selectedAsset.content }}</pre>
