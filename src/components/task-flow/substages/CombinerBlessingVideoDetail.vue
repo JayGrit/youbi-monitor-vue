@@ -9,13 +9,13 @@ defineProps({
 <template>
   <GenericSubStageDetail
     :context="context"
-    title="ASMR 视频合成"
-    :summary-tables="['product_asmr']"
-    :data-tables="['product_asmr']"
+    title="祝福视频合成"
+    :summary-tables="['product_blessing']"
+    :data-tables="['product_blessing']"
     :job-tables="['combiner_jobs', 'combiner_job']"
     job-name-field="job_key"
     job-order-field="id"
     job-result-field="response_json"
-    :media-pattern="/asmr|frame|reference|video|image|mp4|mov|webm|jpg|png/i"
+    :media-pattern="/blessing|image|music|video|mp4|mov|webm|mp3|wav|png|jpg/i"
   />
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import NoDetailPage from './NoDetailPage.vue'
+import GenericSubStageDetail from './GenericSubStageDetail.vue'
 
 defineProps({
   context: { type: Object, required: true },
@@ -7,5 +7,11 @@ defineProps({
 </script>
 
 <template>
-  <NoDetailPage />
+  <GenericSubStageDetail
+    :context="context"
+    title="旁白配音"
+    :summary-tables="['product_narration']"
+    :data-tables="['product_narration_sentence', 'speaker_segment']"
+    :media-pattern="/narration|tts|reference|voice|audio|segment/i"
+  />
 </template>

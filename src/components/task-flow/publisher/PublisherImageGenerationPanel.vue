@@ -6,6 +6,7 @@ import { jobPrompt } from './publisherUtils'
 
 const props = defineProps({
   narrations: { type: Array, default: () => [] },
+  blessings: { type: Array, default: () => [] },
   jobs: { type: Array, default: () => [] },
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
@@ -16,6 +17,7 @@ const props = defineProps({
 })
 
 const narration = computed(() => props.narrations[0] || {})
+const blessing = computed(() => props.blessings[0] || {})
 const imageItems = computed(() => [
   {
     kind: 'cover',
@@ -30,6 +32,15 @@ const imageItems = computed(() => [
     ratio: '4:3',
     prompt: jobPrompt(props.jobs, 'generate_background_image', narration.value.background_prompt, '4:3'),
     url: narration.value.background_image_url || '',
+  },
+].filter(item => item.prompt || item.url))
+const blessingItems = computed(() => [
+  {
+    kind: 'blessing',
+    label: '祝福图',
+    ratio: '1:1',
+    prompt: blessing.value.prompt || jobPrompt(props.jobs, 'generate_blessing_image', '', '1:1'),
+    url: blessing.value.image_url || '',
   },
 ])
 const diagnosticItems = computed(() => [
@@ -47,8 +58,18 @@ function jobOperatorOpId(jobName) {
   <div class="publisher-panel">
     <section class="flow-section narration-section">
       <h4>图片生成</h4>
-      <PublisherImageTable :items="imageItems" :upload-image="uploadImage" />
+      <PublisherImageTable v-if="imageItems.length" :items="imageItems" :upload-image="uploadImage" />
+      <PublisherImageTable v-if="blessing.image_url || blessing.prompt" :items="blessingItems" :upload-image="uploadImage" />
+      <dl v-if="blessing.id" class="substage-field-grid publisher-blessing-summary">
+        <dt>blessing_text</dt>
+        <dd>{{ blessing.blessing_text || '-' }}</dd>
+        <dt>background_music_url</dt>
+        <dd>{{ blessing.background_music_url || '-' }}</dd>
+        <dt>video_url</dt>
+        <dd>{{ blessing.video_url || '-' }}</dd>
+      </dl>
       <pre v-if="narration.error_message" class="flow-stage-error">{{ narration.error_message }}</pre>
+      <pre v-if="blessing.error_message" class="flow-stage-error">{{ blessing.error_message }}</pre>
     </section>
     <PublisherDiagnosticsPanel
       :diagnostics="diagnostics"

@@ -1,5 +1,5 @@
 <script setup>
-import NoDetailPage from './NoDetailPage.vue'
+import GenericSubStageDetail from './GenericSubStageDetail.vue'
 
 defineProps({
   context: { type: Object, required: true },
@@ -7,5 +7,11 @@ defineProps({
 </script>
 
 <template>
-  <NoDetailPage />
+  <GenericSubStageDetail
+    :context="context"
+    title="源音频转写"
+    :summary-tables="['whisper']"
+    :data-tables="['whisper_asr_segment', 'whisper_word_timestamp']"
+    :media-pattern="/audio|vocal|source|asr|transcript|subtitle/i"
+  />
 </template>

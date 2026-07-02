@@ -15,6 +15,7 @@ import PublisherMainDetail from './PublisherMainDetail.vue'
 import PublisherPublishMetadataDetail from './PublisherPublishMetadataDetail.vue'
 import PublisherScriptGenerationDetail from './PublisherScriptGenerationDetail.vue'
 import PublisherSegmentPlanDetail from './PublisherSegmentPlanDetail.vue'
+import CombinerBlessingVideoDetail from './CombinerBlessingVideoDetail.vue'
 import SpeakerDubbingMultiSegmentDetail from './SpeakerDubbingMultiSegmentDetail.vue'
 import SpeakerMainDetail from './SpeakerMainDetail.vue'
 import SpeakerNarrationDetail from './SpeakerNarrationDetail.vue'
@@ -70,6 +71,8 @@ const detailComponents = {
   'asseter:audio_visualization': AsseterAudioVisualizationDetail,
   'asseter:image_composition': AsseterImageCompositionDetail,
   'combiner:asmr': CombinerAsmrDetail,
+  'combiner:audio_align': CombinerAudioMergeDetail,
+  'combiner:blessing_video': CombinerBlessingVideoDetail,
   'combiner:audio_merge': CombinerAudioMergeDetail,
   'combiner:main': CombinerMainDetail,
   'combiner:video_render': CombinerVideoRenderDetail,
@@ -112,13 +115,35 @@ const detailTitle = computed(() => {
   const subStageLabel = subStageNameText[subStage] || subStage || '-'
   return `${stageLabel} - ${subStageLabel}`
 })
+const detailParts = computed(() => {
+  if (detailKey.value === SPEECH_STAGE_KEY) {
+    return { stage: SPEECH_STAGE_KEY, subStage: 'main', detailKey: SPEECH_STAGE_KEY }
+  }
+  const [stage, ...subStageParts] = detailKey.value.split(':')
+  return {
+    stage,
+    subStage: subStageParts.join(':') || 'main',
+    detailKey: detailKey.value,
+  }
+})
+function stageRowsBySubStage(stage, tableName, subStage = detailParts.value.subStage) {
+  const rows = props.stageTableRows(stage, tableName)
+  if (!subStage) return rows
+  const matched = rows.filter(row => String(row?.sub_stage || '') === subStage)
+  if (matched.length) return matched
+  return rows.filter(row => row?.sub_stage === undefined || row?.sub_stage === null || row?.sub_stage === '')
+}
 const context = computed(() => ({
   ...props,
   stage: props.selectedStage,
+  stageKey: detailParts.value.stage,
+  subStage: detailParts.value.subStage,
+  detailKey: detailParts.value.detailKey,
   flow: props.selectedTaskFlow,
   media: props.stageMedia(props.selectedStage),
   demucsMedia: props.demucsAudioMedia(props.selectedStage),
   coverUrl: props.flowCoverUrl(props.selectedTaskFlow),
+  stageRowsBySubStage,
 }))
 </script>
 

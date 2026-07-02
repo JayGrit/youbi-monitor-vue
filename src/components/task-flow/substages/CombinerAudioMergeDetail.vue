@@ -1,15 +1,21 @@
 <script setup>
+import { computed } from 'vue'
 import CombinerAudioPanel from '../combiner/CombinerAudioPanel.vue'
 
-defineProps({
+const props = defineProps({
   context: { type: Object, required: true },
 })
+
+const jobs = computed(() => [
+  ...props.context.stageRowsBySubStage(props.context.stage, 'combiner_jobs', props.context.subStage),
+  ...props.context.stageRowsBySubStage(props.context.stage, 'combiner_job', props.context.subStage),
+])
 </script>
 
 <template>
   <CombinerAudioPanel
     :stage="context.stage"
-    :jobs="[...context.stageTableRows(context.stage, 'combiner_jobs'), ...context.stageTableRows(context.stage, 'combiner_job')]"
+    :jobs="jobs"
     :media="context.media"
     :log-audio-event="context.logAudioEvent"
   />

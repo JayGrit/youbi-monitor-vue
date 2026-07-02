@@ -9,6 +9,7 @@ defineProps({
 <template>
   <PublisherImageGenerationPanel
     :narrations="context.stageTableRows(context.stage, 'product_narration')"
+    :blessings="context.stageTableRows(context.stage, 'product_blessing')"
     :jobs="context.stageTableRows(context.stage, 'publisher_jobs')"
     :diagnostics="context.uploaderDiagnostics"
     :diagnostics-loading="context.uploaderDiagnosticsLoading"
