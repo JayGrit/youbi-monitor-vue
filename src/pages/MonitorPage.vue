@@ -185,7 +185,7 @@ function onlineDeviceNames(service) {
         :disabled="taskProgressLoading && !taskDetailsExpanded"
         @click="toggleTaskDetails"
       >
-        {{ taskDetailsExpanded ? '收起全部详情' : (taskProgressLoading ? '加载详情中' : '展开全部详情') }}
+        {{ taskDetailsExpanded ? '收起进度详情' : (taskProgressLoading ? '加载进度详情' : '展开进度详情') }}
       </button>
       <button
         type="button"

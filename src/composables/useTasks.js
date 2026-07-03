@@ -514,8 +514,17 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
       statusText[node.status] || node.status,
     ]
     const progress = nodeProgress(node)
-    if (progress && node?.key !== 'uploader') {
+    if (progress) {
       parts.push(`任务点 ${progress}`)
+    }
+    const jobSummary = node?.jobSummary
+    if (jobSummary) {
+      if (jobSummary.serviceName) parts.push(`服务 ${jobSummary.serviceName}`)
+      if (jobSummary.sourceTable) parts.push(`来源表 ${jobSummary.sourceTable}`)
+      parts.push(`状态分布 success=${Number(jobSummary.completedCount || 0)} failed=${Number(jobSummary.failedCount || 0)} running=${Number(jobSummary.runningCount || 0)} ready=${Number(jobSummary.readyCount || 0)} pending=${Number(jobSummary.pendingCount || 0)} total=${Number(jobSummary.totalCount || 0)}`)
+      if (jobSummary.startedAt) parts.push(`开始 ${formatDateTime(jobSummary.startedAt)}`)
+      if (jobSummary.completedAt) parts.push(`完成 ${formatDateTime(jobSummary.completedAt)}`)
+      if (Number(jobSummary.elapsedSeconds) > 0) parts.push(`jobs 耗时 ${formatDuration(jobSummary.elapsedSeconds)}`)
     }
     if (Array.isArray(node.platformStatuses) && node.platformStatuses.length > 0) {
       for (const platformStatus of node.platformStatuses) {
@@ -523,12 +532,14 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
         parts.push(`${platform}: ${statusText[platformStatus.status] || platformStatus.status}`)
       }
     }
-    parts.push(`耗时 ${formatDuration(node.elapsedSeconds)}`)
+    if (Number(node.elapsedSeconds) > 0) {
+      parts.push(`耗时 ${formatDuration(node.elapsedSeconds)}`)
+    }
     if (node.errorMessage) {
-      parts.push(node.errorMessage)
+      parts.push(`错误 ${node.errorMessage}`)
     }
     if (node.childErrorMessage) {
-      parts.push(node.childErrorMessage)
+      parts.push(`子任务错误 ${node.childErrorMessage}`)
     }
     return parts.join('\n')
   }
@@ -544,9 +555,20 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
     }
     const completed = Number(node.completedCount || 0)
     const failed = Number(node.failedCount || 0)
+    const running = Number(node.jobSummary?.runningCount || 0)
+    const pending = Number(node.jobSummary?.pendingCount || 0)
+    const ready = Number(node.jobSummary?.readyCount || 0)
+    const waiting = pending + ready
     const done = completed + failed
     const base = `${failed > 0 ? done : completed}/${Number(node.totalCount)}`
-    return failed > 0 ? `${base} 失败${failed}` : base
+    const parts = [failed > 0 ? `${base} 失败${failed}` : base]
+    if (running > 0 || waiting > 0) {
+      const live = []
+      if (running > 0) live.push(`运行${running}`)
+      if (waiting > 0) live.push(`等待${waiting}`)
+      parts.push(live.join('/'))
+    }
+    return parts.join(' ')
   }
 
   return {

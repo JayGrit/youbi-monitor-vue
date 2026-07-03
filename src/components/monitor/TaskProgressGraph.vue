@@ -123,8 +123,7 @@ function platformTitle(platformStatus) {
 }
 
 function showTime(node) {
-  return !['translator', 'speaker', 'uploader'].includes(node.stage)
-    && Number(node.elapsedSeconds) > 0
+  return Number(node.elapsedSeconds) > 0
 }
 
 function updatePaths() {
