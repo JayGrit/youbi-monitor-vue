@@ -79,6 +79,8 @@ const detailComponents = {
   'demucs:main': DemucsMainDetail,
   'downloader:main': DownloaderMainDetail,
   'downloader:metadata': DownloaderMetadataDetail,
+  'downloader:video': DownloaderMainDetail,
+  'downloader:audio': DownloaderMainDetail,
   'publisher:image_generation': PublisherImageGenerationDetail,
   'publisher:main': PublisherMainDetail,
   'publisher:publish_metadata': PublisherPublishMetadataDetail,

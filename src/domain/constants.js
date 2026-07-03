@@ -91,6 +91,8 @@ export const stageNameText = {
 export const subStageNameText = {
   main: 'Main',
   metadata: 'Metadata',
+  video: 'Video',
+  audio: 'Audio',
   source_transcription: 'Source Transcription',
   dubbing_alignment: 'Dubbing Alignment',
   narration: 'Narration',
