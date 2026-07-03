@@ -1,11 +1,14 @@
-FROM node:20-alpine AS builder
+ARG NODE_IMAGE=mirror.ccs.tencentyun.com/library/node:20-alpine
+ARG NGINX_IMAGE=mirror.ccs.tencentyun.com/library/nginx:1.27-alpine
+
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --registry=https://registry.npmmirror.com
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine AS runtime
+FROM ${NGINX_IMAGE} AS runtime
 LABEL org.youbi.service="monitor-vue"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
