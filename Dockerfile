@@ -1,8 +1,7 @@
-# syntax=docker/dockerfile:1.7
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --registry=https://registry.npmmirror.com
+RUN npm ci --registry=https://registry.npmmirror.com
 COPY . .
 RUN npm run build
 
