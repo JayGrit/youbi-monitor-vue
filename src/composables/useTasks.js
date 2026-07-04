@@ -36,7 +36,8 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   const taskActionsExpanded = ref(false)
   const openFailureKey = ref('')
   const taskThumbUrls = ref({})
-  const progressByTaskId = ref({})
+  const summaryProgressByTaskId = ref({})
+  const detailProgressByTaskId = ref({})
   const taskDetailsExpanded = ref(false)
   const taskProgressLoading = ref(false)
   const taskProgressError = ref('')
@@ -79,6 +80,15 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
 
   const pagedTasks = computed(() => {
     return filteredTasks.value
+  })
+
+  const progressByTaskId = computed(() => {
+    if (!taskDetailsExpanded.value) return summaryProgressByTaskId.value
+    const next = { ...summaryProgressByTaskId.value }
+    for (const [taskId, progress] of Object.entries(detailProgressByTaskId.value)) {
+      next[taskId] = progress
+    }
+    return next
   })
 
   const onlineSummary = computed(() => {
@@ -126,14 +136,18 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
 
   function initializeTaskProgress(visibleTasks) {
     const visible = new Set(visibleTasks.map(task => task.taskId).filter(Boolean))
-    const next = Object.fromEntries(
-      Object.entries(progressByTaskId.value).filter(([taskId]) => visible.has(taskId))
+    const nextSummary = Object.fromEntries(
+      Object.entries(summaryProgressByTaskId.value).filter(([taskId]) => visible.has(taskId))
+    )
+    const nextDetail = Object.fromEntries(
+      Object.entries(detailProgressByTaskId.value).filter(([taskId]) => visible.has(taskId))
     )
     for (const task of visibleTasks) {
       const progress = taskProgressFromMonitorItem(task)
-      if (progress) next[task.taskId] = { ...next[task.taskId], ...progress }
+      if (progress) nextSummary[task.taskId] = progress
     }
-    progressByTaskId.value = next
+    summaryProgressByTaskId.value = nextSummary
+    detailProgressByTaskId.value = nextDetail
   }
 
   function taskProgressFromMonitorItem(task) {
@@ -161,11 +175,11 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     batchProgressRequest = tasksApi.loadTaskProgressBatch(taskIds)
       .then(items => {
         const visible = new Set(pagedTasks.value.map(task => task.taskId))
-        const next = { ...progressByTaskId.value }
+        const next = { ...detailProgressByTaskId.value }
         for (const item of items || []) {
           if (item?.taskId && visible.has(item.taskId)) next[item.taskId] = item
         }
-        progressByTaskId.value = next
+        detailProgressByTaskId.value = next
         return items || []
       })
       .catch(err => {
