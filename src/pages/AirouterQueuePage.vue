@@ -40,8 +40,8 @@ const columns = [
 
 const detailFields = [
   { key: 'promptVersion', label: '提示词版本' },
-  { key: 'renderedMessagesJson', label: '提示词（渲染 messages）', format: 'json' },
-  { key: 'requestJson', label: 'API 请求参数', format: 'json' },
+  { key: 'renderedMessagesJson', label: '提示词（渲染 messages）', format: 'promptTemplate' },
+  { key: 'requestJson', label: 'API 请求参数', format: 'promptTemplate' },
   { key: 'responseJson', label: 'API 响应参数', format: 'json' },
   { key: 'rawResponseJson', label: 'API 原始响应', format: 'json' },
 ]

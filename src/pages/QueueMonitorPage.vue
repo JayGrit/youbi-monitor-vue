@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { formatDuration, formatNumber, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 import { formatJson } from '../utils/jsonDisplay'
+import { buildPromptTemplateDisplay } from '../utils/promptTemplateDisplay'
 
 const props = defineProps({
   api: { type: Object, required: true },
@@ -51,10 +52,13 @@ const hasActiveQueue = computed(() => rows.value.some(item => [props.waitingStat
 const hasDetailDialog = computed(() => props.detailFields.length > 0)
 const visibleDetailFields = computed(() => {
   if (!detailRow.value) return []
-  return props.detailFields.map(field => ({
-    ...field,
-    text: detailFieldText(detailRow.value, field),
-  }))
+  return props.detailFields.map(field => {
+    const display = detailFieldDisplay(detailRow.value, field)
+    return {
+      ...field,
+      ...display,
+    }
+  })
 })
 
 onMounted(() => {
@@ -268,6 +272,16 @@ function detailFieldText(row, field) {
   }
   if (value === null || value === undefined || value === '') return '-'
   return String(value)
+}
+
+function detailFieldDisplay(row, field) {
+  const value = row?.[field.key]
+  if (field.format === 'promptTemplate') {
+    const promptTemplate = buildPromptTemplateDisplay(value)
+    if (promptTemplate) return { display: promptTemplate, text: '' }
+    return { display: null, text: formatJson(value) || '-' }
+  }
+  return { display: null, text: detailFieldText(row, field) }
 }
 
 function waitingText(row, column) {
@@ -504,7 +518,21 @@ function positiveInt(value, fallback) {
         <div class="queue-detail-body">
           <article v-for="field in visibleDetailFields" :key="field.key" class="queue-detail-section">
             <h3>{{ field.label }}</h3>
-            <pre>{{ field.text }}</pre>
+            <div v-if="field.display?.kind === 'prompt-template'" class="queue-template-panel">
+              <pre v-if="field.display.metaText" class="queue-template-meta">{{ field.display.metaText }}</pre>
+              <section v-for="(block, blockIndex) in field.display.blocks" :key="`${field.key}-${blockIndex}`" class="queue-template-message">
+                <div class="queue-template-role">{{ block.role }}</div>
+                <pre class="queue-template-content"><template v-for="(token, tokenIndex) in block.tokens" :key="`${field.key}-${blockIndex}-${tokenIndex}`"><span :class="{ 'queue-template-placeholder': token.placeholder }">{{ token.text }}</span></template></pre>
+              </section>
+              <div v-if="field.display.params.length" class="queue-template-params">
+                <div v-for="param in field.display.params" :key="param.name" class="queue-template-param">
+                  <strong>{{ param.name }}</strong>
+                  <span>:</span>
+                  <pre>{{ param.value }}</pre>
+                </div>
+              </div>
+            </div>
+            <pre v-else>{{ field.text }}</pre>
           </article>
         </div>
       </section>
@@ -898,6 +926,67 @@ function positiveInt(value, fallback) {
   word-break: break-word;
 }
 
+.queue-template-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.queue-template-message {
+  display: grid;
+  gap: 6px;
+}
+
+.queue-template-role {
+  width: fit-content;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 760;
+  padding: 2px 8px;
+}
+
+.queue-template-content,
+.queue-template-meta {
+  color: #0f172a;
+}
+
+.queue-template-placeholder {
+  color: #dc2626;
+  font-weight: 760;
+}
+
+.queue-template-params {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  padding: 10px;
+}
+
+.queue-template-param {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  color: #0f172a;
+  font-size: 12px;
+}
+
+.queue-template-param strong {
+  color: #dc2626;
+  font-weight: 760;
+}
+
+.queue-template-param pre {
+  max-height: 180px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
 @media (max-width: 1100px) {
   .queue-search-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -919,6 +1008,10 @@ function positiveInt(value, fallback) {
 
   .queue-detail-modal header {
     flex-direction: column;
+  }
+
+  .queue-template-param {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
