@@ -37,27 +37,37 @@ function inferServiceName(url) {
   return 'backend'
 }
 
-function formatSummary(summary) {
-  return summary ? ` ${summary}` : ''
+function logTitle(prefix, summary) {
+  return `${prefix} ${summary || '后端请求'}`
 }
 
-function logRequestStart({ service, method, url, startTime, summary }) {
-  console.info(`[backend-request] ${startTime} ${service} ${method}${formatSummary(summary)} ${url}`)
+function logRequestStart({ service, url, startTime, summary }) {
+  console.info(logTitle('[backend-request]', summary), {
+    service,
+    url,
+    startTime,
+  })
 }
 
-function logRequestEnd({ service, method, url, endTime, durationMs, status, ok, errorMessage, summary }) {
+function logRequestEnd({ service, url, endTime, durationMs, status, ok, errorMessage, summary }) {
   const logger = ok ? console.info : console.error
-  const result = ok ? 'success' : 'failure'
-  const errorText = errorMessage ? ` error="${errorMessage}"` : ''
-  logger(`[backend-response] ${endTime} ${service} ${method}${formatSummary(summary)} ${result} status=${status} duration=${durationMs}ms ${url}${errorText}`)
+  const details = {
+    service,
+    status,
+    url,
+    result: ok ? 'success' : 'failure',
+    endTime,
+    durationMs,
+  }
+  if (errorMessage) details.errorMessage = errorMessage
+  logger(logTitle('[backend-response]', summary), details)
 }
 
 export async function requestJson(url, options = {}, context = {}) {
-  const method = String(options?.method || 'GET').toUpperCase()
   const service = context.service || inferServiceName(url)
   const summary = context.summary || ''
   const startedAt = performance.now()
-  logRequestStart({ service, method, url, startTime: formatLogTime(), summary })
+  logRequestStart({ service, url, startTime: formatLogTime(), summary })
 
   let response = null
   let payload = null
@@ -72,7 +82,6 @@ export async function requestJson(url, options = {}, context = {}) {
     }
     logRequestEnd({
       service,
-      method,
       url,
       endTime: formatLogTime(),
       durationMs: Math.round(performance.now() - startedAt),
@@ -85,7 +94,6 @@ export async function requestJson(url, options = {}, context = {}) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     logRequestEnd({
       service,
-      method,
       url,
       endTime: formatLogTime(),
       durationMs: Math.round(performance.now() - startedAt),
