@@ -41,8 +41,8 @@ export function useAppShell({
     clearMonitorPolling()
     loadTasks()
     loadServiceHeartbeats()
-    monitorTimer = window.setInterval(loadTasks, 2000)
-    heartbeatTimer = window.setInterval(loadServiceHeartbeats, 30000)
+    monitorTimer = window.setInterval(loadTasks, 20000)
+    heartbeatTimer = window.setInterval(loadServiceHeartbeats, 60000)
   }
 
   function clearServerPolling() {

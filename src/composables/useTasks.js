@@ -191,7 +191,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   function startTaskProgressRefresh() {
     stopTaskProgressRefresh()
     if (!progressPollingActive || !taskDetailsExpanded.value) return
-    progressRefreshTimer = window.setInterval(loadTaskProgressBatch, 10000)
+    progressRefreshTimer = window.setInterval(loadTaskProgressBatch, 20000)
   }
 
   function setTaskProgressPollingActive(active) {
