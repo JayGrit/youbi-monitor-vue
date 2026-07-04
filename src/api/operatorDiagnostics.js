@@ -20,16 +20,16 @@ export function createOperatorDiagnosticsApi(apiBase, service = 'monitor') {
 
   return {
     listQueue(params) {
-      return requestJson(`${base}/queue${queryString(params)}`, undefined, describe('加载执行队列'))
+      return requestJson(`${base}/queue${queryString(params)}`, undefined, describe('查询Operator执行队列'))
     },
     listTasks(params) {
-      return requestJson(`${base}/tasks${queryString(params)}`, undefined, describe('加载执行任务'))
+      return requestJson(`${base}/tasks${queryString(params)}`, undefined, describe('查询Operator任务列表'))
     },
     getTask(opId) {
-      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}`, undefined, describe('加载执行详情'))
+      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}`, undefined, describe('查询Operator任务详情'))
     },
     getDiagnostics(opId, params) {
-      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics${queryString(params)}`, undefined, describe('加载诊断详情'))
+      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics${queryString(params)}`, undefined, describe('查询Operator诊断详情'))
     },
   }
 }

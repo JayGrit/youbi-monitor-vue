@@ -14,11 +14,11 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
       if (limit !== undefined && limit !== null) params.set('limit', String(limit))
       if (offset !== undefined && offset !== null) params.set('offset', String(offset))
       const query = params.toString()
-      return requestJson(`${apiBase}/assets${query ? `?${query}` : ''}`, undefined, describe('加载素材列表'))
+      return requestJson(`${apiBase}/assets${query ? `?${query}` : ''}`, undefined, describe('查询静态素材分页列表'))
     },
 
     getStaticAsset(id) {
-      return requestJson(`${apiBase}/assets/${encodeURIComponent(id)}`, undefined, describe('加载素材详情'))
+      return requestJson(`${apiBase}/assets/${encodeURIComponent(id)}`, undefined, describe('查询静态素材完整内容'))
     },
 
     createStaticTextAsset({ taskId, type, content, remark }) {
@@ -26,7 +26,7 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, type, content, remark }),
-      }, describe('创建文本素材'))
+      }, describe('创建静态文本素材记录'))
     },
 
     uploadStaticAsset({ type, taskId, remark, file }) {
@@ -38,7 +38,7 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
       return requestJson(`${apiBase}/assets/upload`, {
         method: 'POST',
         body: form,
-      }, describe('上传静态素材'))
+      }, describe('上传静态文件素材'))
     },
   }
 }

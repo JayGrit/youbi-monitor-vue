@@ -10,7 +10,7 @@ export function createPublisherApi(apiBase, service = 'monitor') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response }),
-      }, describe('提交解说分段'))
+      }, describe('提交Publisher解说分段'))
     },
 
     uploadNarrationImage(taskId, kind, file) {
@@ -19,7 +19,7 @@ export function createPublisherApi(apiBase, service = 'monitor') {
       return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/publisher/narration/images/${encodeURIComponent(kind)}`, {
         method: 'POST',
         body: form,
-      }, describe('上传解说图片'))
+      }, describe('上传Publisher解说图片'))
     },
   }
 }

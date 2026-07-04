@@ -69,57 +69,57 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
         params.set('bilibili_exists', bilibiliExists === 'exists' ? '1' : '0')
       }
       const query = params.toString()
-      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`, undefined, describe('加载视频列表'))
+      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`, undefined, describe('查询Submitter视频列表'))
     },
 
     listAuthors() {
-      return requestJson(`${submitterApiBase}/authors`, undefined, describe('加载作者列表'))
+      return requestJson(`${submitterApiBase}/authors`, undefined, describe('查询Submitter作者列表'))
     },
 
     submitVideo(rowId, type) {
       return postSubmitterJsonWithRetry(
         `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
         { type },
-        describe('提交视频入库'),
+        describe('提交候选视频入YouBi'),
         { acceptAlreadySubmitted: true },
       )
     },
 
     rejectVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {}, describe('拒绝候选视频'))
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {}, describe('标记候选视频拒绝'))
     },
 
     withdrawVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {}, describe('撤回候选视频'))
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {}, describe('撤回已提交候选视频'))
     },
 
     createVideo(url) {
-      return postJson(`${submitterApiBase}/videos`, { url }, describe('创建视频记录'))
+      return postJson(`${submitterApiBase}/videos`, { url }, describe('手动创建候选视频'))
     },
 
     importAuthor(author, platform) {
-      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, describe('导入作者视频'))
+      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, describe('批量导入作者新视频'))
     },
 
     getImportStatus(batch) {
-      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, describe('查询导入进度'))
+      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, describe('查询作者导入批次进度'))
     },
 
     getVideo(id) {
-      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`, undefined, describe('加载视频详情'))
+      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`, undefined, describe('查询候选视频详情'))
     },
 
     getAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, undefined, describe('加载作者类型'))
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, undefined, describe('查询单作者投稿规则'))
     },
 
     listAuthorTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/all`, undefined, describe('加载作者规则'))
+      return requestJson(`${submitterApiBase}/submitter-author-types/all`, undefined, describe('查询全部作者投稿规则'))
     },
 
     listTaskTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, describe('加载任务类型'))
+      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, describe('查询投稿任务类型选项'))
     },
 
     saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
@@ -134,12 +134,12 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
         coverOrientation,
         fetchNewVideos,
         bilibiliExists,
-      }, describe('保存作者规则'))
+      }, describe('保存作者投稿规则配置'))
     },
 
     deleteAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' }, describe('删除作者规则'))
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' }, describe('删除作者投稿规则配置'))
     },
   }
 }

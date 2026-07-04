@@ -9,13 +9,13 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
 
   return {
     standaloneAccounts() {
-      return requestJson(`${normalizedBaseUrl}/api/accounts/standalone`, undefined, describe('加载本机账号'))
+      return requestJson(`${normalizedBaseUrl}/api/accounts/standalone`, undefined, describe('查询本机独立账号状态'))
     },
     runAccountScript(platform, action, accountKey) {
       return postJson(
         `${normalizedBaseUrl}/api/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(action)}`,
         { accountKey },
-        describe('执行账号脚本'),
+        describe('执行本机账号维护脚本'),
       )
     },
   }

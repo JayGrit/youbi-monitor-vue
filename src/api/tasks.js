@@ -12,11 +12,11 @@ export function createTasksApi(apiBase, service = 'monitor') {
       if (filters.stage && filters.stage !== 'all') params.set('stage', filters.stage)
       if (filters.taskId) params.set('taskId', filters.taskId)
       if (filters.sort && filters.sort !== 'created_desc') params.set('sort', filters.sort)
-      return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`, undefined, describe('加载任务列表'))
+      return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`, undefined, describe('查询监控任务分页列表'))
     },
 
     loadTaskProgress(taskId) {
-      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/progress`, undefined, describe('加载任务进度'))
+      return requestJson(`${apiBase}/video-tasks/${encodeURIComponent(taskId)}/progress`, undefined, describe('查询单任务阶段进度'))
     },
 
     loadTaskProgressBatch(taskIds) {
@@ -24,15 +24,15 @@ export function createTasksApi(apiBase, service = 'monitor') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds }),
-      }, describe('批量任务进度'))
+      }, describe('批量查询任务阶段进度'))
     },
 
     loadServiceHeartbeats() {
-      return requestJson(`${apiBase}/services/heartbeats`, undefined, describe('加载服务心跳'))
+      return requestJson(`${apiBase}/services/heartbeats`, undefined, describe('查询各服务心跳状态'))
     },
 
     loadTaskTypes() {
-      return requestJson(`${apiBase}/accounts/types`, undefined, describe('加载任务类型'))
+      return requestJson(`${apiBase}/accounts/types`, undefined, describe('查询监控任务类型筛选'))
     },
   }
 }

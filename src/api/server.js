@@ -6,13 +6,13 @@ export function createServerApi(apiBase, service = 'backupper') {
 
   return {
     backupperStatus() {
-      return requestJson(`${apiBase}/backupper-status`, undefined, describe('加载备份状态'))
+      return requestJson(`${apiBase}/backupper-status`, undefined, describe('查询服务器备份磁盘状态'))
     },
     clearBuildCache() {
-      return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理构建缓存'))
+      return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理服务器构建缓存'))
     },
     clearDiagnostics() {
-      return postJson(`${apiBase}/diagnostics/clear`, {}, describe('清理诊断文件'))
+      return postJson(`${apiBase}/diagnostics/clear`, {}, describe('清理服务器诊断归档'))
     },
   }
 }

@@ -6,7 +6,7 @@ export function createFailureLogsApi(apiBase, service = 'monitor') {
 
   return {
     loadFailureLogs() {
-      return requestJson(`${apiBase}/failure-logs`, undefined, describe('加载失败日志'))
+      return requestJson(`${apiBase}/failure-logs`, undefined, describe('查询流水线失败日志列表'))
     },
   }
 }

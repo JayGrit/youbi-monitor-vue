@@ -20,7 +20,7 @@ export function createQueueMonitorApi(apiBase, serviceName, service = 'monitor')
 
   return {
     listQueue(params) {
-      return requestJson(`${base}/queue${queryString(params)}`, undefined, describe('加载队列状态'))
+      return requestJson(`${base}/queue${queryString(params)}`, undefined, describe(`查询${serviceName}队列状态`))
     },
   }
 }
