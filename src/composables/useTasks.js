@@ -233,8 +233,10 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
         .map(type => String(type || '').trim())
         .filter(Boolean))]
         .sort((left, right) => left.localeCompare(right))
+      return true
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
+      return false
     }
   }
 

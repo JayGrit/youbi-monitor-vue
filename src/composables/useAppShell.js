@@ -26,6 +26,8 @@ export function useAppShell({
   let monitorTimer = null
   let heartbeatTimer = null
   let serverTimer = null
+  let taskTypesPromise = null
+  let taskTypesLoaded = false
   const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 
   function clearMonitorPolling() {
@@ -52,6 +54,17 @@ export function useAppShell({
     clearServerPolling()
     loadServerStatus()
     serverTimer = window.setInterval(loadServerStatus, 30000)
+  }
+
+  function ensureTaskTypesLoaded() {
+    if (taskTypesLoaded || taskTypesPromise) return
+    taskTypesPromise = Promise.resolve(loadTaskTypes())
+      .then(loaded => {
+        taskTypesLoaded = loaded !== false
+      })
+      .finally(() => {
+        taskTypesPromise = null
+      })
   }
 
   function syncPolling() {
@@ -89,6 +102,7 @@ export function useAppShell({
         loadSubmitterVideos()
       }
     }
+    if (page === 'monitor') ensureTaskTypesLoaded()
     if (page === 'accounts') warmPlatformIcons()
     if (page === 'failure-logs') {
       loadFailureLogs()
@@ -103,7 +117,7 @@ export function useAppShell({
 
   onMounted(() => {
     warmPlatformIcons()
-    loadTaskTypes()
+    if (activePage.value === 'monitor') ensureTaskTypesLoaded()
     if (activePage.value === 'static-assets') {
       loadStaticAssets()
     }
