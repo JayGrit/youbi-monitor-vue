@@ -12,7 +12,11 @@ import { useAppServices } from './useAppServices'
 
 export function useMonitorApp() {
   const {
-    monitorApi,
+    tasksApi,
+    taskFlowApi,
+    publisherApi,
+    staticAssetsApi,
+    failureLogsApi,
     distributorApi,
     operatorDiagnosticsApi,
     ffmpegerApi,
@@ -59,7 +63,7 @@ export function useMonitorApp() {
     toggleAll: toggleFailureLogAll,
     clearSelection: clearFailureLogSelection,
     resetFilters: resetFailureLogFilters,
-  } = useFailureLogs(monitorApi, distributorApi)
+  } = useFailureLogs(failureLogsApi, distributorApi)
 
   const {
     tasks,
@@ -124,7 +128,7 @@ export function useMonitorApp() {
     taskActionsOpen,
     nodeTitle,
     nodeProgress,
-  } = useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributorApi)
+  } = useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorApi)
 
   const {
     bilibiliQrCode,
@@ -243,7 +247,7 @@ export function useMonitorApp() {
     speechAudioAsset,
     stageMedia,
     demucsAudioMedia,
-  } = useTaskFlow(monitorApi, brokenImageUrls)
+  } = useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls)
 
   const {
     submitterVideos,
@@ -352,7 +356,7 @@ export function useMonitorApp() {
     createStaticTextAsset,
     assetTypeLabel,
     assetContentKind,
-  } = useStaticAssets(monitorApi)
+  } = useStaticAssets(staticAssetsApi)
 
   const { activePage, openPage } = useAppShell({
     flowPageOpen,

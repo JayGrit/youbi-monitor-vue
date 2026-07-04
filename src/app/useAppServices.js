@@ -1,11 +1,15 @@
 import { createAccountsApi } from '../api/accounts'
 import { createAgentApi } from '../api/agent'
 import { createDistributorApi } from '../api/distributor'
-import { createMonitorApi } from '../api/monitor'
+import { createFailureLogsApi } from '../api/failureLogs'
 import { createOperatorDiagnosticsApi } from '../api/operatorDiagnostics'
+import { createPublisherApi } from '../api/publisher'
 import { createQueueMonitorApi } from '../api/queueMonitor'
 import { createServerApi } from '../api/server'
+import { createStaticAssetsApi } from '../api/staticAssets'
 import { createSubmitterApi } from '../api/submitter'
+import { createTaskFlowApi } from '../api/taskFlow'
+import { createTasksApi } from '../api/tasks'
 import { createAccountPlatforms, createPlatformIconUrls } from '../domain/constants'
 import { useImageCache } from '../composables/useImageCache'
 
@@ -14,21 +18,29 @@ export function useAppServices() {
   const distributorApiBase = `${import.meta.env.BASE_URL}distributor-api`
   const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
   const backupperApiBase = `${import.meta.env.BASE_URL}backupper-api`
-  const monitorApi = createMonitorApi(apiBase)
-  const distributorApi = createDistributorApi(distributorApiBase)
-  const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase)
-  const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger')
-  const airouterApi = createQueueMonitorApi(apiBase, 'airouter')
-  const accountsApi = createAccountsApi(apiBase, distributorApiBase)
-  const serverApi = createServerApi(backupperApiBase)
-  const agentApi = createAgentApi()
-  const submitterApi = createSubmitterApi(submitterApiBase)
+  const tasksApi = createTasksApi(apiBase, 'monitor')
+  const taskFlowApi = createTaskFlowApi(apiBase, 'monitor')
+  const publisherApi = createPublisherApi(apiBase, 'monitor')
+  const staticAssetsApi = createStaticAssetsApi(apiBase, 'monitor')
+  const failureLogsApi = createFailureLogsApi(apiBase, 'monitor')
+  const distributorApi = createDistributorApi(distributorApiBase, 'distributor')
+  const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase, 'monitor')
+  const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger', 'monitor')
+  const airouterApi = createQueueMonitorApi(apiBase, 'airouter', 'monitor')
+  const accountsApi = createAccountsApi(apiBase, distributorApiBase, { monitor: 'monitor', distributor: 'distributor' })
+  const serverApi = createServerApi(backupperApiBase, 'backupper')
+  const agentApi = createAgentApi(undefined, 'agent')
+  const submitterApi = createSubmitterApi(submitterApiBase, 'submitter')
   const PLATFORM_ICON_URLS = createPlatformIconUrls(import.meta.env.BASE_URL)
   const ACCOUNT_PLATFORMS = createAccountPlatforms(PLATFORM_ICON_URLS)
   const { brokenImageUrls, cacheImageUrl, revokeCachedUrls } = useImageCache()
 
   return {
-    monitorApi,
+    tasksApi,
+    taskFlowApi,
+    publisherApi,
+    staticAssetsApi,
+    failureLogsApi,
     distributorApi,
     operatorDiagnosticsApi,
     ffmpegerApi,

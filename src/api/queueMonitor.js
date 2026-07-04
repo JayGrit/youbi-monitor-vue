@@ -1,7 +1,8 @@
 import { requestJson } from './http'
 
-export function createQueueMonitorApi(apiBase, serviceName) {
+export function createQueueMonitorApi(apiBase, serviceName, service = 'monitor') {
   const base = `${apiBase}/${serviceName}`
+  const context = { service }
 
   function queryString(params) {
     const search = new URLSearchParams()
@@ -18,7 +19,7 @@ export function createQueueMonitorApi(apiBase, serviceName) {
 
   return {
     listQueue(params) {
-      return requestJson(`${base}/queue${queryString(params)}`)
+      return requestJson(`${base}/queue${queryString(params)}`, undefined, context)
     },
   }
 }

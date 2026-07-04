@@ -15,7 +15,7 @@ import {
   youtubeThumbnailUrl,
 } from '../utils/media'
 
-export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributorApi) {
+export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorApi) {
   const tasks = ref([])
   const serviceHeartbeats = ref([])
   const serverTime = ref('')
@@ -95,7 +95,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
 
   async function loadTasks() {
     try {
-      const payload = await monitorApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE, {
+      const payload = await tasksApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE, {
         status: taskStatusFilter.value,
         type: taskTypeFilter.value,
         stage: taskStageFilter.value,
@@ -118,7 +118,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
 
   async function loadServiceHeartbeats() {
     try {
-      serviceHeartbeats.value = await monitorApi.loadServiceHeartbeats() || []
+      serviceHeartbeats.value = await tasksApi.loadServiceHeartbeats() || []
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
     }
@@ -158,7 +158,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
     const requestedTaskIdsKey = taskIds.join('\u0000')
     taskProgressLoading.value = true
     taskProgressError.value = ''
-    batchProgressRequest = monitorApi.loadTaskProgressBatch(taskIds)
+    batchProgressRequest = tasksApi.loadTaskProgressBatch(taskIds)
       .then(items => {
         const visible = new Set(pagedTasks.value.map(task => task.taskId))
         const next = { ...progressByTaskId.value }
@@ -228,7 +228,7 @@ export function useTasks(monitorApi, cacheImageUrl, brokenImageUrls, distributor
 
   async function loadTaskTypes() {
     try {
-      const payload = await monitorApi.loadTaskTypes()
+      const payload = await tasksApi.loadTaskTypes()
       taskTypeFilters.value = [...new Set((payload?.items || [])
         .map(type => String(type || '').trim())
         .filter(Boolean))]

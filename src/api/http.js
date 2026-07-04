@@ -15,19 +15,99 @@ export function apiErrorMessage(payload, status) {
   return payload?.message || payload?.detail || payload?.error || payload?.title || `HTTP ${status}`
 }
 
-export async function requestJson(url, options) {
-  const response = await fetch(url, options)
-  const payload = await readJsonResponse(response)
-  if (!response.ok) {
-    throw new Error(apiErrorMessage(payload, response.status))
-  }
-  return payload
+function padTimePart(value) {
+  return String(value).padStart(2, '0')
 }
 
-export async function postJson(url, body) {
+function formatLogTime(date = new Date()) {
+  return [
+    padTimePart(date.getHours()),
+    padTimePart(date.getMinutes()),
+    padTimePart(date.getSeconds()),
+  ].join(':')
+}
+
+function inferServiceName(url) {
+  const text = String(url || '')
+  if (text.includes('/monitor/distributor-api')) return 'distributor'
+  if (text.includes('/monitor/submitter-api')) return 'submitter'
+  if (text.includes('/monitor/backupper-api')) return 'backupper'
+  if (text.includes('/monitor/api')) return 'monitor'
+  if (text.includes('127.0.0.1:8765') || text.includes('localhost:8765')) return 'agent'
+  return 'backend'
+}
+
+function logRequestStart({ service, method, url, startTime }) {
+  console.info('[backend-request]', {
+    service,
+    method,
+    url,
+    startTime,
+  })
+}
+
+function logRequestEnd({ service, method, url, endTime, durationMs, status, ok, errorMessage }) {
+  const payload = {
+    service,
+    method,
+    url,
+    endTime,
+    durationMs,
+    status,
+    result: ok ? 'success' : 'failure',
+  }
+  if (errorMessage) payload.errorMessage = errorMessage
+  const logger = ok ? console.info : console.error
+  logger('[backend-response]', payload)
+}
+
+export async function requestJson(url, options = {}, context = {}) {
+  const method = String(options?.method || 'GET').toUpperCase()
+  const service = context.service || inferServiceName(url)
+  const startedAt = performance.now()
+  logRequestStart({ service, method, url, startTime: formatLogTime() })
+
+  let response = null
+  let payload = null
+  try {
+    response = await fetch(url, options)
+    payload = await readJsonResponse(response)
+    const accepted = typeof context.acceptResponse === 'function'
+      ? Boolean(context.acceptResponse(response, payload))
+      : false
+    if (!response.ok && !accepted) {
+      throw new Error(apiErrorMessage(payload, response.status))
+    }
+    logRequestEnd({
+      service,
+      method,
+      url,
+      endTime: formatLogTime(),
+      durationMs: Math.round(performance.now() - startedAt),
+      status: response.status,
+      ok: true,
+    })
+    return payload
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    logRequestEnd({
+      service,
+      method,
+      url,
+      endTime: formatLogTime(),
+      durationMs: Math.round(performance.now() - startedAt),
+      status: response?.status || 0,
+      ok: false,
+      errorMessage,
+    })
+    throw err
+  }
+}
+
+export async function postJson(url, body, context) {
   return requestJson(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  })
+  }, context)
 }

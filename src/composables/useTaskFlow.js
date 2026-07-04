@@ -9,7 +9,7 @@ import { shortValue } from '../utils/jsonDisplay'
 import { normalizeResourceUrl, youtubeThumbnailUrl } from '../utils/media'
 import { createTaskFlowMedia } from './task-flow/taskFlowMedia'
 
-export function useTaskFlow(monitorApi, brokenImageUrls) {
+export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   const selectedTaskFlow = ref(null)
   const selectedTaskProgress = ref(null)
   const selectedStageKey = ref('downloader')
@@ -136,7 +136,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
 
   async function loadTaskFlowPage(taskId, quiet = false) {
     if (!taskId) return
-    const progressPromise = monitorApi.loadTaskProgress(taskId)
+    const progressPromise = taskFlowApi.loadTaskProgress(taskId)
       .then(progress => { selectedTaskProgress.value = progress })
       .catch(err => { flowError.value = err instanceof Error ? err.message : String(err) })
     await Promise.all([
@@ -156,9 +156,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
       const needsWhisperMetrics = ['demucs', 'whisper', 'translator', 'speaker', SPEECH_STAGE_KEY].includes(detailStage)
       const flowDetailStage = ['whisper', 'translator', 'speaker'].includes(detailStage) ? SPEECH_STAGE_KEY : detailStage
       const [flow, words, processing] = await Promise.all([
-        monitorApi.loadTaskFlow(taskId, flowDetailStage),
-        needsWhisperMetrics ? monitorApi.loadWhisperWordTimestamps(taskId).catch(() => []) : Promise.resolve(null),
-        needsWhisperMetrics ? monitorApi.loadWhisperProcessing(taskId).catch(() => null) : Promise.resolve(null),
+        taskFlowApi.loadTaskFlow(taskId, flowDetailStage),
+        needsWhisperMetrics ? taskFlowApi.loadWhisperWordTimestamps(taskId).catch(() => []) : Promise.resolve(null),
+        needsWhisperMetrics ? taskFlowApi.loadWhisperProcessing(taskId).catch(() => null) : Promise.resolve(null),
       ])
       if (requestId !== flowRequestId) return
       selectedTaskFlow.value = flow
@@ -243,7 +243,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     uploaderDiagnosticsLoadingTask.value = opId
     uploaderDiagnosticsError.value = ''
     try {
-      const response = await monitorApi.loadOperatorDiagnostics(opId)
+      const response = await taskFlowApi.loadOperatorDiagnostics(opId)
       uploaderDiagnosticsByOpId.value = {
         ...uploaderDiagnosticsByOpId.value,
         [opId]: Array.isArray(response?.items) ? response.items : [],
@@ -281,7 +281,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   async function submitNarrationSegments(response) {
     const taskId = selectedTaskFlow.value?.task?.id
     if (!taskId) throw new Error('缺少 task ID')
-    const result = await monitorApi.submitNarrationSegments(taskId, response)
+    const result = await publisherApi.submitNarrationSegments(taskId, response)
     await loadTaskFlow(taskId, true)
     return result
   }
@@ -289,7 +289,7 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
   async function uploadNarrationImage(kind, file) {
     const taskId = selectedTaskFlow.value?.task?.id
     if (!taskId) throw new Error('缺少 task ID')
-    const result = await monitorApi.uploadNarrationImage(taskId, kind, file)
+    const result = await publisherApi.uploadNarrationImage(taskId, kind, file)
     await loadTaskFlow(taskId, true)
     return result
   }
@@ -596,9 +596,9 @@ export function useTaskFlow(monitorApi, brokenImageUrls) {
     speechEditError.value = ''
     try {
       if (row?.segment_id) {
-        await monitorApi.saveSpeakerSegmentDstText(taskId, row.segment_id, speechEditDraft.value)
+        await taskFlowApi.saveSpeakerSegmentDstText(taskId, row.segment_id, speechEditDraft.value)
       } else if (row?.translation_item_index != null) {
-        await monitorApi.saveTranslatorSegmentDstText(taskId, row.translation_item_index, speechEditDraft.value)
+        await taskFlowApi.saveTranslatorSegmentDstText(taskId, row.translation_item_index, speechEditDraft.value)
       } else {
         return
       }

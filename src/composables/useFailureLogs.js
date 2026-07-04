@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { parseLocalDateTime } from '../utils/format'
 import { normalizeUploadPlatform } from '../utils/uploadPlatform'
 
-export function useFailureLogs(monitorApi, distributorApi) {
+export function useFailureLogs(failureLogsApi, distributorApi) {
   const rows = ref([])
   const loading = ref(false)
   const error = ref('')
@@ -47,7 +47,7 @@ export function useFailureLogs(monitorApi, distributorApi) {
     loading.value = true
     error.value = ''
     try {
-      const payload = await monitorApi.loadFailureLogs()
+      const payload = await failureLogsApi.loadFailureLogs()
       rows.value = Array.isArray(payload?.rows) ? payload.rows : []
       loadedAt.value = payload?.loadedAt || ''
       normalizeFilters()

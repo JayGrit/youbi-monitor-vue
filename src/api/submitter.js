@@ -1,4 +1,4 @@
-import { apiErrorMessage, postJson, readJsonResponse, requestJson } from './http'
+import { postJson, requestJson } from './http'
 
 const RETRYABLE_SUBMITTER_ERROR = /deadlock|lock wait timeout|try restarting transaction/i
 
@@ -6,32 +6,31 @@ function wait(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms))
 }
 
-async function postSubmitterJson(url, body, { acceptAlreadySubmitted = false } = {}) {
-  const response = await fetch(url, {
+async function postSubmitterJson(url, body, context, { acceptAlreadySubmitted = false } = {}) {
+  return requestJson(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+  }, {
+    ...context,
+    acceptResponse: (response, payload) => acceptAlreadySubmitted && response.status === 409 && payload?.already_submitted,
   })
-  const payload = await readJsonResponse(response)
-  if (response.ok) return payload
-  if (acceptAlreadySubmitted && response.status === 409 && payload?.already_submitted) {
-    return payload
-  }
-  throw new Error(apiErrorMessage(payload, response.status))
 }
 
-async function postSubmitterJsonWithRetry(url, body, options) {
+async function postSubmitterJsonWithRetry(url, body, context, options) {
   try {
-    return await postSubmitterJson(url, body, options)
+    return await postSubmitterJson(url, body, context, options)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (!RETRYABLE_SUBMITTER_ERROR.test(message)) throw err
     await wait(500)
-    return postSubmitterJson(url, body, options)
+    return postSubmitterJson(url, body, context, options)
   }
 }
 
-export function createSubmitterApi(submitterApiBase) {
+export function createSubmitterApi(submitterApiBase, service = 'submitter') {
+  const context = { service }
+
   return {
     listVideos({
       detail,
@@ -69,56 +68,57 @@ export function createSubmitterApi(submitterApiBase) {
         params.set('bilibili_exists', bilibiliExists === 'exists' ? '1' : '0')
       }
       const query = params.toString()
-      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`)
+      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`, undefined, context)
     },
 
     listAuthors() {
-      return requestJson(`${submitterApiBase}/authors`)
+      return requestJson(`${submitterApiBase}/authors`, undefined, context)
     },
 
     submitVideo(rowId, type) {
       return postSubmitterJsonWithRetry(
         `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
         { type },
+        context,
         { acceptAlreadySubmitted: true },
       )
     },
 
     rejectVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {})
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {}, context)
     },
 
     withdrawVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {})
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {}, context)
     },
 
     createVideo(url) {
-      return postJson(`${submitterApiBase}/videos`, { url })
+      return postJson(`${submitterApiBase}/videos`, { url }, context)
     },
 
     importAuthor(author, platform) {
-      return postJson(`${submitterApiBase}/authors/import`, { author, platform })
+      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, context)
     },
 
     getImportStatus(batch) {
-      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`)
+      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, context)
     },
 
     getVideo(id) {
-      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`)
+      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`, undefined, context)
     },
 
     getAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`)
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, undefined, context)
     },
 
     listAuthorTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/all`)
+      return requestJson(`${submitterApiBase}/submitter-author-types/all`, undefined, context)
     },
 
     listTaskTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`)
+      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, context)
     },
 
     saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
@@ -133,12 +133,12 @@ export function createSubmitterApi(submitterApiBase) {
         coverOrientation,
         fetchNewVideos,
         bilibiliExists,
-      })
+      }, context)
     },
 
     deleteAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' })
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' }, context)
     },
   }
 }
