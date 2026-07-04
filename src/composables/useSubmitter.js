@@ -259,18 +259,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterSubmittingId.value = String(rowId)
     submitterError.value = ''
     try {
-      const author = submitterAuthorName(item)
-      const authorConfig = await loadSubmitterAuthorType(author)
-      if (!authorConfig.type) {
-        submitterError.value = author
-          ? `作者 ${author} 未配置投稿 type，请先维护 submitter_author。`
-          : '当前素材没有作者信息，无法读取投稿 type。'
-        return
-      }
-      const payload = await submitterApi.submitVideo(
-        rowId,
-        authorConfig.type,
-      )
+      const payload = await submitterApi.submitVideo(rowId)
       Object.assign(item, {
         ydbi_submitted: 1,
         ydbi_submission_status: 'pending',
@@ -278,14 +267,30 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         ydbi_submitted_at: new Date().toISOString(),
         ydbi_rejected_at: null,
       })
-      await loadSubmitterVideos(true)
-      submitterMessage.value = `已投稿到 YouBi 待执行队列，type=${authorConfig.type}。`
+      removeSubmittedRows([rowId])
+      submitterMessage.value = `已投稿到 YouBi 待执行队列，type=${payload.type || 'unknown'}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
-      await loadSubmitterVideos(true)
+      window.alert(submitterError.value)
     } finally {
       submitterSubmittingId.value = ''
     }
+  }
+
+  function removeSubmittedRows(rowIds) {
+    const submitted = new Set(rowIds.map(id => String(id)).filter(Boolean))
+    if (!submitted.size) return
+    const beforeCount = submitterVideos.value.length
+    submitterVideos.value = submitterVideos.value.filter(item => {
+      const rowId = String(submitterFieldValue(item, 'id') || '').trim()
+      return !submitted.has(rowId)
+    })
+    const removedFromPage = beforeCount - submitterVideos.value.length
+    submitterTotal.value = Math.max(0, submitterTotal.value - Math.max(removedFromPage, submitted.size))
+    submitterSelectedIds.value = submitterSelectedIds.value.filter(id => !submitted.has(String(id)))
+    const rows = { ...submitterSelectedRows.value }
+    for (const rowId of submitted) delete rows[rowId]
+    submitterSelectedRows.value = rows
   }
 
   function setSubmitterRowSelected(item, selected) {
@@ -361,7 +366,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterSubmittingId.value = 'batch'
     submitterError.value = ''
     submitterMessage.value = `正在批量投稿 ${formatNumber(selectedIds.length)} 条素材...`
-    const authorConfigByName = new Map()
     const submittedIds = new Set()
     const failedMessages = []
     let skipped = 0
@@ -373,19 +377,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
           continue
         }
         try {
-          const author = submitterAuthorName(item)
-          let authorConfig = authorConfigByName.get(author)
-          if (!authorConfig) {
-            authorConfig = await loadSubmitterAuthorType(author)
-            authorConfigByName.set(author, authorConfig)
-          }
-          if (!authorConfig.type) {
-            failedMessages.push(author
-              ? `作者 ${author} 未配置投稿 type`
-              : `素材 ${rowId} 没有作者信息`)
-            continue
-          }
-          const payload = await submitterApi.submitVideo(rowId, authorConfig.type)
+          const payload = await submitterApi.submitVideo(rowId)
           Object.assign(item, {
             ydbi_submitted: 1,
             ydbi_submission_status: 'pending',
@@ -400,12 +392,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         }
       }
       if (submittedIds.size) {
-        submitterSelectedIds.value = submitterSelectedIds.value.filter(id => !submittedIds.has(id))
-        const rows = { ...submitterSelectedRows.value }
-        for (const rowId of submittedIds) delete rows[rowId]
-        submitterSelectedRows.value = rows
+        removeSubmittedRows([...submittedIds])
       }
-      await loadSubmitterVideos(true)
       const parts = [`已投稿 ${formatNumber(submittedIds.size)} 条到 YouBi 待执行队列`]
       if (skipped) parts.push(`跳过 ${formatNumber(skipped)} 条`)
       if (failedMessages.length) parts.push(`失败 ${formatNumber(failedMessages.length)} 条`)
@@ -460,36 +448,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       await loadSubmitterVideos(true)
     } finally {
       submitterSubmittingId.value = ''
-    }
-  }
-
-  function submitterAuthorName(item) {
-    return String(
-      submitterFieldValue(item, 'uploader')
-      || submitterFieldValue(item, 'import_author')
-      || submitterFieldValue(item, 'channel')
-      || ''
-    ).trim()
-  }
-
-  async function loadSubmitterAuthorType(author) {
-    if (!author) {
-      return {
-        type: '',
-        taskType: '',
-        hasBackgroundAudio: true,
-        resetCover: false,
-        coverOrientation: '',
-      }
-    }
-    const payload = await submitterApi.getAuthorType(author)
-    const resetCover = payload?.resetCover === true
-    return {
-      type: String(payload?.type || '').trim(),
-      taskType: String(payload?.taskType || payload?.task_type || '').trim(),
-      hasBackgroundAudio: payload?.hasBackgroundAudio !== false,
-      resetCover,
-      coverOrientation: resetCover ? normalizeCoverOrientation(payload?.coverOrientation || payload?.cover_orientation) : '',
     }
   }
 

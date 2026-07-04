@@ -76,10 +76,10 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return requestJson(`${submitterApiBase}/authors`, undefined, describe('查询Submitter作者列表'))
     },
 
-    submitVideo(rowId, type) {
+    submitVideo(rowId) {
       return postSubmitterJsonWithRetry(
         `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
-        { type },
+        {},
         describe('提交候选视频入YouBi'),
         { acceptAlreadySubmitted: true },
       )
