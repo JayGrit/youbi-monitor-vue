@@ -2,6 +2,7 @@ import { requestJson } from './http'
 
 export function createStaticAssetsApi(apiBase, service = 'monitor') {
   const context = { service }
+  const describe = summary => ({ ...context, summary })
 
   return {
     listStaticAssets({ type, taskId, scope, keyword, limit, offset } = {}) {
@@ -13,11 +14,11 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
       if (limit !== undefined && limit !== null) params.set('limit', String(limit))
       if (offset !== undefined && offset !== null) params.set('offset', String(offset))
       const query = params.toString()
-      return requestJson(`${apiBase}/assets${query ? `?${query}` : ''}`, undefined, context)
+      return requestJson(`${apiBase}/assets${query ? `?${query}` : ''}`, undefined, describe('加载素材列表'))
     },
 
     getStaticAsset(id) {
-      return requestJson(`${apiBase}/assets/${encodeURIComponent(id)}`, undefined, context)
+      return requestJson(`${apiBase}/assets/${encodeURIComponent(id)}`, undefined, describe('加载素材详情'))
     },
 
     createStaticTextAsset({ taskId, type, content, remark }) {
@@ -25,7 +26,7 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, type, content, remark }),
-      }, context)
+      }, describe('创建文本素材'))
     },
 
     uploadStaticAsset({ type, taskId, remark, file }) {
@@ -37,7 +38,7 @@ export function createStaticAssetsApi(apiBase, service = 'monitor') {
       return requestJson(`${apiBase}/assets/upload`, {
         method: 'POST',
         body: form,
-      }, context)
+      }, describe('上传静态素材'))
     },
   }
 }

@@ -3,6 +3,7 @@ import { requestJson } from './http'
 export function createQueueMonitorApi(apiBase, serviceName, service = 'monitor') {
   const base = `${apiBase}/${serviceName}`
   const context = { service }
+  const describe = summary => ({ ...context, summary })
 
   function queryString(params) {
     const search = new URLSearchParams()
@@ -19,7 +20,7 @@ export function createQueueMonitorApi(apiBase, serviceName, service = 'monitor')
 
   return {
     listQueue(params) {
-      return requestJson(`${base}/queue${queryString(params)}`, undefined, context)
+      return requestJson(`${base}/queue${queryString(params)}`, undefined, describe('加载队列状态'))
     },
   }
 }

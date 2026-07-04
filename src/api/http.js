@@ -37,35 +37,27 @@ function inferServiceName(url) {
   return 'backend'
 }
 
-function logRequestStart({ service, method, url, startTime }) {
-  console.info('[backend-request]', {
-    service,
-    method,
-    url,
-    startTime,
-  })
+function formatSummary(summary) {
+  return summary ? ` ${summary}` : ''
 }
 
-function logRequestEnd({ service, method, url, endTime, durationMs, status, ok, errorMessage }) {
-  const payload = {
-    service,
-    method,
-    url,
-    endTime,
-    durationMs,
-    status,
-    result: ok ? 'success' : 'failure',
-  }
-  if (errorMessage) payload.errorMessage = errorMessage
+function logRequestStart({ service, method, url, startTime, summary }) {
+  console.info(`[backend-request] ${startTime} ${service} ${method}${formatSummary(summary)} ${url}`)
+}
+
+function logRequestEnd({ service, method, url, endTime, durationMs, status, ok, errorMessage, summary }) {
   const logger = ok ? console.info : console.error
-  logger('[backend-response]', payload)
+  const result = ok ? 'success' : 'failure'
+  const errorText = errorMessage ? ` error="${errorMessage}"` : ''
+  logger(`[backend-response] ${endTime} ${service} ${method}${formatSummary(summary)} ${result} status=${status} duration=${durationMs}ms ${url}${errorText}`)
 }
 
 export async function requestJson(url, options = {}, context = {}) {
   const method = String(options?.method || 'GET').toUpperCase()
   const service = context.service || inferServiceName(url)
+  const summary = context.summary || ''
   const startedAt = performance.now()
-  logRequestStart({ service, method, url, startTime: formatLogTime() })
+  logRequestStart({ service, method, url, startTime: formatLogTime(), summary })
 
   let response = null
   let payload = null
@@ -86,6 +78,7 @@ export async function requestJson(url, options = {}, context = {}) {
       durationMs: Math.round(performance.now() - startedAt),
       status: response.status,
       ok: true,
+      summary,
     })
     return payload
   } catch (err) {
@@ -99,6 +92,7 @@ export async function requestJson(url, options = {}, context = {}) {
       status: response?.status || 0,
       ok: false,
       errorMessage,
+      summary,
     })
     throw err
   }

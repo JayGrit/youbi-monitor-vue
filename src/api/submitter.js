@@ -30,6 +30,7 @@ async function postSubmitterJsonWithRetry(url, body, context, options) {
 
 export function createSubmitterApi(submitterApiBase, service = 'submitter') {
   const context = { service }
+  const describe = summary => ({ ...context, summary })
 
   return {
     listVideos({
@@ -68,57 +69,57 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
         params.set('bilibili_exists', bilibiliExists === 'exists' ? '1' : '0')
       }
       const query = params.toString()
-      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`, undefined, context)
+      return requestJson(`${submitterApiBase}/videos${query ? `?${query}` : ''}`, undefined, describe('加载视频列表'))
     },
 
     listAuthors() {
-      return requestJson(`${submitterApiBase}/authors`, undefined, context)
+      return requestJson(`${submitterApiBase}/authors`, undefined, describe('加载作者列表'))
     },
 
     submitVideo(rowId, type) {
       return postSubmitterJsonWithRetry(
         `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
         { type },
-        context,
+        describe('提交视频入库'),
         { acceptAlreadySubmitted: true },
       )
     },
 
     rejectVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {}, context)
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/reject`, {}, describe('拒绝候选视频'))
     },
 
     withdrawVideo(rowId) {
-      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {}, context)
+      return postSubmitterJsonWithRetry(`${submitterApiBase}/videos/${encodeURIComponent(rowId)}/withdraw`, {}, describe('撤回候选视频'))
     },
 
     createVideo(url) {
-      return postJson(`${submitterApiBase}/videos`, { url }, context)
+      return postJson(`${submitterApiBase}/videos`, { url }, describe('创建视频记录'))
     },
 
     importAuthor(author, platform) {
-      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, context)
+      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, describe('导入作者视频'))
     },
 
     getImportStatus(batch) {
-      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, context)
+      return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, describe('查询导入进度'))
     },
 
     getVideo(id) {
-      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`, undefined, context)
+      return requestJson(`${submitterApiBase}/videos/${encodeURIComponent(id)}`, undefined, describe('加载视频详情'))
     },
 
     getAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, undefined, context)
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, undefined, describe('加载作者类型'))
     },
 
     listAuthorTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/all`, undefined, context)
+      return requestJson(`${submitterApiBase}/submitter-author-types/all`, undefined, describe('加载作者规则'))
     },
 
     listTaskTypes() {
-      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, context)
+      return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, describe('加载任务类型'))
     },
 
     saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
@@ -133,12 +134,12 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
         coverOrientation,
         fetchNewVideos,
         bilibiliExists,
-      }, context)
+      }, describe('保存作者规则'))
     },
 
     deleteAuthorType(author) {
       const params = new URLSearchParams({ author })
-      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' }, context)
+      return requestJson(`${submitterApiBase}/submitter-author-types?${params}`, { method: 'DELETE' }, describe('删除作者规则'))
     },
   }
 }
