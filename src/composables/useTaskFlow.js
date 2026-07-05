@@ -119,7 +119,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
       if (status === 'running' || status === 'ready') {
         loadTaskFlowPage(selectedTaskFlow.value.task.id, true)
       }
-    }, 5000)
+    }, 20000)
   }
 
   function setFlowPollingActive(active) {
