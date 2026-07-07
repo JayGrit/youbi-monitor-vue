@@ -384,6 +384,29 @@
   margin-top: 14px;
 }
 
+.standalone-account-head-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.standalone-account-head-actions button {
+  min-height: 32px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #243044;
+  padding: 0 11px;
+  cursor: pointer;
+}
+
+.standalone-account-head-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
 .standalone-account-actions button {
   display: flex;
   align-items: center;

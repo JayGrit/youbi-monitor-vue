@@ -6,6 +6,7 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
   const normalizedBaseUrl = String(baseUrl).replace(/\/+$/, '')
   const context = { service }
   const describe = summary => ({ ...context, summary })
+  const accountScriptUrl = (platform, action) => `${normalizedBaseUrl}/api/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(action)}`
 
   return {
     standaloneAccounts() {
@@ -13,9 +14,24 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
     },
     runAccountScript(platform, action, accountKey) {
       return postJson(
-        `${normalizedBaseUrl}/api/accounts/${encodeURIComponent(platform)}/${encodeURIComponent(action)}`,
+        accountScriptUrl(platform, action),
         { accountKey },
         describe('执行本机账号维护脚本'),
+      )
+    },
+    accountScriptStatus(platform, action, accountKey) {
+      const query = new URLSearchParams({ accountKey: String(accountKey || '') })
+      return requestJson(
+        `${accountScriptUrl(platform, action)}/status?${query.toString()}`,
+        undefined,
+        describe('查询本机账号维护脚本状态'),
+      )
+    },
+    updateYoutubeCookies() {
+      return postJson(
+        accountScriptUrl('youtube', 'cookies'),
+        { accountKey: 'default' },
+        describe('更新 YouTube 下载 Cookie'),
       )
     },
   }

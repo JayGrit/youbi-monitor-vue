@@ -48,6 +48,7 @@ const props = defineProps({
   registerSelectedUploadBackfill: { type: Function, required: true },
   saveUploaderPhoneAccount: { type: Function, required: true },
   runUploaderPhoneAccountScript: { type: Function, required: true },
+  updateYoutubeDownloaderCookies: { type: Function, required: true },
   runStandaloneAccount: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
@@ -71,6 +72,8 @@ const standaloneLabels = {
   notebooklm: 'NotebookLM',
   chatgpt: 'ChatGPT',
 }
+
+const youtubeCookieUpdating = computed(() => props.uploaderPhoneAgentBusyKey === 'youtube:cookies:default')
 
 const phonePlatformAccounts = computed(() => {
   const groups = new Map()
@@ -980,7 +983,16 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
     <section class="biliup-panel standalone-account-panel" aria-label="独立账号入口">
       <div class="uploader-phone-head">
         <strong>独立账号</strong>
-        <span v-if="standaloneAccountLoading">加载中</span>
+        <div class="standalone-account-head-actions">
+          <span v-if="standaloneAccountLoading">加载中</span>
+          <button
+            type="button"
+            :disabled="youtubeCookieUpdating"
+            @click="updateYoutubeDownloaderCookies"
+          >
+            {{ youtubeCookieUpdating ? '更新中' : '更新 YouTube Cookie' }}
+          </button>
+        </div>
       </div>
       <div class="standalone-account-actions">
         <button

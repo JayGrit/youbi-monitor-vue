@@ -1,5 +1,9 @@
 import { ref } from 'vue'
 
+function sleep(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms))
+}
+
 export function useUploaderPhones(accountsApi, agentApi) {
   const uploaderPhoneMatrix = ref({ phones: [], platforms: [] })
   const uploaderPhoneLoading = ref(false)
@@ -75,6 +79,43 @@ export function useUploaderPhones(accountsApi, agentApi) {
     }
   }
 
+  async function updateYoutubeDownloaderCookies() {
+    const busyKey = 'youtube:cookies:default'
+    uploaderPhoneAgentBusyKey.value = busyKey
+    try {
+      await agentApi.updateYoutubeCookies()
+      const payload = await waitAccountScript('youtube', 'cookies', 'default')
+      uploaderPhoneError.value = ''
+      window.alert('YouTube 下载 Cookie 已更新')
+      return payload
+    } catch (err) {
+      if (err instanceof TypeError) {
+        window.alert('agent 没有启动，请先在本地启动 services/agent。')
+      } else {
+        const message = err instanceof Error ? err.message : String(err)
+        uploaderPhoneError.value = message
+        window.alert(message)
+      }
+      return null
+    } finally {
+      if (uploaderPhoneAgentBusyKey.value === busyKey) {
+        uploaderPhoneAgentBusyKey.value = ''
+      }
+    }
+  }
+
+  async function waitAccountScript(platform, action, accountKey) {
+    for (let attempt = 0; attempt < 90; attempt += 1) {
+      const payload = await agentApi.accountScriptStatus(platform, action, accountKey)
+      if (payload?.status === 'success') return payload
+      if (payload?.status === 'failed') {
+        throw new Error(payload.message || '脚本执行失败')
+      }
+      await sleep(1000)
+    }
+    throw new Error('脚本执行超时，请查看本地 agent 日志')
+  }
+
   async function saveUploaderPhoneAccount(phone, platform, accountId, note = '', disabled = false) {
     if (!phone?.id || !platform) return
     const normalizedAccountId = Number(accountId || 0)
@@ -122,6 +163,7 @@ export function useUploaderPhones(accountsApi, agentApi) {
     loadUploaderPhones,
     saveUploaderPhoneAccount,
     runUploaderPhoneAccountScript,
+    updateYoutubeDownloaderCookies,
     loadStandaloneAccounts,
     runStandaloneAccount,
   }
