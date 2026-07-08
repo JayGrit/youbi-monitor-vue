@@ -50,6 +50,7 @@ const props = defineProps({
   isTaskReadyBusy: { type: Function, required: true },
   markTaskReady: { type: Function, required: true },
   isTaskStopBusy: { type: Function, required: true },
+  canStopTask: { type: Function, required: true },
   stopTask: { type: Function, required: true },
   isTaskRestartBusy: { type: Function, required: true },
   restartTask: { type: Function, required: true },
@@ -302,7 +303,7 @@ function onlineDeviceNames(service) {
           {{ isTaskReadyBusy(task) ? '处理中' : '重试' }}
         </button>
         <button
-          v-if="task.status === 'running'"
+          v-if="canStopTask(task)"
           type="button"
           class="stop-button"
           :disabled="isTaskStopBusy(task)"
@@ -312,7 +313,7 @@ function onlineDeviceNames(service) {
           {{ isTaskStopBusy(task) ? '处理中' : '停止' }}
         </button>
         <button
-          v-if="task.status !== 'running'"
+          v-if="!canStopTask(task)"
           type="button"
           class="restart-button"
           :disabled="isTaskRestartBusy(task)"
@@ -322,7 +323,7 @@ function onlineDeviceNames(service) {
           {{ isTaskRestartBusy(task) ? '处理中' : '从头开始' }}
         </button>
         <button
-          v-if="task.status !== 'running'"
+          v-if="!canStopTask(task)"
           type="button"
           class="delete-button"
           :disabled="isTaskDeleteBusy(task)"

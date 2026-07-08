@@ -165,6 +165,25 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     }
   }
 
+  function nodeHasRunningWork(node) {
+    if (node?.status === 'running') return true
+    if (Number(node?.jobSummary?.runningCount || 0) > 0) return true
+    return Array.isArray(node?.platformStatuses)
+      && node.platformStatuses.some(platformStatus => platformStatus?.status === 'running')
+  }
+
+  function taskHasRunningWork(task) {
+    if (task?.status === 'running') return true
+    const progress = progressByTaskId.value?.[task?.taskId] || taskProgressFromMonitorItem(task)
+    const routeNodes = Array.isArray(progress?.routeNodes) ? progress.routeNodes : []
+    const nodes = Array.isArray(progress?.nodes) ? progress.nodes : []
+    return [...routeNodes, ...nodes].some(nodeHasRunningWork)
+  }
+
+  function canStopTask(task) {
+    return Boolean(task?.taskId) && taskHasRunningWork(task)
+  }
+
   async function loadTaskProgressBatch() {
     const taskIds = pagedTasks.value.map(task => task.taskId).filter(Boolean).slice(0, MONITOR_PAGE_SIZE)
     if (!taskDetailsExpanded.value || taskIds.length === 0) return []
@@ -274,7 +293,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   async function stopTask(task) {
-    if (!task?.taskId || task.status !== 'running' || stopTaskId.value) return
+    if (!canStopTask(task) || stopTaskId.value) return
     const confirmed = window.confirm(`确认停止任务？\n\n${displayTitle(task)}\n\n这会把当前任务标记为失败，已启动的 worker 进程不会被强制杀掉，但后续阶段不会继续排队。`)
     if (!confirmed) return
     stopTaskId.value = task.taskId
@@ -295,7 +314,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   async function restartTask(task) {
-    if (!task?.taskId || task.status === 'running' || restartTaskId.value) return
+    if (!task?.taskId || taskHasRunningWork(task) || restartTaskId.value) return
     const confirmed = window.confirm(`确认从头开始任务？\n\n${displayTitle(task)}\n\n这会删除该任务已生成的数据库结果和 MinIO 文件，并从 downloader 重新排队。`)
     if (!confirmed) return
     restartTaskId.value = task.taskId
@@ -317,7 +336,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   async function deleteTask(task) {
-    if (!task?.taskId || task.status === 'running' || deleteTaskId.value) return
+    if (!task?.taskId || taskHasRunningWork(task) || deleteTaskId.value) return
     const confirmed = window.confirm(`确认删除任务？\n\n${displayTitle(task)}\n\n这会永久删除该任务所有数据库记录和 MinIO 文件，无法恢复。`)
     if (!confirmed) return
     deleteTaskId.value = task.taskId
@@ -627,6 +646,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     markTaskReady,
     isTaskReadyBusy,
     stopTask,
+    canStopTask,
     isTaskStopBusy,
     restartTask,
     isTaskRestartBusy,
