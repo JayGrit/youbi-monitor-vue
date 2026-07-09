@@ -72,11 +72,21 @@ export function nextSendText(account) {
   const now = new Date()
   const tomorrow = new Date(now)
   tomorrow.setDate(now.getDate() + 1)
+  const dayAfterTomorrow = new Date(now)
+  dayAfterTomorrow.setDate(now.getDate() + 2)
+  const threeDaysLater = new Date(now)
+  threeDaysLater.setDate(now.getDate() + 3)
   if (isSameDate(next, now)) {
     return formatTime(next)
   }
   if (isSameDate(next, tomorrow)) {
     return `明天${formatTime(next)}`
+  }
+  if (isSameDate(next, dayAfterTomorrow)) {
+    return `后天${formatTime(next)}`
+  }
+  if (isSameDate(next, threeDaysLater)) {
+    return `大后天${formatTime(next)}`
   }
   return `${pad2(next.getMonth() + 1)}-${pad2(next.getDate())} ${formatTime(next)}`
 }

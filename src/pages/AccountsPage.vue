@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
-import ServerDiskStatusPanel from '../components/ServerDiskStatusPanel.vue'
 import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
@@ -66,7 +65,6 @@ const STALE_READY_MINUTES = 10
 const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
-const diskStatusOpen = ref(false)
 
 const standaloneLabels = {
   notebooklm: 'NotebookLM',
@@ -545,15 +543,6 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <div class="account-page-head">
         <div></div>
         <div class="account-edit-actions">
-          <button
-            v-if="backupperDiskStatusText"
-            type="button"
-            class="account-disk-status"
-            title="查看硬盘空间构成"
-            @click="diskStatusOpen = true"
-          >
-            {{ backupperDiskStatusText }}
-          </button>
           <template v-if="accountEditMode">
             <button type="button" @click="cancelAccountEditMode">完成</button>
           </template>
@@ -1010,21 +999,5 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
         请先启动本地 agent
       </div>
     </section>
-
-    <div v-if="diskStatusOpen" class="disk-status-modal-backdrop" @click.self="diskStatusOpen = false">
-      <section class="disk-status-modal" role="dialog" aria-modal="true" aria-labelledby="disk-status-title">
-        <header>
-          <div>
-            <strong id="disk-status-title">硬盘空间构成</strong>
-            <span>{{ backupperDiskStatusText }}</span>
-          </div>
-          <button type="button" @click="diskStatusOpen = false">关闭</button>
-        </header>
-        <ServerDiskStatusPanel
-          :status="backupperDiskStatus"
-          :status-text="backupperDiskStatusText"
-        />
-      </section>
-    </div>
   </section>
 </template>
