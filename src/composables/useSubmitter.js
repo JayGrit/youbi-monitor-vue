@@ -7,11 +7,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterLoading = ref(false)
   const submitterError = ref('')
   const submitterMessage = ref('')
-  const submitterUrl = ref('')
-  const submitterAuthor = ref('')
-  const submitterPlatform = ref('youtube')
+  const submitterInput = ref('')
   const submitterBusy = ref(false)
-  const submitterAuthorBusy = ref(false)
   const submitterTypeFilter = ref('')
   const submitterUploader = ref('')
   const submitterVideoName = ref('')
@@ -611,50 +608,33 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     await loadSubmitterVideos()
   }
 
-  async function createSubmitterVideo() {
-    const url = submitterUrl.value.trim()
-    if (!url || submitterBusy.value) return
+  async function submitSubmitterInput() {
+    const input = submitterInput.value.trim()
+    if (!input || submitterBusy.value) return
     submitterBusy.value = true
-    submitterMessage.value = '正在抓取 yt-dlp JSON 并写入数据库...'
+    submitterMessage.value = '正在识别输入并提交到 Submitter...'
     submitterError.value = ''
     try {
-      await submitterApi.createVideo(url)
-      submitterUrl.value = ''
-      submitterMessage.value = '已保存视频信息。'
+      const payload = await submitterApi.intake(input)
+      submitterInput.value = ''
+      if (payload.kind === 'author') {
+        submitterActiveBatch.value = payload.batch || ''
+        submitterFocusedBatch.value = payload.batch || ''
+        submitterActiveStatus.value = payload
+        submitterListDetail.value = Boolean(payload.batch)
+        submitterMessage.value = payload.source_url ? `已加入后台扫描队列：${payload.source_url}` : '已加入后台扫描队列。'
+      } else {
+        submitterMessage.value = '已保存视频信息。'
+      }
       await loadSubmitterVideos(true)
       await loadSubmitterAuthors()
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      submitterBusy.value = false
-    }
-  }
-
-  async function importSubmitterAuthor() {
-    const author = submitterAuthor.value.trim()
-    if (!author || submitterAuthorBusy.value) return
-    submitterAuthorBusy.value = true
-    submitterBusy.value = true
-    submitterMessage.value = '正在创建作者后台导入任务...'
-    submitterError.value = ''
-    try {
-      const payload = await submitterApi.importAuthor(author, submitterPlatform.value)
-      submitterAuthor.value = ''
-      submitterActiveBatch.value = payload.batch || ''
-      submitterFocusedBatch.value = payload.batch || ''
-      submitterActiveStatus.value = payload
-      submitterListDetail.value = Boolean(payload.batch)
-      submitterMessage.value = payload.source_url ? `已加入后台扫描队列：${payload.source_url}` : '已加入后台扫描队列。'
-      await loadSubmitterVideos(true)
-      await loadSubmitterAuthors()
-      if (payload.batch) {
+      if (payload.kind === 'author' && payload.batch) {
         await refreshSubmitterImportStatus()
       }
       updateSubmitterPolling()
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     } finally {
-      submitterAuthorBusy.value = false
       submitterBusy.value = false
     }
   }
@@ -776,11 +756,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterLoading,
     submitterError,
     submitterMessage,
-    submitterUrl,
-    submitterAuthor,
-    submitterPlatform,
+    submitterInput,
     submitterBusy,
-    submitterAuthorBusy,
     submitterTypeFilter,
     submitterUploader,
     submitterVideoName,
@@ -832,8 +809,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     autosaveSubmitterAuthorType,
     deleteSubmitterAuthor,
     setSubmitterPage,
-    createSubmitterVideo,
-    importSubmitterAuthor,
+    submitSubmitterInput,
     clearSubmitterPolling,
     resumeSubmitterPolling: updateSubmitterPolling,
     submitterFieldValue,

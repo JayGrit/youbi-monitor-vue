@@ -14,11 +14,8 @@ defineProps({
   submitterFocusedBatch: { type: String, default: '' },
   submitterMessage: { type: String, default: '' },
   submitterStatusCounts: { type: String, default: '' },
-  submitterUrl: { type: String, default: '' },
+  submitterInput: { type: String, default: '' },
   submitterBusy: { type: Boolean, default: false },
-  submitterAuthor: { type: String, default: '' },
-  submitterPlatform: { type: String, default: 'youtube' },
-  submitterAuthorBusy: { type: Boolean, default: false },
   submitterTypeFilter: { type: String, default: '' },
   submitterUploader: { type: String, default: '' },
   submitterVideoName: { type: String, default: '' },
@@ -44,8 +41,7 @@ defineProps({
   submitterPageAllSelected: { type: Boolean, default: false },
   submitterJsonPayload: { type: Object, default: null },
   submitterJsonTitle: { type: String, default: '' },
-  createSubmitterVideo: { type: Function, required: true },
-  importSubmitterAuthor: { type: Function, required: true },
+  submitSubmitterInput: { type: Function, required: true },
   applySubmitterFilters: { type: Function, required: true },
   resetSubmitterFilters: { type: Function, required: true },
   clearSubmitterBatchFocus: { type: Function, required: true },
@@ -68,9 +64,7 @@ defineProps({
 })
 
 const emit = defineEmits([
-  'update:submitterUrl',
-  'update:submitterAuthor',
-  'update:submitterPlatform',
+  'update:submitterInput',
   'update:submitterTypeFilter',
   'update:submitterUploader',
   'update:submitterVideoName',
@@ -92,41 +86,18 @@ const emit = defineEmits([
     </section>
 
     <section class="submitter-actions-panel">
-      <form class="submitter-submit-row" @submit.prevent="createSubmitterVideo">
+      <form class="submitter-submit-row" @submit.prevent="submitSubmitterInput">
         <label>
-          <span>视频链接</span>
+          <span>视频或作者</span>
           <input
-            :value="submitterUrl"
-            type="url"
-            placeholder="YouTube 或 TikTok 视频链接"
-            required
-            @input="emit('update:submitterUrl', $event.target.value)"
-          />
-        </label>
-        <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '抓取中' : '抓取并保存' }}</button>
-      </form>
-      <form class="submitter-submit-row submitter-author-row" @submit.prevent="importSubmitterAuthor">
-        <label class="submitter-platform-select">
-          <span>来源</span>
-          <select
-            :value="submitterPlatform"
-            @change="emit('update:submitterPlatform', $event.target.value)"
-          >
-            <option value="youtube">YouTube</option>
-            <option value="tiktok">TikTok</option>
-          </select>
-        </label>
-        <label>
-          <span>作者链接</span>
-          <input
-            :value="submitterAuthor"
+            :value="submitterInput"
             type="text"
-            :placeholder="submitterPlatform === 'tiktok' ? '@handle 或 https://www.tiktok.com/@handle' : '@handle 或 https://www.youtube.com/@channel'"
+            placeholder="粘贴 YouTube / TikTok / 抖音视频链接或作者主页"
             required
-            @input="emit('update:submitterAuthor', $event.target.value)"
+            @input="emit('update:submitterInput', $event.target.value)"
           />
         </label>
-        <button type="submit" :disabled="submitterAuthorBusy">{{ submitterAuthorBusy ? '排队中' : '加入作者扫描' }}</button>
+        <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '处理中' : '提交' }}</button>
       </form>
     </section>
 
