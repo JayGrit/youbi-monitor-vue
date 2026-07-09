@@ -17,7 +17,6 @@ const filters = reactive({
   taskId: '',
   timeRange: 'recent',
 })
-const queueLimit = 50
 const queueTasks = ref([])
 const queueLoading = ref(false)
 const queueError = ref('')
@@ -83,7 +82,6 @@ async function loadQueue({ silent = false } = {}) {
   try {
     const response = await props.api.listQueue({
       page: 1,
-      limit: queueLimit,
       platform: filters.platform,
       accountKey: filters.accountKey,
       opId: filters.opId,
