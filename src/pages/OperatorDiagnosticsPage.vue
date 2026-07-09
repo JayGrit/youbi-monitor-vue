@@ -80,21 +80,38 @@ async function loadQueue({ silent = false } = {}) {
   queueError.value = ''
   syncQuery()
   try {
-    const response = await props.api.listQueue({
-      page: 1,
-      platform: filters.platform,
-      accountKey: filters.accountKey,
-      opId: filters.opId,
-      taskId: filters.taskId,
-      ...timeRangeParams(filters.timeRange),
-    })
+    const response = await loadAllQueuePages(token)
     if (token !== queueRequestToken) return
-    queueTasks.value = response.items || []
+    queueTasks.value = response
     syncPolling()
   } catch (err) {
     if (token === queueRequestToken) queueError.value = err instanceof Error ? err.message : String(err)
   } finally {
     if (token === queueRequestToken) queueLoading.value = false
+  }
+}
+
+async function loadAllQueuePages(token) {
+  const params = queueParams()
+  const firstPage = await props.api.listQueue({ ...params, page: 1 })
+  if (token !== queueRequestToken) return []
+  const rows = [...(firstPage.items || [])]
+  const pageCount = Number(firstPage.pageCount || 1)
+  for (let page = 2; page <= pageCount; page += 1) {
+    const response = await props.api.listQueue({ ...params, page })
+    if (token !== queueRequestToken) return []
+    rows.push(...(response.items || []))
+  }
+  return rows
+}
+
+function queueParams() {
+  return {
+    platform: filters.platform,
+    accountKey: filters.accountKey,
+    opId: filters.opId,
+    taskId: filters.taskId,
+    ...timeRangeParams(filters.timeRange),
   }
 }
 
