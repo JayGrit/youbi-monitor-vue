@@ -40,6 +40,8 @@ const backupperStatTimeText = computed(() => {
     hour12: false,
   }).format(date).replace(/\//g, '-')
 })
+
+const minioConsoleUrl = 'http://120.53.92.66:9001/'
 </script>
 
 <template>
@@ -53,6 +55,14 @@ const backupperStatTimeText = computed(() => {
         </div>
         <div class="server-actions">
           <span v-if="loading">加载中</span>
+          <a
+            class="server-action-link"
+            :href="minioConsoleUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            打开 MinIO
+          </a>
           <button
             type="button"
             :disabled="loading || Boolean(actionBusy)"

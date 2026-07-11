@@ -39,16 +39,22 @@
   font-size: 13px;
 }
 
-.server-actions button {
+.server-actions button,
+.server-action-link {
   border: 1px solid #cfd8e3;
   border-radius: 8px;
   background: #ffffff;
   color: #243044;
   padding: 7px 12px;
   cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: normal;
+  text-decoration: none;
 }
 
-.server-actions button:hover:not(:disabled) {
+.server-actions button:hover:not(:disabled),
+.server-action-link:hover {
   border-color: #9fb2c8;
   background: #f8fafc;
 }
