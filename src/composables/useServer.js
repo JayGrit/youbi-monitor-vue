@@ -28,9 +28,12 @@ export function useServer(serverApi) {
     actionMessage.value = ''
     error.value = ''
     try {
-      const payload = action === 'build-cache'
-        ? await serverApi.clearBuildCache()
-        : await serverApi.clearDiagnostics()
+      const actions = {
+        'build-cache': serverApi.clearBuildCache,
+        'mysql-binlog': serverApi.clearMysqlBinlog,
+        diagnostics: serverApi.clearDiagnostics,
+      }
+      const payload = await actions[action]()
       actionMessage.value = payload?.message || '操作完成'
       await loadServerStatus()
     } catch (err) {
@@ -44,8 +47,12 @@ export function useServer(serverApi) {
     return runServerAction('build-cache', '确认清空服务器 Docker 构建缓存？')
   }
 
+  function clearMysqlBinlog() {
+    return runServerAction('mysql-binlog', '确认清理 MySQL binlog？')
+  }
+
   function clearDiagnostics() {
-    return runServerAction('diagnostics', '确认清空 MinIO youbi-diagnostics 诊断日志？')
+    return runServerAction('diagnostics', '确认删除 success 任务的诊断截图和 HTML？')
   }
 
   return {
@@ -57,6 +64,7 @@ export function useServer(serverApi) {
     actionMessage,
     loadServerStatus,
     clearBuildCache,
+    clearMysqlBinlog,
     clearDiagnostics,
   }
 }

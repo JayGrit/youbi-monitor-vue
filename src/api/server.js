@@ -11,8 +11,11 @@ export function createServerApi(apiBase, service = 'backupper') {
     clearBuildCache() {
       return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理服务器构建缓存'))
     },
+    clearMysqlBinlog() {
+      return postJson(`${apiBase}/mysql-binlog/clear`, {}, describe('清理服务器 MySQL binlog'))
+    },
     clearDiagnostics() {
-      return postJson(`${apiBase}/diagnostics/clear`, {}, describe('清理服务器诊断归档'))
+      return postJson(`${apiBase}/diagnostics/clear`, {}, describe('清理 success 任务诊断截图和 HTML'))
     },
   }
 }

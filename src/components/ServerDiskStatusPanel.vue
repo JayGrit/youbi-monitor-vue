@@ -14,11 +14,12 @@ const DISK_CHART_COLORS = [
   '#8b5cf6',
   '#db2777',
   '#dc2626',
-  '#94a3b8',
-  '#ffffff',
+  '#7c3aed',
+  '#64748b',
+  '#f8fafc',
 ]
 
-const diskUsageItems = computed(() => {
+const diskUsageContext = computed(() => {
   const gib = 1024 ** 3
   const status = props.status || {}
   const usedBytes = Math.max(0, Number(status.usedGb || 0) * gib)
@@ -35,30 +36,63 @@ const diskUsageItems = computed(() => {
   const buildCacheBytes = Math.max(0, Number(status.dockerBuildCacheBytes || 0))
   const workfolderBytes = Math.max(0, Number(status.workfolderBytes || 0))
   const mysqlBytes = Math.max(0, Number(status.mysqlBytes || 0))
-  const knownBytes = minioYdbiBytes + minioDiagnosticsBytes + dockerNonDanglingImageBytes + danglingBytes
-    + buildCacheBytes + workfolderBytes + mysqlBytes
-  return [
-    { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0] },
-    { label: 'MinIO youbi-diagnostics', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1] },
-    { label: 'Docker 镜像（保留）', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2] },
-    { label: 'Docker dangling 镜像（可清理）', value: danglingBytes, color: DISK_CHART_COLORS[3] },
-    { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4] },
-    { label: 'YouBi/workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5] },
-    { label: 'MySQL', value: mysqlBytes, color: DISK_CHART_COLORS[6] },
-    { label: '其他系统占用', value: Math.max(0, totalBytes - availableBytes - knownBytes), color: DISK_CHART_COLORS[7] },
-    { label: '可用空间', value: availableBytes, color: DISK_CHART_COLORS[8] },
-  ]
+  const mysqlBinlogBytes = Math.max(0, Number(status.mysqlBinlogBytes || 0))
+  const knownUsedBytes = minioYdbiBytes + minioDiagnosticsBytes + dockerNonDanglingImageBytes + danglingBytes
+    + buildCacheBytes + workfolderBytes + mysqlBytes + mysqlBinlogBytes
+
+  return {
+    totalBytes,
+    usedBytes,
+    availableBytes,
+    knownUsedBytes,
+    items: [
+      { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0] },
+      { label: 'MinIO 诊断', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1] },
+      { label: 'Docker 镜像', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2] },
+      { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[3] },
+      { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4] },
+      { label: 'YouBi workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5] },
+      { label: 'MySQL 数据', value: mysqlBytes, color: DISK_CHART_COLORS[6] },
+      { label: 'MySQL binlog', value: mysqlBinlogBytes, color: DISK_CHART_COLORS[7] },
+    ],
+  }
 })
 
-const diskUsageTotal = computed(() => diskUsageItems.value.reduce((sum, item) => sum + item.value, 0))
+const diskUsageItems = computed(() => {
+  const context = diskUsageContext.value
+  const otherUsedBytes = Math.max(0, context.usedBytes - context.knownUsedBytes)
+  return [
+    ...context.items,
+    { label: '其他系统占用', value: otherUsedBytes, color: DISK_CHART_COLORS[8] },
+    { label: '可用空间', value: context.availableBytes, color: DISK_CHART_COLORS[9] },
+  ].filter(item => item.value > 0 || item.label === '可用空间')
+})
+
+const diskUsageTotal = computed(() => {
+  const context = diskUsageContext.value
+  return Math.max(context.totalBytes, context.usedBytes + context.availableBytes, context.knownUsedBytes + context.availableBytes)
+})
+
+const diskChartItems = computed(() => {
+  const context = diskUsageContext.value
+  const visibleUsedItems = context.knownUsedBytes > context.usedBytes && context.knownUsedBytes > 0
+    ? context.items.map(item => ({ ...item, chartValue: item.value / context.knownUsedBytes * context.usedBytes }))
+    : context.items.map(item => ({ ...item, chartValue: item.value }))
+  const knownChartBytes = visibleUsedItems.reduce((sum, item) => sum + item.chartValue, 0)
+  return [
+    ...visibleUsedItems,
+    { label: '其他系统占用', chartValue: Math.max(0, context.usedBytes - knownChartBytes), color: DISK_CHART_COLORS[8] },
+    { label: '可用空间', chartValue: context.availableBytes, color: DISK_CHART_COLORS[9] },
+  ].filter(item => item.chartValue > 0)
+})
 
 const diskChartStyle = computed(() => {
-  const total = diskUsageTotal.value
-  if (!total) return { background: DISK_CHART_COLORS[4] }
+  const total = diskChartItems.value.reduce((sum, item) => sum + item.chartValue, 0)
+  if (!total) return { background: DISK_CHART_COLORS[9] }
   let offset = 0
-  const stops = diskUsageItems.value.map(item => {
+  const stops = diskChartItems.value.map(item => {
     const start = offset
-    offset += item.value / total * 100
+    offset += item.chartValue / total * 100
     return `${item.color} ${start}% ${offset}%`
   })
   return { background: `conic-gradient(${stops.join(', ')})` }

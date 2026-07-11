@@ -197,6 +197,7 @@ export function useMonitorApp() {
     actionMessage: serverActionMessage,
     loadServerStatus,
     clearBuildCache: clearServerBuildCache,
+    clearMysqlBinlog: clearServerMysqlBinlog,
     clearDiagnostics: clearServerDiagnostics,
   } = useServer(serverApi)
 
@@ -528,6 +529,7 @@ export function useMonitorApp() {
     serverActionMessage,
     loadServerStatus,
     clearServerBuildCache,
+    clearServerMysqlBinlog,
     clearServerDiagnostics,
     uploadBackfillOpen,
     uploadBackfillContext,

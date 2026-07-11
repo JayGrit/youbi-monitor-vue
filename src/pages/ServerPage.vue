@@ -10,6 +10,7 @@ defineProps({
   actionMessage: { type: String, default: '' },
   loadServerStatus: { type: Function, required: true },
   clearBuildCache: { type: Function, required: true },
+  clearMysqlBinlog: { type: Function, required: true },
   clearDiagnostics: { type: Function, required: true },
 })
 </script>
@@ -39,9 +40,17 @@ defineProps({
             type="button"
             class="danger"
             :disabled="Boolean(actionBusy)"
+            @click="clearMysqlBinlog"
+          >
+            {{ actionBusy === 'mysql-binlog' ? '清理中' : 'MySQL binlog' }}
+          </button>
+          <button
+            type="button"
+            class="danger"
+            :disabled="Boolean(actionBusy)"
             @click="clearDiagnostics"
           >
-            {{ actionBusy === 'diagnostics' ? '清理中' : '诊断日志' }}
+            {{ actionBusy === 'diagnostics' ? '清理中' : '成功诊断' }}
           </button>
         </div>
       </div>
