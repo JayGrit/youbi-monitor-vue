@@ -238,12 +238,6 @@
   font-weight: 760;
 }
 
-.failure-log-table th:nth-child(1) { width: 130px; }
-.failure-log-table th:nth-child(2) { width: 120px; }
-.failure-log-table th:nth-child(3) { width: 90px; }
-.failure-log-table th:nth-child(4) { width: 280px; }
-.failure-log-table th:nth-child(5) { width: 160px; }
-
 .failure-log-select-column {
   width: 64px;
 }
@@ -251,6 +245,21 @@
 .failure-log-table th.failure-log-select-column,
 .failure-log-table td.failure-log-select-column {
   width: 64px;
+}
+
+.failure-log-table th.failure-log-platform-column,
+.failure-log-table td.failure-log-platform-column {
+  width: 64px;
+}
+
+.failure-log-table th.failure-log-task-column,
+.failure-log-table td.failure-log-task-column {
+  width: 360px;
+}
+
+.failure-log-table th.failure-log-time-column,
+.failure-log-table td.failure-log-time-column {
+  width: 148px;
 }
 
 .failure-log-select-column input {

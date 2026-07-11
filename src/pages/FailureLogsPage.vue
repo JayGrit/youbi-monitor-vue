@@ -241,9 +241,9 @@ function actionModeText() {
             <th v-if="actionsExpanded" class="failure-log-select-column">选择</th>
             <th>阶段</th>
             <th>Type</th>
-            <th>平台</th>
-            <th>任务</th>
-            <th>失败时间</th>
+            <th class="failure-log-platform-column">平台</th>
+            <th class="failure-log-task-column">任务</th>
+            <th class="failure-log-time-column">失败时间</th>
             <th>错误日志</th>
           </tr>
         </thead>
@@ -262,7 +262,7 @@ function actionModeText() {
             </td>
             <td><span class="failure-log-stage">{{ stageText(row) }}</span></td>
             <td>{{ row.type || '-' }}</td>
-            <td>
+            <td class="failure-log-platform-column">
               <img
                 v-if="row.platform && platformIconUrls[row.platform]"
                 class="failure-log-platform-icon"
@@ -272,7 +272,7 @@ function actionModeText() {
               >
               <span v-else>-</span>
             </td>
-            <td>
+            <td class="failure-log-task-column">
               <div class="failure-log-task">
                 <button type="button" class="failure-log-task-title" @click="openTask(row)">
                   {{ row.title || row.taskId }}
@@ -287,7 +287,7 @@ function actionModeText() {
                 </button>
               </div>
             </td>
-            <td class="failure-log-time">{{ formatDateTime(row.failedAt) }}</td>
+            <td class="failure-log-time-column failure-log-time">{{ formatDateTime(row.failedAt) }}</td>
             <td><pre>{{ row.errorMessage || '未知错误' }}</pre></td>
           </tr>
         </tbody>
