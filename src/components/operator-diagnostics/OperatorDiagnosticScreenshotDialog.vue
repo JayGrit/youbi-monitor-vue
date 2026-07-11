@@ -24,7 +24,7 @@ const screenshotErrors = ref({})
 let requestToken = 0
 
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
-const sortedRows = computed(() => [...rows.value].sort(compareDiagnostics))
+const sortedRows = computed(() => rows.value.filter(hasScreenshotUrl).sort(compareDiagnostics))
 const previewRow = computed(() => sortedRows.value[previewIndex.value] || null)
 
 watch(
@@ -114,7 +114,12 @@ function diagnosticMeta(row) {
   ].filter(Boolean).join(' · ')
 }
 
+function hasScreenshotUrl(row) {
+  return Boolean(normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || ''))
+}
+
 function screenshotUrl(row) {
+  if (!hasScreenshotUrl(row)) return ''
   return diagnosticArtifactUrl(row, 'screenshot') || normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
 }
 

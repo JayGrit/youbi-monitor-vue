@@ -18,7 +18,7 @@ const previewIndex = computed(() => {
   return visibleRows.value.findIndex(row => screenshotKey(row) === screenshotKey(previewRow.value))
 })
 
-const visibleRows = computed(() => [...props.rows].sort(compareDiagnostics))
+const visibleRows = computed(() => props.rows.filter(hasScreenshotUrl).sort(compareDiagnostics))
 
 watch(
   visibleRows,
@@ -79,11 +79,16 @@ function diagnosticMeta(row) {
 }
 
 function screenshotUrl(row) {
+  if (!hasScreenshotUrl(row)) return ''
   return diagnosticArtifactUrl(row, 'screenshot') || normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || '')
 }
 
 function htmlUrl(row) {
   return diagnosticArtifactUrl(row, 'html') || normalizeResourceUrl(row.htmlUrl || row.html_url || '')
+}
+
+function hasScreenshotUrl(row) {
+  return Boolean(normalizeResourceUrl(row.screenshotUrl || row.screenshot_url || ''))
 }
 
 function diagnosticError(row) {
