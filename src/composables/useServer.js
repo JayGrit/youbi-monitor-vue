@@ -13,13 +13,32 @@ export function useServer(serverApi) {
     error.value = ''
     try {
       const status = await serverApi.backupperStatus()
-      backupperDiskStatus.value = status || null
-      backupperDiskStatusText.value = status?.statusText || ''
+      applyServerStatus(status)
     } catch (err) {
       error.value = err?.message || String(err)
     } finally {
       loading.value = false
     }
+  }
+
+  async function refreshServerStatus() {
+    actionBusy.value = 'refresh-status'
+    actionMessage.value = ''
+    error.value = ''
+    try {
+      const status = await serverApi.refreshBackupperStatus()
+      applyServerStatus(status)
+      actionMessage.value = status?.message || '服务器硬盘统计已更新'
+    } catch (err) {
+      error.value = err?.message || String(err)
+    } finally {
+      actionBusy.value = ''
+    }
+  }
+
+  function applyServerStatus(status) {
+    backupperDiskStatus.value = status || null
+    backupperDiskStatusText.value = status?.statusText || ''
   }
 
   async function runServerAction(action, confirmText) {
@@ -63,6 +82,7 @@ export function useServer(serverApi) {
     actionBusy,
     actionMessage,
     loadServerStatus,
+    refreshServerStatus,
     clearBuildCache,
     clearMysqlBinlog,
     clearDiagnostics,

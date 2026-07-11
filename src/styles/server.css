@@ -21,6 +21,11 @@
   font-size: 13px;
 }
 
+.server-page-head .server-stat-time {
+  margin-top: 4px;
+  color: #475569;
+}
+
 .server-actions {
   display: flex;
   flex-wrap: wrap;

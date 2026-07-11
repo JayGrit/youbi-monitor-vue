@@ -8,6 +8,9 @@ export function createServerApi(apiBase, service = 'backupper') {
     backupperStatus() {
       return requestJson(`${apiBase}/backupper-status`, undefined, describe('查询服务器备份磁盘状态'))
     },
+    refreshBackupperStatus() {
+      return postJson(`${apiBase}/backupper-status/refresh`, {}, describe('重新统计服务器备份磁盘状态'))
+    },
     clearBuildCache() {
       return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理服务器构建缓存'))
     },

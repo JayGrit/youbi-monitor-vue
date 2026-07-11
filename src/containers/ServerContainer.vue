@@ -15,6 +15,7 @@ defineProps({
     :action-busy="app.serverActionBusy"
     :action-message="app.serverActionMessage"
     :load-server-status="app.loadServerStatus"
+    :refresh-server-status="app.refreshServerStatus"
     :clear-build-cache="app.clearServerBuildCache"
     :clear-mysql-binlog="app.clearServerMysqlBinlog"
     :clear-diagnostics="app.clearServerDiagnostics"
