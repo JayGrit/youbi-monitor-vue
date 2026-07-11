@@ -28,7 +28,10 @@ export function useServer(serverApi) {
     try {
       const status = await serverApi.refreshBackupperStatus()
       applyServerStatus(status)
-      actionMessage.value = status?.message || '服务器硬盘统计已更新'
+      const statTime = formatServerStatTime(status?.createdAt)
+      actionMessage.value = statTime
+        ? `服务器硬盘统计已更新：${statTime}`
+        : (status?.message || '服务器硬盘统计已更新')
     } catch (err) {
       error.value = err?.message || String(err)
     } finally {
@@ -39,6 +42,22 @@ export function useServer(serverApi) {
   function applyServerStatus(status) {
     backupperDiskStatus.value = status || null
     backupperDiskStatusText.value = status?.statusText || ''
+  }
+
+  function formatServerStatTime(value) {
+    if (!value) return ''
+    const match = String(value).match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/)
+    if (match) return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return new Intl.DateTimeFormat('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date).replace(/\//g, '-')
   }
 
   async function runServerAction(action, confirmText) {

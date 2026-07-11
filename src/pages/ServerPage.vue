@@ -16,18 +16,29 @@ const props = defineProps({
   clearDiagnostics: { type: Function, required: true },
 })
 
-const backupperStatTime = computed(() => {
+const backupperStatusSummary = computed(() => {
+  if (props.backupperDiskStatusText) return `硬盘占用 ${props.backupperDiskStatusText}`
+  if (props.loading) return '加载中'
+  return '暂无服务器状态'
+})
+
+const backupperStatTimeText = computed(() => {
   const value = props.backupperDiskStatus?.createdAt
   if (!value) return ''
-  const textTime = String(value).match(/\b(\d{2}:\d{2})/)
-  if (textTime) return textTime[1]
+  const textDateTime = String(value).match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/)
+  if (textDateTime) {
+    return `${textDateTime[1]}-${textDateTime[2]}-${textDateTime[3]} ${textDateTime[4]}:${textDateTime[5]}`
+  }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(date)
+  }).format(date).replace(/\//g, '-')
 })
 </script>
 
@@ -37,8 +48,8 @@ const backupperStatTime = computed(() => {
       <div class="server-page-head">
         <div>
           <h1>服务器</h1>
-          <p>{{ backupperDiskStatusText || (loading ? '加载中' : '暂无服务器状态') }}</p>
-          <p v-if="backupperStatTime" class="server-stat-time">统计时间 {{ backupperStatTime }}</p>
+          <p>{{ backupperStatusSummary }}</p>
+          <p v-if="backupperStatTimeText" class="server-stat-time">统计于 {{ backupperStatTimeText }}</p>
         </div>
         <div class="server-actions">
           <span v-if="loading">加载中</span>
