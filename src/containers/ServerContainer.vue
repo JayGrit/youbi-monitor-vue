@@ -16,6 +16,7 @@ defineProps({
     :action-message="app.serverActionMessage"
     :load-server-status="app.loadServerStatus"
     :refresh-server-status="app.refreshServerStatus"
+    :run-minio-cleanup="app.runServerMinioCleanup"
     :clear-build-cache="app.clearServerBuildCache"
     :clear-mysql-binlog="app.clearServerMysqlBinlog"
     :clear-diagnostics="app.clearServerDiagnostics"

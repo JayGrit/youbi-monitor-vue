@@ -67,12 +67,14 @@ export function useServer(serverApi) {
     error.value = ''
     try {
       const actions = {
+        'minio-cleanup': serverApi.runMinioCleanup,
         'build-cache': serverApi.clearBuildCache,
         'mysql-binlog': serverApi.clearMysqlBinlog,
         diagnostics: serverApi.clearDiagnostics,
       }
       const payload = await actions[action]()
       actionMessage.value = payload?.message || '操作完成'
+      if (payload?.status) applyServerStatus(payload.status)
       await loadServerStatus()
     } catch (err) {
       error.value = err?.message || String(err)
@@ -83,6 +85,10 @@ export function useServer(serverApi) {
 
   function clearBuildCache() {
     return runServerAction('build-cache', '确认清空服务器 Docker 构建缓存？')
+  }
+
+  function runMinioCleanup() {
+    return runServerAction('minio-cleanup', '确认手动执行一次 MinIO 回收任务？')
   }
 
   function clearMysqlBinlog() {
@@ -102,6 +108,7 @@ export function useServer(serverApi) {
     actionMessage,
     loadServerStatus,
     refreshServerStatus,
+    runMinioCleanup,
     clearBuildCache,
     clearMysqlBinlog,
     clearDiagnostics,

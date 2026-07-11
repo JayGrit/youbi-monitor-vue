@@ -11,6 +11,7 @@ const props = defineProps({
   actionMessage: { type: String, default: '' },
   loadServerStatus: { type: Function, required: true },
   refreshServerStatus: { type: Function, required: true },
+  runMinioCleanup: { type: Function, required: true },
   clearBuildCache: { type: Function, required: true },
   clearMysqlBinlog: { type: Function, required: true },
   clearDiagnostics: { type: Function, required: true },
@@ -69,6 +70,14 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
             @click="refreshServerStatus"
           >
             {{ actionBusy === 'refresh-status' ? '统计中' : '刷新' }}
+          </button>
+          <button
+            type="button"
+            class="danger"
+            :disabled="Boolean(actionBusy)"
+            @click="runMinioCleanup"
+          >
+            {{ actionBusy === 'minio-cleanup' ? '清理中' : '清理 MinIO' }}
           </button>
           <button
             type="button"

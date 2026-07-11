@@ -11,6 +11,9 @@ export function createServerApi(apiBase, service = 'backupper') {
     refreshBackupperStatus() {
       return postJson(`${apiBase}/backupper-status/refresh`, {}, describe('重新统计服务器备份磁盘状态'))
     },
+    runMinioCleanup() {
+      return postJson(`${apiBase}/minio-cleanup/run`, {}, describe('手动执行 MinIO 回收任务'))
+    },
     clearBuildCache() {
       return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理服务器构建缓存'))
     },
