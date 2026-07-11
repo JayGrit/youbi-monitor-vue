@@ -125,18 +125,19 @@ export const uploadPlatformText = {
 }
 
 export function createPlatformIconUrls(baseUrl) {
+  const assetBaseUrl = `${baseUrl}minio/youbi-assets/`
   return {
-    douyin: `${baseUrl}platform-icons/douyin-official-appstore-512.png`,
-    xiaohongshu: `${baseUrl}platform-icons/xiaohongshu-official-appstore-512.png`,
-    bilibili: `${baseUrl}platform-icons/bilibili-official-appstore-512.png`,
-    shipinhao: `${baseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
-    kuaishou: `${baseUrl}platform-icons/kuaishou-official-appstore-512.png`,
-    jinritoutiao: `${baseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
-    x: `${baseUrl}platform-icons/x-official-appstore-512.png`,
-    youtube: `${baseUrl}platform-icons/youtube-official-appstore-512.png`,
-    doubao: `${baseUrl}platform-icons/doubao-official-appstore-512.png`,
-    notebooklm: `${baseUrl}platform-icons/notebooklm-official-appstore-512.png`,
-    chatgpt: `${baseUrl}platform-icons/chatgpt-official-appstore-512.png`,
+    douyin: `${assetBaseUrl}platform-icons/douyin-official-appstore-512.png`,
+    xiaohongshu: `${assetBaseUrl}platform-icons/xiaohongshu-official-appstore-512.png`,
+    bilibili: `${assetBaseUrl}platform-icons/bilibili-official-appstore-512.png`,
+    shipinhao: `${assetBaseUrl}platform-icons/wechat_channels-official-appstore-512.png`,
+    kuaishou: `${assetBaseUrl}platform-icons/kuaishou-official-appstore-512.png`,
+    jinritoutiao: `${assetBaseUrl}platform-icons/jinritoutiao-official-appstore-512.png`,
+    x: `${assetBaseUrl}platform-icons/x-official-appstore-512.png`,
+    youtube: `${assetBaseUrl}platform-icons/youtube-official-appstore-512.png`,
+    doubao: `${assetBaseUrl}platform-icons/doubao-official-appstore-512.png`,
+    notebooklm: `${assetBaseUrl}platform-icons/notebooklm-official-appstore-512.png`,
+    chatgpt: `${assetBaseUrl}platform-icons/chatgpt-official-appstore-512.png`,
   }
 }
 
