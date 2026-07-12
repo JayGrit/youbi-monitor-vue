@@ -8,9 +8,7 @@ const props = defineProps({
 
 const limit = 80
 const filters = reactive({
-  status: '',
   device: '',
-  timeRange: 'recent',
   taskId: '',
   taskType: '',
 })
@@ -21,29 +19,12 @@ const page = ref(1)
 const pageCount = ref(0)
 const loading = ref(false)
 const error = ref('')
-const expandedId = ref(null)
 const copyToastVisible = ref(false)
 const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
 let pollTimer = null
 let filterTimer = null
 let copyToastTimer = null
 let requestToken = 0
-
-const statusFilters = [
-  { value: '', label: '默认' },
-  { value: 'unfinished', label: '未完成' },
-  { value: 'running', label: '执行中' },
-  { value: 'ready', label: '排队中' },
-  { value: 'pending', label: '待处理' },
-  { value: 'success', label: '成功' },
-  { value: 'failed', label: '失败' },
-]
-const timeRanges = [
-  { value: 'recent', label: '近3小时' },
-  { value: 'today', label: '今天' },
-  { value: 'yesterday', label: '昨天' },
-  { value: 'beforeYesterday', label: '前天' },
-]
 
 const summaryData = computed(() => summary.value || {})
 const deviceRows = computed(() => {
@@ -64,11 +45,11 @@ const deviceOptions = computed(() => {
   names.add('未分配')
   return Array.from(names)
 })
-const hasActiveQueue = computed(() => rows.value.some(row => ['ready', 'pending', 'running'].includes(row.status)))
+const hasActiveQueue = computed(() => rows.value.some(row => row.status === 'running'))
 const headlineCards = computed(() => [
   { key: 'unfinished', label: '未完成', value: summaryData.value.unfinishedCount || 0 },
   { key: 'running', label: '运行中', value: summaryData.value.runningCount || 0 },
-  { key: 'recent', label: '近3h完成', value: summaryData.value.recentCompletedCount || 0 },
+  { key: 'completed', label: '最近完成', value: summaryData.value.completedCount || 0 },
   { key: 'failed', label: '失败', value: summaryData.value.failedCount || 0 },
 ])
 
@@ -87,9 +68,7 @@ onUnmounted(() => {
 
 function restoreQuery() {
   const query = new URLSearchParams(window.location.search)
-  filters.status = query.get('status') || ''
   filters.device = query.get('device') || ''
-  filters.timeRange = query.get('timeRange') || 'recent'
   filters.taskId = query.get('taskId') || ''
   filters.taskType = query.get('taskType') || ''
   page.value = positiveInt(query.get('speakerPage'), 1)
@@ -99,7 +78,9 @@ function syncQuery() {
   const query = new URLSearchParams(window.location.search)
   query.set('page', 'speaker')
   query.set('speakerPage', String(page.value))
-  for (const key of ['status', 'device', 'timeRange', 'taskId', 'taskType']) {
+  query.delete('status')
+  query.delete('timeRange')
+  for (const key of ['device', 'taskId', 'taskType']) {
     if (filters[key]) query.set(key, filters[key])
     else query.delete(key)
   }
@@ -115,9 +96,7 @@ async function loadSegments({ silent = false } = {}) {
     const response = await props.api.listSegments({
       page: page.value,
       limit,
-      status: filters.status,
       device: deviceParam(filters.device),
-      timeRange: filters.timeRange,
       taskId: filters.taskId,
       taskType: filters.taskType,
     })
@@ -138,7 +117,6 @@ async function loadSegments({ silent = false } = {}) {
 
 function filterChanged() {
   page.value = 1
-  expandedId.value = null
   loadSegments()
 }
 
@@ -173,10 +151,6 @@ function setPage(nextPage) {
   if (normalized === page.value) return
   page.value = normalized
   loadSegments()
-}
-
-function toggleRow(row) {
-  expandedId.value = expandedId.value === row.id ? null : row.id
 }
 
 async function copyText(text) {
@@ -337,7 +311,7 @@ function positiveInt(value, fallback) {
         <dl>
           <div><dt>运行</dt><dd>{{ device.running || 0 }}</dd></div>
           <div><dt>排队</dt><dd>{{ deviceQueued(device) }}</dd></div>
-          <div><dt>近3h完成</dt><dd>{{ device.success || 0 }}</dd></div>
+          <div><dt>最近完成</dt><dd>{{ (device.success || 0) + (device.failed || 0) }}</dd></div>
           <div><dt>最近耗时</dt><dd>{{ latestDeviceDuration(device.device) }}</dd></div>
         </dl>
       </article>
@@ -345,22 +319,10 @@ function positiveInt(value, fallback) {
 
     <div class="speaker-filter-bar">
       <label>
-        状态
-        <select v-model="filters.status" @change="filterChanged">
-          <option v-for="item in statusFilters" :key="item.value || 'default'" :value="item.value">{{ item.label }}</option>
-        </select>
-      </label>
-      <label>
         设备
         <select v-model="filters.device" @change="filterChanged">
           <option value="">全部</option>
           <option v-for="device in deviceOptions" :key="device" :value="device">{{ device }}</option>
-        </select>
-      </label>
-      <label>
-        时间
-        <select v-model="filters.timeRange" :disabled="filters.status && filters.status !== 'success'" @change="filterChanged">
-          <option v-for="item in timeRanges" :key="item.value" :value="item.value">{{ item.label }}</option>
         </select>
       </label>
       <label>
@@ -397,8 +359,11 @@ function positiveInt(value, fallback) {
             <tr v-if="!loading && !rows.length">
               <td colspan="12" class="speaker-empty">没有配音段</td>
             </tr>
-            <template v-for="row in rows" :key="row.id">
-              <tr :class="['speaker-row', `speaker-${row.status || 'unknown'}`]" @click="toggleRow(row)">
+            <tr
+              v-for="row in rows"
+              :key="row.id"
+              :class="['speaker-row', `speaker-${row.status || 'unknown'}`]"
+            >
                 <td>{{ deviceDisplay(row.device || row.operator) }}</td>
                 <td>{{ statusText(row.status) }}</td>
                 <td>
@@ -414,31 +379,6 @@ function positiveInt(value, fallback) {
                 <td class="speaker-text-cell">{{ shortText(row.dstText || row.srcText) }}</td>
                 <td class="speaker-error-cell">{{ errorText(row) }}</td>
               </tr>
-              <tr v-if="expandedId === row.id" class="speaker-detail-row">
-                <td colspan="12">
-                  <div class="speaker-detail-grid">
-                    <section>
-                      <h2>源文本</h2>
-                      <pre>{{ row.srcText || '-' }}</pre>
-                    </section>
-                    <section>
-                      <h2>目标文本</h2>
-                      <pre>{{ row.dstText || '-' }}</pre>
-                    </section>
-                    <section>
-                      <h2>音频</h2>
-                      <p>tts: <a v-if="row.ttsWavUrl" :href="row.ttsWavUrl" target="_blank" rel="noreferrer">{{ row.ttsWavUrl }}</a><span v-else>-</span></p>
-                      <p>reference: <a v-if="row.referenceWavUrl" :href="row.referenceWavUrl" target="_blank" rel="noreferrer">{{ row.referenceWavUrl }}</a><span v-else>-</span></p>
-                      <p>speaker: {{ row.speaker || '-' }}</p>
-                    </section>
-                    <section>
-                      <h2>错误</h2>
-                      <pre>{{ row.errorMessage || '-' }}</pre>
-                    </section>
-                  </div>
-                </td>
-              </tr>
-            </template>
           </tbody>
         </table>
       </div>
@@ -562,7 +502,7 @@ function positiveInt(value, fallback) {
 
 .speaker-filter-bar {
   display: grid;
-  grid-template-columns: 130px 160px 130px repeat(2, minmax(0, 1fr));
+  grid-template-columns: 160px repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -619,12 +559,7 @@ function positiveInt(value, fallback) {
 }
 
 .speaker-row {
-  cursor: pointer;
   background: #f1f5f9;
-}
-
-.speaker-row:hover td {
-  background: rgb(37 99 235 / 6%);
 }
 
 .speaker-success {
@@ -662,47 +597,6 @@ function positiveInt(value, fallback) {
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
-}
-
-.speaker-detail-row td {
-  background: #f8fafc;
-  white-space: normal;
-}
-
-.speaker-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  text-align: left;
-}
-
-.speaker-detail-grid section {
-  display: grid;
-  gap: 7px;
-}
-
-.speaker-detail-grid h2 {
-  margin: 0;
-  color: #334155;
-  font-size: 13px;
-}
-
-.speaker-detail-grid pre,
-.speaker-detail-grid p {
-  margin: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #0f172a;
-  padding: 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.speaker-detail-grid a {
-  color: #1d4ed8;
 }
 
 .speaker-empty,
@@ -751,8 +645,7 @@ function positiveInt(value, fallback) {
 
   .speaker-summary,
   .speaker-device-grid,
-  .speaker-filter-bar,
-  .speaker-detail-grid {
+  .speaker-filter-bar {
     grid-template-columns: minmax(0, 1fr);
   }
 }
