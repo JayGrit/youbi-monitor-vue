@@ -299,6 +299,7 @@ function positiveInt(value, fallback) {
             <tr>
               <th>设备</th>
               <th>任务</th>
+              <th>优先级</th>
               <th>段号</th>
               <th>任务类型</th>
               <th>尝试</th>
@@ -310,7 +311,7 @@ function positiveInt(value, fallback) {
           </thead>
           <tbody>
             <tr v-if="!loading && !rows.length">
-              <td colspan="9" class="speaker-empty">没有配音段</td>
+              <td colspan="10" class="speaker-empty">没有配音段</td>
             </tr>
             <tr
               v-for="row in rows"
@@ -321,6 +322,7 @@ function positiveInt(value, fallback) {
                 <td>
                   <button type="button" class="speaker-copy-button" @click.stop="copyText(row.taskId)">{{ row.taskId || '-' }}</button>
                 </td>
+                <td class="speaker-priority-cell">{{ row.priority ?? '-' }}</td>
                 <td>{{ row.itemIndex ?? '-' }}</td>
                 <td>{{ row.taskType || '-' }}</td>
                 <td>{{ attemptText(row) }}</td>
@@ -553,6 +555,11 @@ function positiveInt(value, fallback) {
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
+}
+
+.speaker-priority-cell {
+  color: #0f172a;
+  font-weight: 760;
 }
 
 .speaker-empty,
