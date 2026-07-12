@@ -61,6 +61,13 @@ const emit = defineEmits(['openPage'])
       </button>
       <button
         type="button"
+        :class="{ active: activePage === 'speaker' && !flowPageOpen }"
+        @click="emit('openPage', 'speaker')"
+      >
+        配音
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'ffmpeger' && !flowPageOpen }"
         @click="emit('openPage', 'ffmpeger')"
       >

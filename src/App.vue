@@ -9,6 +9,7 @@ import FfmpegerQueueContainer from './containers/FfmpegerQueueContainer.vue'
 import MonitorContainer from './containers/MonitorContainer.vue'
 import OperatorDiagnosticsContainer from './containers/OperatorDiagnosticsContainer.vue'
 import ServerContainer from './containers/ServerContainer.vue'
+import SpeakerSegmentsContainer from './containers/SpeakerSegmentsContainer.vue'
 import StaticAssetsContainer from './containers/StaticAssetsContainer.vue'
 import SubmitterAuthorsContainer from './containers/SubmitterAuthorsContainer.vue'
 import SubmitterContainer from './containers/SubmitterContainer.vue'
@@ -35,6 +36,7 @@ const pageShellClass = computed(() => ['page-shell', app.flowPageOpen ? 'flow-pa
       <ServerContainer v-else-if="app.activePage === 'server'" :app="app" />
       <FfmpegerQueueContainer v-else-if="app.activePage === 'ffmpeger'" :app="app" />
       <AirouterQueueContainer v-else-if="app.activePage === 'airouter'" :app="app" />
+      <SpeakerSegmentsContainer v-else-if="app.activePage === 'speaker'" :app="app" />
       <FailureLogsContainer v-else-if="app.activePage === 'failure-logs'" :app="app" />
       <OperatorDiagnosticsContainer v-else-if="app.activePage === 'operator-diagnostics'" :app="app" />
     </template>

@@ -6,6 +6,7 @@ import { createOperatorDiagnosticsApi } from '../api/operatorDiagnostics'
 import { createPublisherApi } from '../api/publisher'
 import { createQueueMonitorApi } from '../api/queueMonitor'
 import { createServerApi } from '../api/server'
+import { createSpeakerSegmentsApi } from '../api/speakerSegments'
 import { createStaticAssetsApi } from '../api/staticAssets'
 import { createSubmitterApi } from '../api/submitter'
 import { createTaskFlowApi } from '../api/taskFlow'
@@ -25,6 +26,7 @@ export function useAppServices() {
   const failureLogsApi = createFailureLogsApi(apiBase, 'monitor')
   const distributorApi = createDistributorApi(distributorApiBase, 'distributor')
   const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase, 'monitor')
+  const speakerSegmentsApi = createSpeakerSegmentsApi(apiBase, 'monitor')
   const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger', 'monitor')
   const airouterApi = createQueueMonitorApi(apiBase, 'airouter', 'monitor')
   const accountsApi = createAccountsApi(apiBase, distributorApiBase, { monitor: 'monitor', distributor: 'distributor' })
@@ -43,6 +45,7 @@ export function useAppServices() {
     failureLogsApi,
     distributorApi,
     operatorDiagnosticsApi,
+    speakerSegmentsApi,
     ffmpegerApi,
     airouterApi,
     accountsApi,
