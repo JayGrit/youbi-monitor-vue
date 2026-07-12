@@ -30,27 +30,19 @@ const summaryData = computed(() => summary.value || {})
 const deviceRows = computed(() => {
   const known = ['Macbook Air M4', 'myhp']
   const source = Array.isArray(summaryData.value.devices) ? summaryData.value.devices : []
-  const byKey = new Map(source.map(row => [deviceDisplay(row.device), row]))
-  const merged = []
-  for (const name of known) {
+  return known.map((name) => {
     const matched = source.find(row => deviceDisplay(row.device) === name || deviceDisplay(row.device).toLowerCase() === name.toLowerCase())
-    merged.push(matched || { device: name, pending: 0, ready: 0, running: 0, success: 0, failed: 0, total: 0 })
-    if (matched) byKey.delete(deviceDisplay(matched.device))
-  }
-  for (const row of byKey.values()) merged.push(row)
-  return merged
+    return matched || { device: name, pending: 0, ready: 0, running: 0, success: 0, failed: 0, total: 0 }
+  })
 })
 const deviceOptions = computed(() => {
   const names = new Set(deviceRows.value.map(row => deviceDisplay(row.device)).filter(Boolean))
   names.add('未分配')
   return Array.from(names)
 })
-const hasActiveQueue = computed(() => rows.value.some(row => row.status === 'running'))
+const hasActiveQueue = computed(() => rows.value.some(row => ['pending', 'ready', 'running'].includes(row.status)))
 const headlineCards = computed(() => [
   { key: 'unfinished', label: '未完成', value: summaryData.value.unfinishedCount || 0 },
-  { key: 'running', label: '运行中', value: summaryData.value.runningCount || 0 },
-  { key: 'completed', label: '最近完成', value: summaryData.value.completedCount || 0 },
-  { key: 'failed', label: '失败', value: summaryData.value.failedCount || 0 },
 ])
 
 onMounted(() => {
@@ -192,15 +184,6 @@ function clearCopyToastTimer() {
   copyToastTimer = null
 }
 
-function statusText(status) {
-  if (status === 'pending') return '待处理'
-  if (status === 'ready') return '排队中'
-  if (status === 'running') return '执行中'
-  if (status === 'success') return '成功'
-  if (status === 'failed') return '失败'
-  return status || '-'
-}
-
 function deviceDisplay(device) {
   const text = String(device || '').trim()
   if (!text) return '未分配'
@@ -218,14 +201,10 @@ function attemptText(row) {
   return row.maxAttempts ? `${row.attemptCount || 0}/${row.maxAttempts}` : String(row.attemptCount ?? '-')
 }
 
-function shortText(value) {
-  const text = String(value || '').replace(/\s+/g, ' ').trim()
+function errorText(row) {
+  const text = String(row.errorMessage || '').replace(/\s+/g, ' ').trim()
   if (!text) return '-'
   return text.length > 80 ? `${text.slice(0, 80)}...` : text
-}
-
-function errorText(row) {
-  return shortText(row.errorMessage)
 }
 
 function durationValue(row) {
@@ -243,14 +222,6 @@ function durationText(row) {
   return seconds === null || !Number.isFinite(seconds) ? '-' : formatDuration(seconds)
 }
 
-function waitingText(row) {
-  if (row.waitingSeconds !== null && row.waitingSeconds !== undefined) return formatDuration(row.waitingSeconds)
-  const created = parseLocalDateTime(row.createdAt)
-  const started = parseLocalDateTime(row.startedAt)
-  if (created && started) return formatDuration((started.getTime() - created.getTime()) / 1000)
-  return '-'
-}
-
 function relativeTime(value) {
   const date = parseLocalDateTime(value)
   if (!date) return '-'
@@ -263,18 +234,6 @@ function relativeTime(value) {
   if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
   if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
   return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`
-}
-
-function latestDeviceDuration(device) {
-  const display = deviceDisplay(device)
-  const match = rows.value
-    .filter(row => row.status === 'success' && deviceDisplay(row.device || row.operator) === display)
-    .sort((left, right) => String(right.completedAt || '').localeCompare(String(left.completedAt || '')))[0]
-  return match ? durationText(match) : '-'
-}
-
-function deviceQueued(row) {
-  return Number(row.pending || 0) + Number(row.ready || 0)
 }
 
 function positiveInt(value, fallback) {
@@ -309,10 +268,7 @@ function positiveInt(value, fallback) {
           <span>{{ device.total || 0 }} 段</span>
         </header>
         <dl>
-          <div><dt>运行</dt><dd>{{ device.running || 0 }}</dd></div>
-          <div><dt>排队</dt><dd>{{ deviceQueued(device) }}</dd></div>
           <div><dt>最近完成</dt><dd>{{ (device.success || 0) + (device.failed || 0) }}</dd></div>
-          <div><dt>最近耗时</dt><dd>{{ latestDeviceDuration(device.device) }}</dd></div>
         </dl>
       </article>
     </section>
@@ -342,22 +298,19 @@ function positiveInt(value, fallback) {
           <thead>
             <tr>
               <th>设备</th>
-              <th>状态</th>
               <th>任务</th>
               <th>段号</th>
               <th>任务类型</th>
               <th>尝试</th>
-              <th>开始</th>
+              <th>提交时间</th>
               <th>完成</th>
-              <th>等待</th>
               <th>耗时</th>
-              <th>文本摘要</th>
               <th>错误</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="!loading && !rows.length">
-              <td colspan="12" class="speaker-empty">没有配音段</td>
+              <td colspan="9" class="speaker-empty">没有配音段</td>
             </tr>
             <tr
               v-for="row in rows"
@@ -365,18 +318,15 @@ function positiveInt(value, fallback) {
               :class="['speaker-row', `speaker-${row.status || 'unknown'}`]"
             >
                 <td>{{ deviceDisplay(row.device || row.operator) }}</td>
-                <td>{{ statusText(row.status) }}</td>
                 <td>
                   <button type="button" class="speaker-copy-button" @click.stop="copyText(row.taskId)">{{ row.taskId || '-' }}</button>
                 </td>
                 <td>{{ row.itemIndex ?? '-' }}</td>
                 <td>{{ row.taskType || '-' }}</td>
                 <td>{{ attemptText(row) }}</td>
-                <td>{{ relativeTime(row.startedAt) }}</td>
+                <td>{{ relativeTime(row.createdAt) }}</td>
                 <td>{{ relativeTime(row.completedAt) }}</td>
-                <td>{{ waitingText(row) }}</td>
                 <td>{{ durationText(row) }}</td>
-                <td class="speaker-text-cell">{{ shortText(row.dstText || row.srcText) }}</td>
                 <td class="speaker-error-cell">{{ errorText(row) }}</td>
               </tr>
           </tbody>
@@ -441,8 +391,15 @@ function positiveInt(value, fallback) {
 .speaker-summary,
 .speaker-device-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+
+.speaker-summary {
+  grid-template-columns: minmax(180px, 260px);
+}
+
+.speaker-device-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .speaker-summary-card,
@@ -484,7 +441,7 @@ function positiveInt(value, fallback) {
 
 .speaker-device-card dl {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin: 0;
 }
@@ -538,7 +495,7 @@ function positiveInt(value, fallback) {
 
 .speaker-table {
   width: 100%;
-  min-width: 1320px;
+  min-width: 980px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -591,7 +548,6 @@ function positiveInt(value, fallback) {
   cursor: pointer;
 }
 
-.speaker-text-cell,
 .speaker-error-cell {
   max-width: 280px;
   overflow: hidden;
@@ -631,7 +587,6 @@ function positiveInt(value, fallback) {
 }
 
 @media (max-width: 1100px) {
-  .speaker-summary,
   .speaker-device-grid,
   .speaker-filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
