@@ -15,6 +15,9 @@ export const ACCOUNT_PLATFORM_TYPES = [
   'jinritoutiao',
   'x',
   'youtube',
+  'doubao',
+  'notebooklm',
+  'chatgpt',
 ]
 
 export const QR_LOGIN_PLATFORM_TYPES = ['bilibili', 'xiaohongshu', 'douyin']

@@ -77,5 +77,8 @@ export function createAccountsApi(apiBase, distributorApiBase = apiBase, service
     jinritoutiao: managedAccountApi('jinritoutiao'),
     x: managedAccountApi('x'),
     youtube: managedAccountApi('youtube'),
+    doubao: managedAccountApi('doubao'),
+    notebooklm: managedAccountApi('notebooklm'),
+    chatgpt: managedAccountApi('chatgpt'),
   }
 }
