@@ -61,6 +61,7 @@ const props = defineProps({
 })
 
 const STALE_READY_MINUTES = 10
+const OVERVIEW_TOOL_ACCOUNT_TYPES = new Set(['chatgpt', 'doubao', 'notebooklm'])
 
 const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
@@ -218,7 +219,10 @@ function forEachConfiguredAccount(callback) {
 }
 
 function visibleRows(group) {
-  return group.rows.filter(item => accountEditMode.value || item.row.enabled !== false)
+  return group.rows.filter(item => {
+    if (OVERVIEW_TOOL_ACCOUNT_TYPES.has(item.type)) return false
+    return accountEditMode.value || item.row.enabled !== false
+  })
 }
 
 const visibleAccountGroups = computed(() => {
