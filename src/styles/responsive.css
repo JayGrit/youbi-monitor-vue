@@ -853,12 +853,19 @@
     flex-direction: column;
   }
 
-  .submitter-author-type-table {
-    min-width: 860px;
+  .submitter-author-type-body {
+    padding: 10px;
   }
 
-  .submitter-author-type-body {
-    overflow: auto;
+  .submitter-author-type-head {
+    display: none;
+  }
+
+  .submitter-author-type-row,
+  .submitter-author-type-body.editing .submitter-author-type-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
   }
 
 }

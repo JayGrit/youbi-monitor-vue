@@ -453,13 +453,23 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     try {
       const payload = await submitterApi.listAuthorTypes()
       const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
-      const authors = new Set([...submitterAuthors.value, ...byAuthor.keys()].filter(Boolean))
-      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...authors].map(author => {
+      const authorRows = new Map()
+      for (const item of submitterAuthors.value) {
+        const normalized = normalizeSubmitterAuthorRow(item)
+        if (normalized.author) authorRows.set(normalized.author, normalized)
+      }
+      for (const author of byAuthor.keys()) {
+        if (!authorRows.has(author)) authorRows.set(author, { author })
+      }
+      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...authorRows.values()].map(authorRow => {
+        const author = authorRow.author
         const item = byAuthor.get(author)
         const resetCover = item?.resetCover === true
         const coverOrientation = resetCover ? normalizeCoverOrientation(item?.coverOrientation || item?.cover_orientation) : ''
         return {
           author,
+          source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || authorRow.source),
+          authorUrl: String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || authorRow.authorUrl || ''),
           type: String(item?.type || ''),
           draftType: String(item?.type || ''),
           taskType: String(item?.taskType || item?.task_type || 'dubbing'),
@@ -483,6 +493,45 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
     }
+  }
+
+  function normalizeSubmitterAuthorRow(item) {
+    if (typeof item === 'string') {
+      return {
+        author: item,
+        source: inferSubmitterAuthorSource(item),
+        authorUrl: inferSubmitterAuthorUrl(item),
+      }
+    }
+    const author = String(item?.author || item?.uploader || item?.name || item?.id || '').trim()
+    const authorUrl = String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || item?.url || '').trim()
+    return {
+      author,
+      source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || inferSubmitterAuthorSource(authorUrl || author)),
+      authorUrl: authorUrl || inferSubmitterAuthorUrl(author),
+    }
+  }
+
+  function normalizeSubmitterAuthorSource(value) {
+    const source = String(value || '').trim().toLowerCase()
+    if (source.includes('youtube') || source === 'yt') return 'youtube'
+    if (source.includes('tiktok')) return 'tiktok'
+    if (source.includes('douyin') || source.includes('iesdouyin')) return 'douyin'
+    return ''
+  }
+
+  function inferSubmitterAuthorSource(value) {
+    const text = String(value || '').trim().toLowerCase()
+    if (/youtu\.?be|youtube\.com/.test(text)) return 'youtube'
+    if (/tiktok\.com/.test(text)) return 'tiktok'
+    if (/douyin\.com|iesdouyin\.com/.test(text)) return 'douyin'
+    return ''
+  }
+
+  function inferSubmitterAuthorUrl(value) {
+    const text = String(value || '').trim()
+    if (/^https?:\/\//i.test(text)) return text
+    return ''
   }
 
   async function loadSubmitterTaskTypes() {
@@ -594,7 +643,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterMessage.value = `已删除作者配置 ${deletedAuthorRows} 条，视频 ${deletedVideoRows} 条，导入批次 ${deletedImportRows} 条，匹配 batch ${matchedBatchCount} 个`
       console.info('submitter author deleted', result)
       submitterAuthorTypeRows.value = submitterAuthorTypeRows.value.filter(item => item.author !== author)
-      submitterAuthors.value = submitterAuthors.value.filter(item => item !== author)
+      submitterAuthors.value = submitterAuthors.value.filter(item => normalizeSubmitterAuthorRow(item).author !== author)
       if (submitterUploader.value === author) {
         submitterUploader.value = ''
       }

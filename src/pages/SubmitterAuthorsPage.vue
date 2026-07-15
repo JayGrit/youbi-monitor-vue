@@ -1,10 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import PlatformIcon from '../components/PlatformIcon.vue'
 
 const props = defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
   submitterAuthorTypeRows: { type: Array, default: () => [] },
   submitterTaskTypes: { type: Array, default: () => [] },
+  platformIconUrls: { type: Object, default: () => ({}) },
   submitterAuthorTypeSaving: { type: String, default: '' },
   submitterAuthorDeleting: { type: String, default: '' },
   autosaveSubmitterAuthorType: { type: Function, required: true },
@@ -13,6 +15,16 @@ const props = defineProps({
 
 const editMode = ref(false)
 const typeAutosaveTimers = new Map()
+
+const authorTypeGroups = computed(() => {
+  const groups = new Map()
+  for (const row of props.submitterAuthorTypeRows) {
+    const type = String(row?.draftType || row?.type || '').trim() || '未设置'
+    if (!groups.has(type)) groups.set(type, [])
+    groups.get(type).push(row)
+  }
+  return [...groups.entries()].map(([type, rows]) => ({ type, rows }))
+})
 
 function scheduleTypeAutosave(row, autosave) {
   const author = String(row?.author || '')
@@ -53,9 +65,52 @@ function boolMark(value) {
   return value ? '✔' : '✘'
 }
 
+function sourcePlatform(row) {
+  const value = String(row?.source || row?.platform || '').trim().toLowerCase()
+  if (value.includes('youtube') || value === 'yt') return 'youtube'
+  if (value.includes('tiktok')) return 'tiktok'
+  if (value.includes('douyin') || value.includes('iesdouyin')) return 'douyin'
+  const text = `${row?.authorUrl || ''} ${row?.author || ''}`.toLowerCase()
+  if (/youtu\.?be|youtube\.com/.test(text)) return 'youtube'
+  if (/tiktok\.com/.test(text)) return 'tiktok'
+  if (/douyin\.com|iesdouyin\.com/.test(text)) return 'douyin'
+  return ''
+}
+
+function sourceLabel(row) {
+  const platform = sourcePlatform(row)
+  if (platform === 'youtube') return 'YouTube'
+  if (platform === 'tiktok') return 'TikTok'
+  if (platform === 'douyin') return '抖音'
+  return '来源'
+}
+
+function sourceIconUrl(row) {
+  const platform = sourcePlatform(row)
+  if (platform === 'youtube') return props.platformIconUrls.youtube || ''
+  if (platform === 'tiktok' || platform === 'douyin') return props.platformIconUrls.douyin || ''
+  return ''
+}
+
+function authorHref(row) {
+  const url = String(row?.authorUrl || '').trim()
+  return /^https?:\/\//i.test(url) ? url : ''
+}
+
 function taskTypeLabel(value) {
   const option = props.submitterTaskTypes.find(item => item.taskType === value)
   return option?.name || value || '-'
+}
+
+function settingRows(row) {
+  return [
+    { key: 'background', label: '有背景音', value: row.draftHasBackgroundAudio },
+    { key: 'resetCover', label: '重制封面', value: row.draftResetCover },
+    { key: 'horizontal', label: '横向封面', value: row.draftCoverOrientation === 'horizontal' },
+    { key: 'vertical', label: '竖向封面', value: row.draftCoverOrientation === 'vertical' },
+    { key: 'fetchNew', label: '拉取新视频', value: row.draftFetchNewVideos },
+    { key: 'bilibili', label: 'B站已有人发', value: row.draftBilibiliExists },
+  ]
 }
 </script>
 
@@ -72,32 +127,39 @@ function taskTypeLabel(value) {
         </button>
         <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
       </header>
-      <div class="submitter-author-type-body">
-        <table class="submitter-author-type-table" :class="{ editing: editMode }">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>作者</th>
-              <th>任务类型</th>
-              <th>有背景音</th>
-              <th>重制封面</th>
-              <th>横向封面</th>
-              <th>竖向封面</th>
-              <th>拉取新视频</th>
-              <th>B站已有人发</th>
-              <th v-if="editMode">原语言</th>
-              <th v-if="editMode">目标语言</th>
-              <th v-if="editMode">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="submitterAuthorTypeRows.length === 0">
-              <td :colspan="editMode ? 12 : 9" class="submitter-empty">暂无作者</td>
-            </tr>
-            <tr v-for="row in submitterAuthorTypeRows" :key="row.author">
-              <td>
+      <div class="submitter-author-type-body" :class="{ editing: editMode }">
+        <p v-if="submitterAuthorTypeRows.length === 0" class="submitter-empty">暂无作者</p>
+        <section v-for="group in authorTypeGroups" :key="group.type" class="submitter-author-type-group">
+          <header class="submitter-author-type-title">
+            <strong>{{ group.type }}</strong>
+            <span>{{ group.rows.length }} 位作者</span>
+          </header>
+          <div class="submitter-author-type-head" aria-hidden="true">
+            <span>来源</span>
+            <span>作者</span>
+            <span>任务类型</span>
+            <span>配置</span>
+            <span v-if="editMode">语言</span>
+            <span v-if="editMode">操作</span>
+          </div>
+          <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
+            <div class="submitter-author-source-cell">
+              <PlatformIcon :src="sourceIconUrl(row)" :label="sourceLabel(row)" :platform="sourcePlatform(row)" :size="24" />
+              <span>{{ sourceLabel(row) }}</span>
+            </div>
+            <div class="submitter-author-main-cell">
+              <a
+                v-if="authorHref(row)"
+                class="submitter-author-link"
+                :href="authorHref(row)"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {{ row.author }}
+              </a>
+              <span v-else class="submitter-author-name">{{ row.author }}</span>
+              <div v-if="editMode" class="submitter-author-type-edit">
                 <input
-                  v-if="editMode"
                   v-model="row.draftType"
                   type="text"
                   placeholder="投稿 type"
@@ -105,10 +167,9 @@ function taskTypeLabel(value) {
                   @input="scheduleTypeAutosave(row, autosaveSubmitterAuthorType)"
                   @change="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
                 />
-                <strong v-else class="account-type-cell submitter-author-type-badge">{{ row.draftType || '-' }}</strong>
-              </td>
-              <td>{{ row.author }}</td>
-              <td>
+              </div>
+            </div>
+            <div class="submitter-author-task-cell">
                 <select
                   v-if="editMode"
                   v-model="row.draftTaskType"
@@ -124,8 +185,19 @@ function taskTypeLabel(value) {
                   </option>
                 </select>
                 <span v-else>{{ taskTypeLabel(row.draftTaskType) }}</span>
-              </td>
-              <td>
+            </div>
+            <div class="submitter-author-settings-cell">
+              <div v-if="!editMode" class="submitter-author-setting-list">
+                <span
+                  v-for="setting in settingRows(row)"
+                  :key="setting.key"
+                  class="submitter-author-setting-pill"
+                  :class="{ active: setting.value }"
+                >
+                  {{ setting.label }} {{ boolMark(setting.value) }}
+                </span>
+              </div>
+              <div v-else class="submitter-author-check-grid">
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftHasBackgroundAudio"
@@ -133,10 +205,8 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
+                  <span>有背景音</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftHasBackgroundAudio) }}</span>
-              </td>
-              <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftResetCover"
@@ -144,10 +214,8 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="onResetCoverChange(row, autosaveSubmitterAuthorType)"
                   />
+                  <span>重制封面</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftResetCover) }}</span>
-              </td>
-              <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     :checked="row.draftCoverOrientation === 'horizontal'"
@@ -155,10 +223,8 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
                     @change="onCoverOrientationChange(row, 'horizontal', autosaveSubmitterAuthorType)"
                   />
+                  <span>横向封面</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftCoverOrientation === 'horizontal') }}</span>
-              </td>
-              <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     :checked="row.draftCoverOrientation === 'vertical'"
@@ -166,10 +232,8 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author || !row.draftResetCover"
                     @change="onCoverOrientationChange(row, 'vertical', autosaveSubmitterAuthorType)"
                   />
+                  <span>竖向封面</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftCoverOrientation === 'vertical') }}</span>
-              </td>
-              <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftFetchNewVideos"
@@ -177,10 +241,8 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
+                  <span>拉取新视频</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftFetchNewVideos) }}</span>
-              </td>
-              <td>
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftBilibiliExists"
@@ -188,10 +250,11 @@ function taskTypeLabel(value) {
                     :disabled="submitterAuthorTypeSaving === row.author"
                     @change="autosaveSubmitterAuthorType(row)"
                   />
+                  <span>B站已有人发</span>
                 </label>
-                <span v-else class="submitter-author-bool">{{ boolMark(row.draftBilibiliExists) }}</span>
-              </td>
-              <td v-if="editMode" class="submitter-author-language-cell">
+              </div>
+            </div>
+            <div v-if="editMode" class="submitter-author-language-cell">
                 <input
                   v-model="row.draftSourceLanguage"
                   type="text"
@@ -200,8 +263,6 @@ function taskTypeLabel(value) {
                   @change="autosaveSubmitterAuthorType(row)"
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
-              </td>
-              <td v-if="editMode" class="submitter-author-language-cell">
                 <input
                   v-model="row.draftTargetLanguage"
                   type="text"
@@ -210,8 +271,8 @@ function taskTypeLabel(value) {
                   @change="autosaveSubmitterAuthorType(row)"
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
-              </td>
-              <td v-if="editMode">
+            </div>
+            <div v-if="editMode" class="submitter-author-action-cell">
                 <button
                   type="button"
                   class="submitter-author-delete"
@@ -220,10 +281,9 @@ function taskTypeLabel(value) {
                 >
                   {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
                 </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </div>
+          </article>
+        </section>
       </div>
     </section>
   </section>
