@@ -223,6 +223,13 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     clearUploaderDiagnosticsPolling()
   }
 
+  function refreshTaskFlow() {
+    const taskId = selectedTaskFlow.value?.task?.id
+    if (taskId) {
+      loadTaskFlowPage(taskId)
+    }
+  }
+
   async function submitNarrationSegments(response) {
     const taskId = selectedTaskFlow.value?.task?.id
     if (!taskId) throw new Error('缺少 task ID')
