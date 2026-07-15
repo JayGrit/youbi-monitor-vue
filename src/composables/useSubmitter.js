@@ -586,7 +586,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorDeleting.value = author
     submitterAuthorTypeError.value = ''
     try {
-      await submitterApi.deleteAuthorType(author)
+      const result = await submitterApi.deleteAuthorType(author)
+      const deletedAuthorRows = Number(result?.deletedAuthorRows || 0)
+      const deletedVideoRows = Number(result?.deletedVideoRows || 0)
+      const deletedImportRows = Number(result?.deletedImportRows || 0)
+      const matchedBatchCount = Array.isArray(result?.matchedBatches) ? result.matchedBatches.length : 0
+      submitterMessage.value = `已删除作者配置 ${deletedAuthorRows} 条，视频 ${deletedVideoRows} 条，导入批次 ${deletedImportRows} 条，匹配 batch ${matchedBatchCount} 个`
+      console.info('submitter author deleted', result)
       submitterAuthorTypeRows.value = submitterAuthorTypeRows.value.filter(item => item.author !== author)
       submitterAuthors.value = submitterAuthors.value.filter(item => item !== author)
       if (submitterUploader.value === author) {
