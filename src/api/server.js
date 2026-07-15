@@ -14,6 +14,9 @@ export function createServerApi(apiBase, service = 'backupper') {
     runMinioCleanup() {
       return postJson(`${apiBase}/minio-cleanup/run`, {}, describe('手动执行 MinIO 回收任务'))
     },
+    generateUploadIncompleteReport() {
+      return postJson(`${apiBase}/reports/upload-incomplete`, {}, describe('生成上传未完成 MinIO 报表'))
+    },
     clearBuildCache() {
       return postJson(`${apiBase}/build-cache/clear`, {}, describe('清理服务器构建缓存'))
     },

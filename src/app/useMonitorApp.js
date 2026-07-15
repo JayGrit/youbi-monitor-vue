@@ -142,6 +142,10 @@ export function useMonitorApp() {
     accountKeyGroups,
     backupperDiskStatus,
     backupperDiskStatusText,
+    uploadIncompleteReport,
+    uploadIncompleteReportLoading,
+    uploadIncompleteReportError,
+    generateUploadIncompleteReport,
     uploadBackfillOpen,
     uploadBackfillContext,
     uploadBackfillRows,
@@ -189,7 +193,7 @@ export function useMonitorApp() {
     platformErrorText,
     warmPlatformIcons,
     qrImageUrl,
-  } = useAccounts(accountsApi, agentApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
+  } = useAccounts(accountsApi, agentApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS, serverApi)
 
   const {
     backupperDiskStatus: serverBackupperDiskStatus,
@@ -529,6 +533,10 @@ export function useMonitorApp() {
     accountKeyGroups,
     backupperDiskStatus,
     backupperDiskStatusText,
+    uploadIncompleteReport,
+    uploadIncompleteReportLoading,
+    uploadIncompleteReportError,
+    generateUploadIncompleteReport,
     serverBackupperDiskStatus,
     serverBackupperDiskStatusText,
     serverLoading,
