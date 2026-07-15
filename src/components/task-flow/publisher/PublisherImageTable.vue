@@ -73,7 +73,8 @@ async function upload(item, event) {
     <div class="publisher-image-row publisher-image-head">
       <strong>比例</strong>
       <strong>提示词（点击复制）</strong>
-      <strong>图片</strong>
+      <strong>图片 1</strong>
+      <strong>图片 2</strong>
     </div>
     <div v-for="item in items" :key="item.kind" class="publisher-image-row">
       <strong class="publisher-image-ratio">{{ item.ratio }}</strong>
@@ -112,6 +113,18 @@ async function upload(item, event) {
           hidden
           @change="upload(item, $event)"
         />
+      </div>
+      <div class="publisher-image-cell">
+        <a
+          v-if="item.secondaryUrl"
+          :href="normalizeResourceUrl(item.secondaryUrl)"
+          target="_blank"
+          rel="noreferrer"
+          :title="`查看${item.label}保存图`"
+        >
+          <img :src="normalizeResourceUrl(item.secondaryUrl)" :alt="`${item.label}保存图`" loading="lazy" />
+        </a>
+        <span v-else class="publisher-image-empty">-</span>
       </div>
       <p v-if="messages[item.kind]" class="publisher-image-feedback narration-manual-success">{{ messages[item.kind] }}</p>
       <p v-if="errors[item.kind]" class="publisher-image-feedback inline-error">{{ errors[item.kind] }}</p>

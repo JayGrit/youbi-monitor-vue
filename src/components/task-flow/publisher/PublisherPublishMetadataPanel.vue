@@ -11,6 +11,7 @@ const props = defineProps({
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
+  operatorDiagnosticsApi: { type: Object, required: true },
   loadDiagnostics: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
   uploadImage: { type: Function, required: true },
@@ -70,6 +71,7 @@ function jobOperatorOpId(jobName) {
       <PublisherImageTable :items="images" :upload-image="uploadImage" />
     </section>
     <PublisherDiagnosticsPanel
+      :api="operatorDiagnosticsApi"
       :diagnostics="diagnostics"
       :items="diagnosticItems"
       :loading="diagnosticsLoading"

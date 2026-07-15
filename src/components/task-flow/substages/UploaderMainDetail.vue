@@ -19,6 +19,7 @@ defineProps({
     :rows="context.uploadSubmissionRows(context.stage)"
     :upload-platform-name="context.uploadPlatformName"
     :platform-icon-urls="context.platformIconUrls"
+    :operator-diagnostics-api="context.operatorDiagnosticsApi"
     :diagnostics="context.uploaderDiagnostics"
     :loading="context.uploaderDiagnosticsLoading"
     :error="context.uploaderDiagnosticsError"

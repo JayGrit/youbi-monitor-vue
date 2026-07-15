@@ -37,6 +37,7 @@ const props = defineProps({
   uploaderDiagnostics: { type: Array, default: () => [] },
   uploaderDiagnosticsLoading: { type: Boolean, default: false },
   uploaderDiagnosticsError: { type: String, default: '' },
+  operatorDiagnosticsApi: { type: Object, required: true },
   platformIconUrls: { type: Object, default: () => ({}) },
   whisperWordTimestamps: { type: Array, default: () => [] },
   whisperProcessing: { type: Object, default: null },

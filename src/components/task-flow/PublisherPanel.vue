@@ -14,6 +14,7 @@ defineProps({
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
+  operatorDiagnosticsApi: { type: Object, required: true },
   loadDiagnostics: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
   submitSegments: { type: Function, required: true },
@@ -36,6 +37,7 @@ defineProps({
     :diagnostics="diagnostics"
     :diagnostics-loading="diagnosticsLoading"
     :diagnostics-error="diagnosticsError"
+    :operator-diagnostics-api="operatorDiagnosticsApi"
     :load-diagnostics="loadDiagnostics"
     :upload-platform-name="uploadPlatformName"
     :upload-image="uploadImage"
@@ -48,6 +50,7 @@ defineProps({
     :diagnostics="diagnostics"
     :diagnostics-loading="diagnosticsLoading"
     :diagnostics-error="diagnosticsError"
+    :operator-diagnostics-api="operatorDiagnosticsApi"
     :load-diagnostics="loadDiagnostics"
     :upload-platform-name="uploadPlatformName"
     :upload-image="uploadImage"

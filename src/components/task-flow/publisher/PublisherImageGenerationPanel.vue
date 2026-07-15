@@ -11,6 +11,7 @@ const props = defineProps({
   diagnostics: { type: Array, default: () => [] },
   diagnosticsLoading: { type: Boolean, default: false },
   diagnosticsError: { type: String, default: '' },
+  operatorDiagnosticsApi: { type: Object, required: true },
   loadDiagnostics: { type: Function, required: true },
   uploadPlatformName: { type: Function, required: true },
   uploadImage: { type: Function, required: true },
@@ -25,6 +26,7 @@ const imageItems = computed(() => [
     ratio: '1:1',
     prompt: jobPrompt(props.jobs, 'generate_cover_image', narration.value.cover_prompt, '1:1'),
     url: narration.value.cover_image_url || '',
+    secondaryUrl: narration.value.cover_saved_image_url || '',
   },
   {
     kind: 'background',
@@ -32,6 +34,7 @@ const imageItems = computed(() => [
     ratio: '4:3',
     prompt: jobPrompt(props.jobs, 'generate_background_image', narration.value.background_prompt, '4:3'),
     url: narration.value.background_image_url || '',
+    secondaryUrl: narration.value.background_saved_image_url || '',
   },
 ].filter(item => item.prompt || item.url))
 const blessingItems = computed(() => [
@@ -41,6 +44,7 @@ const blessingItems = computed(() => [
     ratio: '1:1',
     prompt: blessing.value.prompt || jobPrompt(props.jobs, 'generate_blessing_image', '', '1:1'),
     url: blessing.value.image_url || '',
+    secondaryUrl: blessing.value.saved_image_url || blessing.value.savedImageUrl || '',
   },
 ])
 const diagnosticItems = computed(() => [
@@ -72,6 +76,7 @@ function jobOperatorOpId(jobName) {
       <pre v-if="blessing.error_message" class="flow-stage-error">{{ blessing.error_message }}</pre>
     </section>
     <PublisherDiagnosticsPanel
+      :api="operatorDiagnosticsApi"
       :diagnostics="diagnostics"
       :items="diagnosticItems"
       :loading="diagnosticsLoading"

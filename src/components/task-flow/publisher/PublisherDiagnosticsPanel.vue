@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch } from 'vue'
-import DiagnosticScreenshotGrid from '../DiagnosticScreenshotGrid.vue'
+import { computed, ref } from 'vue'
+import OperatorDiagnosticScreenshotDialog from '../../operator-diagnostics/OperatorDiagnosticScreenshotDialog.vue'
 
 const props = defineProps({
+  api: { type: Object, required: true },
   diagnostics: { type: Array, default: () => [] },
   items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
@@ -11,36 +12,20 @@ const props = defineProps({
   uploadPlatformName: { type: Function, required: true },
 })
 
-const requestedKey = ref('')
-
-function matching(item) {
-  return props.diagnostics.filter(row => item.operatorOpId && (row.opId || row.op_id) === item.operatorOpId)
-}
-
-function visible(item) {
-  return [...matching(item)].sort((left, right) => {
-    return Number(left.stepIndex ?? left.step_index) - Number(right.stepIndex ?? right.step_index)
-      || Date.parse(left.createdAt || left.created_at || '') - Date.parse(right.createdAt || right.created_at || '')
-      || Number(left.id || 0) - Number(right.id || 0)
-  })
-}
+const dialogItem = ref(null)
+const dialogTask = computed(() => {
+  if (!dialogItem.value?.operatorOpId) return null
+  return { opId: dialogItem.value.operatorOpId }
+})
 
 function request(item) {
-  requestedKey.value = item.key
-  props.load(item)
+  dialogItem.value = item
 }
 
-function titlePrefix(row) {
-  return row.opId || row.op_id || ''
+function closeDialog() {
+  dialogItem.value = null
 }
 
-watch(
-  () => props.items,
-  items => {
-    const keys = new Set(items.map(item => item.key))
-    if (!keys.has(requestedKey.value)) requestedKey.value = ''
-  },
-)
 </script>
 
 <template>
@@ -54,24 +39,21 @@ watch(
             <button
               type="button"
               class="diagnostic-load-button"
-              :disabled="!item.operatorOpId || (loading && requestedKey === item.key)"
+              :disabled="!item.operatorOpId"
               @click="request(item)"
             >
-              {{ !item.operatorOpId ? '无 Operator' : loading && requestedKey === item.key ? '加载中' : '加载诊断截图' }}
+              {{ !item.operatorOpId ? '无 Operator' : '打开诊断截图' }}
             </button>
-          </div>
-          <div v-if="requestedKey === item.key" class="upload-submission-diagnostics">
-            <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
-            <p v-if="loading && !visible(item).length" class="flow-muted">正在加载诊断截图</p>
-            <DiagnosticScreenshotGrid
-              v-else
-              :rows="visible(item)"
-              :title-prefix="titlePrefix"
-              :empty-text="`没有${item.label}诊断截图`"
-            />
           </div>
         </div>
       </article>
     </div>
+    <OperatorDiagnosticScreenshotDialog
+      :api="api"
+      :open="Boolean(dialogTask)"
+      :task="dialogTask"
+      :title="dialogItem ? `${dialogItem.label}诊断截图` : '诊断截图'"
+      @close="closeDialog"
+    />
   </section>
 </template>

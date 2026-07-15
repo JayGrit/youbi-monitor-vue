@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue'
 import { statusText } from '../../domain/constants'
 import { formatDateTime } from '../../utils/format'
-import DiagnosticScreenshotGrid from './DiagnosticScreenshotGrid.vue'
+import OperatorDiagnosticScreenshotDialog from '../operator-diagnostics/OperatorDiagnosticScreenshotDialog.vue'
 
 const props = defineProps({
+  operatorDiagnosticsApi: { type: Object, required: true },
   rows: { type: Array, default: () => [] },
   uploadPlatformName: { type: Function, required: true },
   platformIconUrls: { type: Object, default: () => ({}) },
@@ -14,54 +15,27 @@ const props = defineProps({
   loadDiagnostics: { type: Function, required: true },
 })
 
-const requestedKey = ref('')
 const requestedSubmission = ref(null)
-
-const matchingDiagnostics = computed(() => {
-  if (!requestedSubmission.value) return []
-  return props.diagnostics.filter(row => diagnosticMatches(row, requestedSubmission.value))
-})
-const visibleDiagnostics = computed(() => {
-  return [...matchingDiagnostics.value].sort(compareDiagnostics)
+const dialogTask = computed(() => {
+  if (!operatorOpId(requestedSubmission.value)) return null
+  return { opId: operatorOpId(requestedSubmission.value) }
 })
 
 function requestDiagnostics(submission) {
-  requestedKey.value = submissionKey(submission)
   requestedSubmission.value = submission
-  props.loadDiagnostics(submission)
 }
 
-function submissionKey(submission) {
-  return `${submission.id || ''}:${submission.platform || ''}:${operatorOpId(submission)}`
-}
-
-function diagnosticMatches(row, submission) {
-  const opId = operatorOpId(submission)
-  return Boolean(opId) && (row.opId || row.op_id) === opId
-}
-
-function compareDiagnostics(left, right) {
-  return diagnosticStep(left) - diagnosticStep(right)
-    || diagnosticCreatedAt(left) - diagnosticCreatedAt(right)
-    || Number(left.id || 0) - Number(right.id || 0)
-}
-
-function diagnosticStep(row) {
-  const step = Number(row.stepIndex ?? row.step_index)
-  if (Number.isFinite(step)) return step
-  return Number.MAX_SAFE_INTEGER
-}
-
-function diagnosticCreatedAt(row) {
-  return Date.parse(row.createdAt || row.created_at || '') || 0
-}
-
-function diagnosticTitlePrefix(row) {
-  return row.opId || row.op_id || ''
+function closeDiagnostics() {
+  requestedSubmission.value = null
 }
 
 function operatorOpId(row) {
   return String(row?.operatorOpId || row?.operator_op_id || row?.operator_run_id || '').trim()
+}
+
+function diagnosticsTitle(submission) {
+  if (!submission) return '诊断截图'
+  return `${props.uploadPlatformName(submission.platform)}诊断截图`
 }
 </script>
 
@@ -87,10 +61,10 @@ function operatorOpId(row) {
               <button
                 type="button"
                 class="diagnostic-load-button"
-                :disabled="!operatorOpId(submission) || (loading && requestedKey === submissionKey(submission))"
+                :disabled="!operatorOpId(submission)"
                 @click="requestDiagnostics(submission)"
               >
-                {{ !operatorOpId(submission) ? '无 Operator' : loading && requestedKey === submissionKey(submission) ? '加载中' : '加载诊断截图' }}
+                {{ !operatorOpId(submission) ? '无 Operator' : '打开诊断截图' }}
               </button>
               <span :class="['task-badge', `status-${submission.status}`]">
                 {{ statusText[submission.status] || submission.status }}
@@ -103,18 +77,15 @@ function operatorOpId(row) {
             </span>
           </div>
           <pre v-if="submission.error_message" class="flow-stage-error">{{ submission.error_message }}</pre>
-          <div v-if="requestedKey === submissionKey(submission)" class="upload-submission-diagnostics">
-            <div v-if="error" class="flow-error diagnostic-error">诊断截图接口错误：{{ error }}</div>
-            <p v-if="loading && !visibleDiagnostics.length" class="flow-muted">正在加载诊断截图</p>
-            <p v-else-if="loading" class="flow-muted diagnostic-refreshing">正在自动更新诊断截图</p>
-            <DiagnosticScreenshotGrid
-              v-if="visibleDiagnostics.length || !loading"
-              :rows="visibleDiagnostics"
-              :title-prefix="diagnosticTitlePrefix"
-            />
-          </div>
         </div>
       </article>
     </div>
+    <OperatorDiagnosticScreenshotDialog
+      :api="operatorDiagnosticsApi"
+      :open="Boolean(dialogTask)"
+      :task="dialogTask"
+      :title="diagnosticsTitle(requestedSubmission)"
+      @close="closeDiagnostics"
+    />
   </div>
 </template>
