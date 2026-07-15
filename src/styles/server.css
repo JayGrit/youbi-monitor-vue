@@ -152,16 +152,17 @@
 
 .upload-report-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1080px;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .upload-report-table th,
 .upload-report-table td {
   border-bottom: 1px solid #e2e8f0;
-  padding: 7px 8px;
-  text-align: left;
+  min-height: 52px;
+  padding: 11px 10px;
+  text-align: center;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -177,13 +178,32 @@
 }
 
 .upload-report-task {
+  appearance: none;
+  border: 0;
+  background: transparent;
   color: #0f172a;
+  cursor: pointer;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.upload-report-task:hover {
+  color: #2563eb;
+  text-decoration: underline;
 }
 
 .upload-report-platform-icons {
-  justify-content: flex-start;
-  min-width: 120px;
+  justify-content: center;
+  min-width: 168px;
+  gap: 5px;
+}
+
+.upload-report-platform-icons .uploader-platform-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
 }
 
 @media (max-width: 720px) {

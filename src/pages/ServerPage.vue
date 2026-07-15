@@ -54,8 +54,8 @@ const uploadReportRows = computed(() => {
     return rows.sort((a, b) => Number(b?.remainingBytes || 0) - Number(a?.remainingBytes || 0))
   }
   return rows.sort((a, b) => {
-    const left = `${a?.type || ''}/${a?.taskType || ''}/${a?.taskId || ''}`
-    const right = `${b?.type || ''}/${b?.taskType || ''}/${b?.taskId || ''}`
+    const left = `${a?.type || ''}/${a?.taskId || ''}`
+    const right = `${b?.type || ''}/${b?.taskId || ''}`
     return left.localeCompare(right)
   })
 })
@@ -75,9 +75,11 @@ function reportTaskState(row) {
 }
 
 function platformStatuses(row) {
+  const order = { success: 0, running: 1, ready: 2, pending: 3, failed: 9 }
   return Object.entries(row?.platforms || {})
     .filter(([, status]) => status && !['no_need', 'skipped'].includes(status))
     .map(([platform, status]) => ({ platform, status }))
+    .sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5) || a.platform.localeCompare(b.platform))
 }
 
 function platformTitle(platformStatus) {
@@ -85,8 +87,45 @@ function platformTitle(platformStatus) {
   return `${platform} · ${platformStatus.status}`
 }
 
-function stageDone(row, stage) {
-  return row?.backupper?.[stage] === 'success'
+function stageValue(row, stage) {
+  const value = row?.backupper?.[stage]
+  if (!value) return {}
+  if (typeof value === 'string') return { status: value, cleanedAt: '' }
+  return value
+}
+
+function stageCleanedText(row, stage) {
+  const value = stageValue(row, stage)
+  if (value.status !== 'success') return ''
+  return shortDateTime(value.cleanedAt)
+}
+
+function shortDateTime(value) {
+  const text = String(value || '').trim()
+  const match = text.match(/(?:\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+  if (match) return `${match[1]}-${match[2]} ${match[3]}:${match[4]}:${match[5]}`
+  const date = new Date(text)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = value => String(value).padStart(2, '0')
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+async function copyTaskId(taskId) {
+  const text = String(taskId || '').trim()
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  }
 }
 
 const minioConsoleUrl = 'http://120.53.92.66:9001/'
@@ -223,8 +262,12 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
           </thead>
           <tbody>
             <tr v-for="row in uploadReportRows" :key="row.taskId">
-              <td class="upload-report-task">{{ row.taskId }}</td>
-              <td>{{ row.type || '-' }}/{{ row.taskType || '-' }}</td>
+              <td>
+                <button type="button" class="upload-report-task" @click="copyTaskId(row.taskId)">
+                  {{ row.taskId }}
+                </button>
+              </td>
+              <td>{{ row.type || '-' }}</td>
               <td>{{ reportTaskState(row) }}</td>
               <td>{{ row.uploaderStatus || '-' }}</td>
               <td>{{ row.remainingObjectCount }}</td>
@@ -246,9 +289,9 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
                   </span>
                 </span>
               </td>
-              <td>{{ stageDone(row, 'processAssets') }}</td>
-              <td>{{ stageDone(row, 'cover') }}</td>
-              <td>{{ stageDone(row, 'finalVideo') }}</td>
+              <td>{{ stageCleanedText(row, 'processAssets') }}</td>
+              <td>{{ stageCleanedText(row, 'cover') }}</td>
+              <td>{{ stageCleanedText(row, 'finalVideo') }}</td>
             </tr>
           </tbody>
         </table>
