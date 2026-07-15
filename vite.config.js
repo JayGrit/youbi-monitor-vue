@@ -33,6 +33,8 @@ export default defineConfig({
       '/monitor/backupper-api': {
         target: backupperApiTarget,
         changeOrigin: true,
+        timeout: 1800000,
+        proxyTimeout: 1800000,
         rewrite: path => path.replace(/^\/monitor\/backupper-api/, '/api'),
       },
       '/monitor/minio': {
