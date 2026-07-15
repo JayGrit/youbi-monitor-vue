@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import PlatformIcon from '../components/PlatformIcon.vue'
+import AccountOverviewPanel from '../components/accounts/AccountOverviewPanel.vue'
+import StandaloneAccountsPanel from '../components/accounts/StandaloneAccountsPanel.vue'
+import UploaderPhoneMatrix from '../components/accounts/UploaderPhoneMatrix.vue'
 import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
@@ -543,465 +545,93 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
 
 <template>
   <section class="account-page" aria-label="账号管理">
-    <section class="biliup-panel account-overview" aria-label="账号管理总览">
-      <div class="account-page-head">
-        <div></div>
-        <div class="account-edit-actions">
-          <template v-if="accountEditMode">
-            <button type="button" @click="cancelAccountEditMode">完成</button>
-          </template>
-          <button v-else type="button" @click="enterAccountEditMode">编辑</button>
-        </div>
-      </div>
-      <div v-if="visibleAccountGroups.length" class="account-key-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
-        <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
-          <span class="account-type-header">Type</span>
-          <div class="account-row account-header account-platform-row">
-            <span>Platform</span>
-            <span>头像</span>
-            <span>账号</span>
-            <span v-if="!accountEditMode">今日已发</span>
-            <span v-if="!accountEditMode">冷却等待</span>
-            <span v-if="!accountEditMode">生产中</span>
-            <span v-if="!accountEditMode">上传中</span>
-            <span v-if="!accountEditMode">生产失败</span>
-            <span v-if="!accountEditMode">待拉取</span>
-            <span v-if="!accountEditMode">失败任务</span>
-            <span v-if="!accountEditMode">上次上传</span>
-            <span v-if="!accountEditMode">下次可发送</span>
-            <span v-if="accountEditMode">Key</span>
-            <span v-if="accountEditMode">操作</span>
-            <span v-if="accountEditMode">随机冷却</span>
-            <span v-if="accountEditMode">禁发时间</span>
-            <span v-if="accountEditMode">最大暂存</span>
-            <span v-if="accountEditMode">启用</span>
-          </div>
-        </div>
-        <section v-for="group in visibleAccountGroups" :key="group.key" class="account-key-group">
-          <div class="account-group-grid" :class="{ editing: accountEditMode }">
-            <strong class="account-type-cell">{{ group.key }}</strong>
-            <div class="account-table" :class="{ editing: accountEditMode }">
-            <div
-              v-for="item in group.visibleRows"
-              :key="`${group.key}-${item.type}`"
-              :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item), saving: accountRowSaving(item) }]"
-            >
-              <span class="platform-mark" :class="{ saving: accountRowSaving(item) }">
-                <PlatformIcon :src="item.iconUrl" :label="item.label" :platform="item.type" />
-              </span>
-              <span data-label="头像">
-                <label
-                  v-if="item.configured"
-                  class="account-avatar-cell"
-                >
-                  <img
-                    v-if="accountAvatar(item.type, item.row)"
-                    :src="accountAvatar(item.type, item.row)"
-                    :alt="accountName(item.type, item.row)"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span v-else class="account-avatar-fallback">{{ accountAvatarInitial(item.row, item.type) }}</span>
-                </label>
-                <template v-else>-</template>
-              </span>
-              <span data-label="账号">
-                <span v-if="item.configured" class="account-profile-text">
-                  <strong>{{ accountName(item.type, item.row) }}</strong>
-                </span>
-                <template v-else>-</template>
-              </span>
-              <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="生产中">{{ item.configured ? accountMetricText(item.row, 'stagedRunningCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
-              <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && stagedFailedCount(item.row) > 0 }" data-label="生产失败">
-                {{ item.configured ? accountMetricText(item.row, 'stagedFailedCount') : '-' }}
-              </span>
-              <span v-if="!accountEditMode" data-label="待拉取">{{ item.configured ? accountMetricText(item.row, 'downloaderPendingCount') : '-' }}</span>
-              <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
-                {{ item.configured ? accountMetricText(item.row, 'failedUploadCount') : '-' }}
-              </span>
-              <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
-              <span
-                v-if="!accountEditMode"
-                :class="{
-                  'next-send-ready': item.configured && nextSendReady(item.row),
-                  'next-send-stale': item.configured && nextSendStale(item.row),
-                }"
-                data-label="下次可发送"
-              >
-                <button
-                  v-if="item.configured && nextSendRunning(item.row)"
-                  type="button"
-                  class="next-send-link"
-                  @click="openRunningTask(item.row)"
-                >
-                  {{ nextSendDisplay(item.row) }}
-                </button>
-                <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
-              </span>
-              <span v-if="accountEditMode" data-label="Key">
-                <input
-                  v-if="item.configured"
-                  v-model="item.row.draftKey"
-                  type="text"
-                  class="account-key-input"
-                  aria-label="账号 key"
-                  placeholder="账号 key"
-                  :disabled="accountRowSaving(item)"
-                  @change="saveAccountKeyEdit(item)"
-                />
-                <template v-else>-</template>
-              </span>
-              <span v-if="accountEditMode" data-label="操作">
-                <button
-                  v-if="item.configured"
-                  type="button"
-                  class="account-backfill-button"
-                  :disabled="accountRowSaving(item)"
-                  @click="openUploadBackfill(item.type, item.label, item.row.accountKey, group.key)"
-                >
-                  补发历史
-                </button>
-                <template v-else>-</template>
-              </span>
-              <span v-if="accountEditMode" class="cooldown-editor" data-label="随机冷却">
-                <template v-if="item.configured">
-                  <input
-                    v-model="item.row.draftCooldownMinMinutes"
-                    type="number"
-                    min="0"
-                    step="1"
-                    aria-label="最小冷却分钟"
-                    :disabled="accountRowSaving(item)"
-                    @change="saveAccountCooldownEdit(item)"
-                  />
-                  <span>-</span>
-                  <input
-                    v-model="item.row.draftCooldownMaxMinutes"
-                    type="number"
-                    min="0"
-                    step="1"
-                    aria-label="最大冷却分钟"
-                    :disabled="accountRowSaving(item)"
-                    @change="saveAccountCooldownEdit(item)"
-                  />
-                </template>
-                <template v-else>-</template>
-              </span>
-              <span v-if="accountEditMode" class="cooldown-editor quiet-time-editor" data-label="禁发时间">
-                <template v-if="item.configured">
-                  <input
-                    v-model="item.row.draftUploadQuietStartTime"
-                    type="time"
-                    aria-label="禁发开始时间"
-                    :disabled="accountRowSaving(item)"
-                    @change="saveAccountQuietTimeEdit(item)"
-                  />
-                  <span>-</span>
-                  <input
-                    v-model="item.row.draftUploadQuietEndTime"
-                    type="time"
-                    aria-label="禁发结束时间"
-                    :disabled="accountRowSaving(item)"
-                    @change="saveAccountQuietTimeEdit(item)"
-                  />
-                </template>
-                <template v-else>-</template>
-              </span>
-              <span v-if="accountEditMode" data-label="最大暂存">
-                <input
-                  v-if="item.configured"
-                  v-model="item.row.draftDownloaderMaxStagedCount"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  class="account-small-number-input"
-                  aria-label="最大暂存个数"
-                  :disabled="accountRowSaving(item)"
-                  @change="saveAccountDownloaderMaxStagedCountEdit(item)"
-                />
-                <template v-else>-</template>
-              </span>
-              <span v-if="accountEditMode" data-label="启用">
-                <label v-if="item.configured" class="account-enabled-edit">
-                  <input
-                    v-model="item.row.draftEnabled"
-                    type="checkbox"
-                    :disabled="accountRowSaving(item)"
-                    @change="saveAccountEnabledEdit(item)"
-                  />
-                  {{ item.row.draftEnabled ? '启用' : '禁用' }}
-                </label>
-                <template v-else>-</template>
-              </span>
-            </div>
-            </div>
-          </div>
-        </section>
-      </div>
-      <div v-else class="empty-state">暂无账号配置</div>
+    <AccountOverviewPanel
+      :account-edit-mode="accountEditMode"
+      :visible-account-groups="visibleAccountGroups"
+      :upload-backfill-open="uploadBackfillOpen"
+      :upload-backfill-context="uploadBackfillContext"
+      :upload-backfill-rows="uploadBackfillRows"
+      :upload-backfill-loading="uploadBackfillLoading"
+      :upload-backfill-busy="uploadBackfillBusy"
+      :upload-backfill-selected-ids="uploadBackfillSelectedIds"
+      :upload-backfill-selected-set="uploadBackfillSelectedSet"
+      :upload-backfill-all-selected="uploadBackfillAllSelected"
+      :upload-backfill-error="uploadBackfillError"
+      :bilibili-qr-code="bilibiliQrCode"
+      :bilibili-qr-message="bilibiliQrMessage"
+      :xiaohongshu-qr-code="xiaohongshuQrCode"
+      :xiaohongshu-qr-message="xiaohongshuQrMessage"
+      :enter-account-edit-mode="enterAccountEditMode"
+      :cancel-account-edit-mode="cancelAccountEditMode"
+      :account-row-unavailable="accountRowUnavailable"
+      :account-row-saving="accountRowSaving"
+      :account-avatar="accountAvatar"
+      :account-name="accountName"
+      :account-avatar-initial="accountAvatarInitial"
+      :account-metric-text="accountMetricText"
+      :staged-failed-count="stagedFailedCount"
+      :failed-upload-count="failedUploadCount"
+      :last-upload-text="lastUploadText"
+      :next-send-ready="nextSendReady"
+      :next-send-stale="nextSendStale"
+      :next-send-running="nextSendRunning"
+      :open-running-task="openRunningTask"
+      :next-send-display="nextSendDisplay"
+      :save-account-key-edit="saveAccountKeyEdit"
+      :open-upload-backfill="openUploadBackfill"
+      :save-account-cooldown-edit="saveAccountCooldownEdit"
+      :save-account-quiet-time-edit="saveAccountQuietTimeEdit"
+      :save-account-downloader-max-staged-count-edit="saveAccountDownloaderMaxStagedCountEdit"
+      :save-account-enabled-edit="saveAccountEnabledEdit"
+      :toggle-upload-backfill-all="toggleUploadBackfillAll"
+      :load-upload-backfill-candidates="loadUploadBackfillCandidates"
+      :close-upload-backfill="closeUploadBackfill"
+      :register-selected-upload-backfill="registerSelectedUploadBackfill"
+      :toggle-upload-backfill-row="toggleUploadBackfillRow"
+      :format-date-time="formatDateTime"
+      :qr-image-url="qrImageUrl"
+      :platform-error-text="platformErrorText"
+    />
 
-      <div v-if="accountEditMode && uploadBackfillOpen && uploadBackfillContext" class="upload-backfill-panel">
-        <div class="upload-retry-head">
-          <strong>
-            {{ uploadBackfillLoading ? '正在加载历史视频' : `补发候选 ${uploadBackfillRows.length} 个` }}
-          </strong>
-          <span class="upload-backfill-context">
-            {{ uploadBackfillContext.type }} · {{ uploadBackfillContext.platformLabel }}/{{ uploadBackfillContext.accountKey }}
-          </span>
-          <div class="upload-retry-actions">
-            <button type="button" :disabled="uploadBackfillLoading || uploadBackfillRows.length === 0" @click="toggleUploadBackfillAll">
-              {{ uploadBackfillAllSelected ? '取消全选' : '全选' }}
-            </button>
-            <button type="button" :disabled="uploadBackfillLoading || uploadBackfillBusy" @click="loadUploadBackfillCandidates">
-              刷新
-            </button>
-            <button type="button" :disabled="uploadBackfillBusy" @click="closeUploadBackfill">
-              关闭
-            </button>
-            <button
-              type="button"
-              class="primary"
-              :disabled="uploadBackfillBusy || uploadBackfillSelectedIds.length === 0"
-              @click="registerSelectedUploadBackfill"
-            >
-              {{ uploadBackfillBusy ? '注册中' : `注册选中 ${uploadBackfillSelectedIds.length}` }}
-            </button>
-          </div>
-        </div>
-        <p v-if="uploadBackfillError" class="inline-error">{{ uploadBackfillError }}</p>
-        <div v-if="!uploadBackfillLoading && uploadBackfillRows.length === 0" class="upload-retry-empty">
-          当前 type 暂无可补发历史视频
-        </div>
-        <div v-else class="upload-retry-list">
-          <label
-            v-for="row in uploadBackfillRows"
-            :key="row.taskId"
-            :class="['upload-retry-row', 'upload-backfill-row', { blocked: !row.selectable }]"
-          >
-            <input
-              type="checkbox"
-              :checked="uploadBackfillSelectedSet.has(row.taskId)"
-              :disabled="!row.selectable"
-              @change="toggleUploadBackfillRow(row)"
-            />
-            <span class="upload-backfill-cover">
-              <img v-if="row.coverUrl" :src="row.coverUrl" :alt="row.title || row.taskId" loading="lazy" decoding="async" />
-            </span>
-            <span class="upload-retry-main">
-              <span class="upload-retry-title">{{ row.title || row.taskId }}</span>
-              <span class="upload-retry-meta">
-                {{ row.taskId }} · 已发 {{ (row.uploadedPlatforms || []).join(', ') || '-' }} · {{ formatDateTime(row.completedAt) }}
-              </span>
-              <span v-if="!row.selectable" class="upload-retry-error">{{ row.blockedReason || '不可注册' }}</span>
-            </span>
-          </label>
-        </div>
-      </div>
+    <UploaderPhoneMatrix
+      :uploader-phone-edit-mode="uploaderPhoneEditMode"
+      :uploader-phone-loading="uploaderPhoneLoading"
+      :phone-rows="phoneRows"
+      :visible-phone-platforms="visiblePhonePlatforms"
+      :uploader-phone-error="uploaderPhoneError"
+      :phone-cell-disabled="phoneCellDisabled"
+      :phone-cell-unavailable="phoneCellUnavailable"
+      :selected-phone-account="selectedPhoneAccount"
+      :phone-cell-agent-busy="phoneCellAgentBusy"
+      :run-phone-cell-action="runPhoneCellAction"
+      :phone-cell-input-value="phoneCellInputValue"
+      :phone-cell-list-id="phoneCellListId"
+      :phone-cell-saving="phoneCellSaving"
+      :save-phone-platform="savePhonePlatform"
+      :toggle-phone-disabled="togglePhoneDisabled"
+      :phone-account-options="phoneAccountOptions"
+      :account-option-text="accountOptionText"
+      :phone-selected-account-row="phoneSelectedAccountRow"
+      :phone-account-profile-avatar="phoneAccountProfileAvatar"
+      :phone-account-profile-name="phoneAccountProfileName"
+      :phone-account-initial="phoneAccountInitial"
+      :platform-busy-key="platformBusyKey"
+      :upload-phone-account-avatar="uploadPhoneAccountAvatar"
+      :save-phone-account-profile="savePhoneAccountProfile"
+      :phone-account-name="phoneAccountName"
+      :phone-account-avatar="phoneAccountAvatar"
+      :phone-note-value="phoneNoteValue"
+      @toggle-edit-mode="uploaderPhoneEditMode = !uploaderPhoneEditMode"
+    />
 
-      <div class="account-qr-grid">
-        <div v-if="bilibiliQrCode" class="bilibili-login">
-          <img :src="qrImageUrl(bilibiliQrCode.url)" alt="B站登录二维码" />
-          <div>
-            <strong>{{ bilibiliQrMessage }}</strong>
-            <a :href="bilibiliQrCode.url" target="_blank" rel="noreferrer">打开登录链接</a>
-          </div>
-        </div>
-
-        <div v-if="xiaohongshuQrCode" class="bilibili-login">
-          <img :src="xiaohongshuQrCode.imageDataUrl" alt="小红书登录二维码" />
-          <div>
-            <strong>{{ xiaohongshuQrMessage }}</strong>
-            <span>请用小红书 App 扫码并确认登录</span>
-          </div>
-        </div>
-      </div>
-
-      <p v-if="platformErrorText()" class="inline-error">{{ platformErrorText() }}</p>
-    </section>
-
-    <section class="biliup-panel uploader-phone-panel" aria-label="手机号账号矩阵">
-      <div class="uploader-phone-head">
-        <strong>手机号账号</strong>
-        <div class="uploader-phone-actions">
-          <span v-if="uploaderPhoneLoading">加载中</span>
-          <button type="button" @click="uploaderPhoneEditMode = !uploaderPhoneEditMode">
-            {{ uploaderPhoneEditMode ? '完成' : '编辑' }}
-          </button>
-        </div>
-      </div>
-      <div v-if="phoneRows.length && visiblePhonePlatforms.length" class="uploader-phone-table">
-        <div
-          class="uploader-phone-row uploader-phone-header-row"
-          :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
-        >
-          <span class="uploader-phone-platform-cell"></span>
-          <span v-for="phone in phoneRows" :key="phone.id" class="uploader-phone-head-cell">
-            <small v-if="phone.remark">{{ phone.remark }}</small>
-            <strong>{{ phone.phone }}</strong>
-          </span>
-        </div>
-        <div
-          v-for="platform in visiblePhonePlatforms"
-          :key="platform.type"
-          class="uploader-phone-row"
-          :style="{ gridTemplateColumns: `72px repeat(${phoneRows.length}, minmax(180px, 1fr))` }"
-        >
-          <span class="uploader-phone-platform-cell">
-            <PlatformIcon :src="platform.iconUrl" :label="platform.label" :platform="platform.type" />
-          </span>
-          <span
-            v-for="phone in phoneRows"
-            :key="`${platform.type}-${phone.id}`"
-            class="uploader-phone-select-cell"
-            :class="{
-              disabled: phoneCellDisabled(phone, platform.type),
-              unavailable: phoneCellUnavailable(phone, platform.type),
-              empty: !selectedPhoneAccount(phone, platform.type),
-              actionable: !uploaderPhoneEditMode,
-              busy: phoneCellAgentBusy(phone, platform.type),
-            }"
-            :role="uploaderPhoneEditMode ? undefined : 'button'"
-            :tabindex="uploaderPhoneEditMode ? undefined : 0"
-            @click="runPhoneCellAction(phone, platform.type)"
-            @keyup.enter="runPhoneCellAction(phone, platform.type)"
-            @keyup.space.prevent="runPhoneCellAction(phone, platform.type)"
-          >
-            <template v-if="uploaderPhoneEditMode">
-              <div class="uploader-phone-edit-line">
-                <input
-                  type="text"
-                  :class="{ 'disabled-note': phoneCellDisabled(phone, platform.type) }"
-                  :value="phoneCellInputValue(phone, platform.type)"
-                  :list="phoneCellListId(phone, platform.type)"
-                  :disabled="phoneCellSaving(phone, platform.type)"
-                  :aria-label="`${platform.label} ${phone.phone}`"
-                  @change="savePhonePlatform(phone, platform.type, $event)"
-                  @keyup.enter="savePhonePlatform(phone, platform.type, $event)"
-                />
-                <button
-                  type="button"
-                  class="uploader-phone-disable-button"
-                  :class="{ active: phoneCellDisabled(phone, platform.type) }"
-                  :disabled="phoneCellSaving(phone, platform.type)"
-                  @click="togglePhoneDisabled(phone, platform.type)"
-                >
-                  {{ phoneCellDisabled(phone, platform.type) ? '启用' : '禁用' }}
-                </button>
-              </div>
-              <datalist :id="phoneCellListId(phone, platform.type)">
-                <option
-                  v-for="account in phoneAccountOptions(platform.type)"
-                  :key="account.id"
-                  :value="accountOptionText(account)"
-                >
-                </option>
-              </datalist>
-              <div
-                v-if="selectedPhoneAccount(phone, platform.type) && phoneSelectedAccountRow(phone, platform.type)"
-                class="uploader-phone-profile-editor"
-              >
-                <label class="uploader-phone-profile-avatar">
-                  <img
-                    v-if="phoneAccountProfileAvatar(phone, platform.type)"
-                    :src="phoneAccountProfileAvatar(phone, platform.type)"
-                    :alt="phoneAccountProfileName(phone, platform.type) || selectedPhoneAccount(phone, platform.type).accountKey"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    aria-label="上传账号头像"
-                    :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
-                    @change="uploadPhoneAccountAvatar(phone, platform.type, $event)"
-                  />
-                </label>
-                <input
-                  type="text"
-                  class="uploader-phone-profile-name"
-                  :value="phoneAccountProfileName(phone, platform.type)"
-                  placeholder="账号名"
-                  :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
-                  @change="savePhoneAccountProfile(phone, platform.type, $event)"
-                  @keyup.enter="savePhoneAccountProfile(phone, platform.type, $event)"
-                />
-              </div>
-            </template>
-            <template v-else>
-              <span v-if="phoneCellAgentBusy(phone, platform.type)" class="uploader-phone-running">
-                启动中
-              </span>
-              <span
-                v-else-if="selectedPhoneAccount(phone, platform.type)"
-                class="uploader-phone-account-card"
-                :class="{ 'no-name': !phoneAccountName(selectedPhoneAccount(phone, platform.type)) }"
-              >
-                <span class="uploader-phone-account-avatar">
-                  <img
-                    v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
-                    :src="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
-                    :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span v-else>{{ phoneAccountInitial(selectedPhoneAccount(phone, platform.type)) }}</span>
-                </span>
-                <span class="uploader-phone-account-text">
-                  <strong v-if="phoneAccountName(selectedPhoneAccount(phone, platform.type))">
-                    {{ phoneAccountName(selectedPhoneAccount(phone, platform.type)) }}
-                  </strong>
-                </span>
-              </span>
-              <span
-                v-else-if="phoneNoteValue(phone, platform.type)"
-                class="uploader-phone-note"
-                :class="{ disabled: phoneCellDisabled(phone, platform.type) }"
-              >
-                {{ phoneNoteValue(phone, platform.type) }}
-              </span>
-              <span v-else class="uploader-phone-account-empty">新建账号</span>
-            </template>
-          </span>
-        </div>
-      </div>
-      <div v-else class="empty-state">暂无手机号配置</div>
-      <p v-if="uploaderPhoneError" class="inline-error">{{ uploaderPhoneError }}</p>
-    </section>
-
-    <section class="biliup-panel standalone-account-panel" aria-label="独立账号入口">
-      <div class="uploader-phone-head">
-        <strong>独立账号</strong>
-        <div class="standalone-account-head-actions">
-          <span v-if="standaloneAccountLoading">加载中</span>
-          <button
-            type="button"
-            :disabled="youtubeCookieUpdating"
-            @click="updateYoutubeDownloaderCookies"
-          >
-            {{ youtubeCookieUpdating ? '更新中' : '更新 YouTube Cookie' }}
-          </button>
-        </div>
-      </div>
-      <div class="standalone-account-actions">
-        <button
-          v-for="account in standaloneAccounts"
-          :key="account.platform"
-          type="button"
-          :disabled="Boolean(standaloneAccountBusyKey)"
-          @click="runStandaloneAccount(account)"
-        >
-          <strong>{{ standaloneLabels[account.platform] || account.platform }}</strong>
-          <span>{{ standaloneAccountBusyKey === account.platform ? '启动中' : (account.exists ? 'Open' : 'New') }}</span>
-        </button>
-      </div>
-      <div v-if="!standaloneAccountLoading && !standaloneAccounts.length" class="empty-state">
-        请先启动本地 agent
-      </div>
-    </section>
+    <StandaloneAccountsPanel
+      :standalone-account-loading="standaloneAccountLoading"
+      :youtube-cookie-updating="youtubeCookieUpdating"
+      :update-youtube-downloader-cookies="updateYoutubeDownloaderCookies"
+      :standalone-accounts="standaloneAccounts"
+      :standalone-account-busy-key="standaloneAccountBusyKey"
+      :run-standalone-account="runStandaloneAccount"
+      :standalone-labels="standaloneLabels"
+    />
   </section>
 </template>

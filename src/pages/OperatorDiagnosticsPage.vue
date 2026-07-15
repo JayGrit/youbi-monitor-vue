@@ -2,6 +2,9 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
 import OperatorDiagnosticScreenshotDialog from '../components/operator-diagnostics/OperatorDiagnosticScreenshotDialog.vue'
+import { useCopyToast } from '../composables/useCopyToast'
+import { usePageVisibilityPolling } from '../composables/usePageVisibilityPolling'
+import { recentTimeRanges, timeRangeParams } from '../composables/useTimeRangeFilter'
 import { uploadPlatformText } from '../domain/constants'
 import { formatDuration, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
@@ -20,13 +23,13 @@ const filters = reactive({
 const queueTasks = ref([])
 const queueLoading = ref(false)
 const queueError = ref('')
-const copyToastVisible = ref(false)
 const screenshotDialogTask = ref(null)
-const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
-let pollTimer = null
 let filterTimer = null
-let copyToastTimer = null
 let queueRequestToken = 0
+const { copyToastVisible, copyText } = useCopyToast()
+const { syncPolling, stopPolling } = usePageVisibilityPolling(() => {
+  loadQueue({ silent: true })
+}, () => hasActiveQueue.value)
 
 const hasActiveQueue = computed(() => queueTasks.value.some(item => ['ready', 'running'].includes(item.status)))
 const platformOptions = computed(() => Object.entries(props.platformIconUrls).map(([type, iconUrl]) => ({
@@ -34,24 +37,16 @@ const platformOptions = computed(() => Object.entries(props.platformIconUrls).ma
   label: uploadPlatformText[type] || type,
   iconUrl,
 })))
-const timeRanges = [
-  { value: 'recent', label: '近3小时' },
-  { value: 'today', label: '今天' },
-  { value: 'yesterday', label: '昨天' },
-  { value: 'beforeYesterday', label: '前天' },
-]
+const timeRanges = recentTimeRanges
 
 onMounted(() => {
   restoreQuery()
   loadQueue()
-  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   stopPolling()
   clearFilterTimer()
-  clearCopyToastTimer()
-  document.removeEventListener('visibilitychange', handleVisibility)
 })
 
 function restoreQuery() {
@@ -136,66 +131,6 @@ function setPlatformFilter(platform) {
   filterChanged()
 }
 
-function handleVisibility() {
-  pageVisible.value = document.visibilityState === 'visible'
-  syncPolling()
-}
-
-function syncPolling() {
-  stopPolling()
-  if (!pageVisible.value || !hasActiveQueue.value) return
-  pollTimer = window.setInterval(() => {
-    loadQueue({ silent: true })
-  }, 10000)
-}
-
-function stopPolling() {
-  if (pollTimer) window.clearInterval(pollTimer)
-  pollTimer = null
-}
-
-async function copyText(text) {
-  const value = String(text || '').trim()
-  if (!value) return
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value)
-    } else {
-      copyTextFallback(value)
-    }
-    showCopyToast()
-  } catch {
-    copyTextFallback(value)
-    showCopyToast()
-  }
-}
-
-function copyTextFallback(text) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
-}
-
-function showCopyToast() {
-  copyToastVisible.value = true
-  clearCopyToastTimer()
-  copyToastTimer = window.setTimeout(() => {
-    copyToastVisible.value = false
-    copyToastTimer = null
-  }, 1400)
-}
-
-function clearCopyToastTimer() {
-  if (copyToastTimer) window.clearTimeout(copyToastTimer)
-  copyToastTimer = null
-}
-
 function queueTaskId(row) {
   return row?.taskId || row?.task_id || ''
 }
@@ -217,38 +152,6 @@ function screenshotDialogTitle(task) {
     queueTaskType(task),
     task?.accountKey,
   ].filter(Boolean).join(' / ') || '诊断截图'
-}
-
-function timeRangeParams(range) {
-  const now = new Date()
-  if (range === 'today') return dayRange(now)
-  if (range === 'yesterday') return dayRange(addDays(now, -1))
-  if (range === 'beforeYesterday') return dayRange(addDays(now, -2))
-  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000)
-  return {
-    createdFrom: localDateTime(from),
-    createdTo: localDateTime(now),
-  }
-}
-
-function dayRange(date) {
-  const from = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const to = new Date(from)
-  to.setDate(to.getDate() + 1)
-  return {
-    createdFrom: localDateTime(from),
-    createdTo: localDateTime(to),
-  }
-}
-
-function addDays(date, days) {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function localDateTime(date) {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 }
 
 function platformIconUrl(platform) {

@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useCopyToast } from '../composables/useCopyToast'
+import { usePageVisibilityPolling } from '../composables/usePageVisibilityPolling'
 import { formatDuration, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
@@ -19,12 +21,12 @@ const page = ref(1)
 const pageCount = ref(0)
 const loading = ref(false)
 const error = ref('')
-const copyToastVisible = ref(false)
-const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
-let pollTimer = null
 let filterTimer = null
-let copyToastTimer = null
 let requestToken = 0
+const { copyToastVisible, copyText } = useCopyToast()
+const { syncPolling, stopPolling } = usePageVisibilityPolling(() => {
+  loadSegments({ silent: true })
+}, () => hasActiveQueue.value)
 
 const summaryData = computed(() => summary.value || {})
 const deviceRows = computed(() => {
@@ -48,14 +50,11 @@ const headlineCards = computed(() => [
 onMounted(() => {
   restoreQuery()
   loadSegments()
-  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   stopPolling()
   clearFilterTimer()
-  clearCopyToastTimer()
-  document.removeEventListener('visibilitychange', handleVisibility)
 })
 
 function restoreQuery() {
@@ -122,66 +121,11 @@ function clearFilterTimer() {
   filterTimer = null
 }
 
-function handleVisibility() {
-  pageVisible.value = document.visibilityState === 'visible'
-  syncPolling()
-}
-
-function syncPolling() {
-  stopPolling()
-  if (!pageVisible.value || !hasActiveQueue.value) return
-  pollTimer = window.setInterval(() => loadSegments({ silent: true }), 10000)
-}
-
-function stopPolling() {
-  if (pollTimer) window.clearInterval(pollTimer)
-  pollTimer = null
-}
-
 function setPage(nextPage) {
   const normalized = Math.max(1, Math.min(nextPage, pageCount.value || 1))
   if (normalized === page.value) return
   page.value = normalized
   loadSegments()
-}
-
-async function copyText(text) {
-  const value = String(text || '').trim()
-  if (!value) return
-  try {
-    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value)
-    else copyTextFallback(value)
-    showCopyToast()
-  } catch {
-    copyTextFallback(value)
-    showCopyToast()
-  }
-}
-
-function copyTextFallback(text) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
-}
-
-function showCopyToast() {
-  copyToastVisible.value = true
-  clearCopyToastTimer()
-  copyToastTimer = window.setTimeout(() => {
-    copyToastVisible.value = false
-    copyToastTimer = null
-  }, 1400)
-}
-
-function clearCopyToastTimer() {
-  if (copyToastTimer) window.clearTimeout(copyToastTimer)
-  copyToastTimer = null
 }
 
 function deviceDisplay(device) {

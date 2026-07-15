@@ -1,6 +1,11 @@
 import { computed, ref } from 'vue'
 import { SUBMITTER_PAGE_SIZE } from '../domain/constants'
 import { formatNumber } from '../utils/format'
+import { useSubmitterActions } from './submitter/useSubmitterActions'
+import { useSubmitterAuthors } from './submitter/useSubmitterAuthors'
+import { useSubmitterPolling } from './submitter/useSubmitterPolling'
+import { useSubmitterSelection } from './submitter/useSubmitterSelection'
+import { useSubmitterThumbnails } from './submitter/useSubmitterThumbnails'
 
 export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterVideos = ref([])
@@ -38,7 +43,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorTypeSaving = ref('')
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
-  let submitterTimer = null
 
   const submitterAuthorTypeFilters = computed(() => {
     const types = new Set()
@@ -94,22 +98,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       })
       .map(([status, count]) => `${labels[status] || (status === 'unknown' ? '未导入' : status)} ${formatNumber(count)}`)
       .join(' · ')
-  })
-
-  const submitterPageSelectableIds = computed(() => {
-    return submitterVideos.value
-      .filter(item => submitterSubmissionStatus(item) === 'unuploaded')
-      .map(item => String(submitterFieldValue(item, 'id') || '').trim())
-      .filter(Boolean)
-  })
-
-  const submitterSelectedCount = computed(() => submitterSelectedIds.value.length)
-
-  const submitterPageAllSelected = computed(() => {
-    const ids = submitterPageSelectableIds.value
-    if (!ids.length) return false
-    const selected = new Set(submitterSelectedIds.value)
-    return ids.every(id => selected.has(id))
   })
 
   function submitterSource(item) {
@@ -250,413 +238,93 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     return payload?.items || []
   }
 
-  async function submitVideoToYoubi(item) {
-    const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
-    submitterSubmittingId.value = String(rowId)
-    submitterError.value = ''
-    try {
-      const payload = await submitterApi.submitVideo(rowId)
-      Object.assign(item, {
-        ydbi_submitted: 1,
-        ydbi_submission_status: 'pending',
-        ydbi_submission_id: payload.submission_id,
-        ydbi_submitted_at: new Date().toISOString(),
-        ydbi_rejected_at: null,
-      })
-      removeSubmittedRows([rowId])
-      submitterMessage.value = `已投稿到 YouBi 待执行队列，type=${payload.type || 'unknown'}。`
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-      window.alert(submitterError.value)
-    } finally {
-      submitterSubmittingId.value = ''
-    }
-  }
+  const {
+    submitterPageSelectableIds,
+    submitterSelectedCount,
+    submitterPageAllSelected,
+    setSubmitterRowSelected,
+    toggleSubmitterPageSelection,
+    selectAllSubmitterFilteredVideos,
+    clearSubmitterSelection,
+    removeSubmittedRows,
+  } = useSubmitterSelection({
+    submitterVideos,
+    submitterSelectedIds,
+    submitterSelectedRows,
+    submitterBatchSubmitting,
+    submitterMessage,
+    submitterError,
+    loadSubmitterMatchingVideos,
+    submitterFieldValue,
+    submitterSubmissionStatus,
+  })
 
-  function removeSubmittedRows(rowIds) {
-    const submitted = new Set(rowIds.map(id => String(id)).filter(Boolean))
-    if (!submitted.size) return
-    const beforeCount = submitterVideos.value.length
-    submitterVideos.value = submitterVideos.value.filter(item => {
-      const rowId = String(submitterFieldValue(item, 'id') || '').trim()
-      return !submitted.has(rowId)
-    })
-    const removedFromPage = beforeCount - submitterVideos.value.length
-    submitterTotal.value = Math.max(0, submitterTotal.value - Math.max(removedFromPage, submitted.size))
-    submitterSelectedIds.value = submitterSelectedIds.value.filter(id => !submitted.has(String(id)))
-    const rows = { ...submitterSelectedRows.value }
-    for (const rowId of submitted) delete rows[rowId]
-    submitterSelectedRows.value = rows
-  }
+  const {
+    submitterVideoThumb,
+    submitterCachedThumb,
+    warmSubmitterThumbnails,
+  } = useSubmitterThumbnails({
+    submitterVideos,
+    submitterThumbUrls,
+    cacheImageUrl,
+    submitterFieldValue,
+  })
 
-  function setSubmitterRowSelected(item, selected) {
-    const rowId = String(submitterFieldValue(item, 'id') || '').trim()
-    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterBatchSubmitting.value) return
-    const ids = new Set(submitterSelectedIds.value)
-    const rows = { ...submitterSelectedRows.value }
-    if (selected) {
-      ids.add(rowId)
-      rows[rowId] = item
-    } else {
-      ids.delete(rowId)
-      delete rows[rowId]
-    }
-    submitterSelectedIds.value = [...ids]
-    submitterSelectedRows.value = rows
-  }
+  const {
+    submitVideoToYoubi,
+    submitSelectedVideosToYoubi,
+    rejectSubmitterVideo,
+    withdrawSubmitterVideo,
+  } = useSubmitterActions({
+    submitterApi,
+    submitterVideos,
+    submitterTotal,
+    submitterError,
+    submitterMessage,
+    submitterSubmittingId,
+    submitterRejectingId,
+    submitterBatchSubmitting,
+    submitterSelectedIds,
+    submitterSelectedRows,
+    submitterFieldValue,
+    submitterSubmissionStatus,
+    removeSubmittedRows,
+    loadSubmitterVideos,
+  })
 
-  function toggleSubmitterPageSelection() {
-    if (submitterBatchSubmitting.value) return
-    const selected = new Set(submitterSelectedIds.value)
-    const rows = { ...submitterSelectedRows.value }
-    const shouldSelect = !submitterPageAllSelected.value
-    for (const item of submitterVideos.value) {
-      const rowId = String(submitterFieldValue(item, 'id') || '').trim()
-      if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded') continue
-      if (shouldSelect) {
-        selected.add(rowId)
-        rows[rowId] = item
-      } else {
-        selected.delete(rowId)
-        delete rows[rowId]
-      }
-    }
-    submitterSelectedIds.value = [...selected]
-    submitterSelectedRows.value = rows
-  }
+  const {
+    loadSubmitterAuthorTypes,
+    loadSubmitterTaskTypes,
+    autosaveSubmitterAuthorType,
+    deleteSubmitterAuthor,
+  } = useSubmitterAuthors({
+    submitterApi,
+    submitterAuthors,
+    submitterAuthorTypeRows,
+    submitterTaskTypes,
+    submitterAuthorTypeSaving,
+    submitterAuthorDeleting,
+    submitterAuthorTypeError,
+    submitterMessage,
+    submitterUploader,
+    submitterTypeFilter,
+    submitterAuthorTypeFilters,
+    loadSubmitterVideos,
+  })
 
-  async function selectAllSubmitterFilteredVideos() {
-    if (submitterBatchSubmitting.value) return
-    submitterError.value = ''
-    try {
-      const rows = (await loadSubmitterMatchingVideos())
-        .filter(item => submitterSubmissionStatus(item) === 'unuploaded')
-      const nextRows = {}
-      const ids = []
-      for (const item of rows) {
-        const rowId = String(submitterFieldValue(item, 'id') || '').trim()
-        if (!rowId) continue
-        ids.push(rowId)
-        nextRows[rowId] = item
-      }
-      submitterSelectedIds.value = ids
-      submitterSelectedRows.value = nextRows
-      submitterMessage.value = ids.length
-        ? `已选择当前筛选结果中的 ${formatNumber(ids.length)} 条未投稿素材。`
-        : '当前筛选结果没有可投稿的素材。'
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  function clearSubmitterSelection() {
-    submitterSelectedIds.value = []
-    submitterSelectedRows.value = {}
-  }
-
-  async function submitSelectedVideosToYoubi() {
-    if (submitterBatchSubmitting.value || submitterSubmittingId.value || submitterRejectingId.value) return
-    const selectedIds = submitterSelectedIds.value.slice()
-    if (!selectedIds.length) return
-    submitterBatchSubmitting.value = true
-    submitterSubmittingId.value = 'batch'
-    submitterError.value = ''
-    submitterMessage.value = `正在批量投稿 ${formatNumber(selectedIds.length)} 条素材...`
-    const submittedIds = new Set()
-    const failedMessages = []
-    let skipped = 0
-    try {
-      for (const rowId of selectedIds) {
-        const item = submitterSelectedRows.value[rowId]
-        if (!item || submitterSubmissionStatus(item) !== 'unuploaded') {
-          skipped += 1
-          continue
-        }
-        try {
-          const payload = await submitterApi.submitVideo(rowId)
-          Object.assign(item, {
-            ydbi_submitted: 1,
-            ydbi_submission_status: 'pending',
-            ydbi_submission_id: payload.submission_id,
-            ydbi_submitted_at: new Date().toISOString(),
-            ydbi_rejected_at: null,
-          })
-          submittedIds.add(rowId)
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err)
-          failedMessages.push(`素材 ${rowId}: ${message}`)
-        }
-      }
-      if (submittedIds.size) {
-        removeSubmittedRows([...submittedIds])
-      }
-      const parts = [`已投稿 ${formatNumber(submittedIds.size)} 条到 YouBi 待执行队列`]
-      if (skipped) parts.push(`跳过 ${formatNumber(skipped)} 条`)
-      if (failedMessages.length) parts.push(`失败 ${formatNumber(failedMessages.length)} 条`)
-      submitterMessage.value = `${parts.join('，')}。`
-      submitterError.value = failedMessages.slice(0, 3).join('；')
-    } finally {
-      submitterSubmittingId.value = ''
-      submitterBatchSubmitting.value = false
-    }
-  }
-
-  async function rejectSubmitterVideo(item) {
-    const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'unuploaded' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
-    submitterRejectingId.value = String(rowId)
-    submitterError.value = ''
-    try {
-      await submitterApi.rejectVideo(rowId)
-      Object.assign(item, {
-        ydbi_submitted: 0,
-        ydbi_submission_status: 'rejected',
-        ydbi_rejected_at: new Date().toISOString(),
-      })
-      await loadSubmitterVideos(true)
-      submitterMessage.value = '已标记为拒稿。'
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-      await loadSubmitterVideos(true)
-    } finally {
-      submitterRejectingId.value = ''
-    }
-  }
-
-  async function withdrawSubmitterVideo(item) {
-    const rowId = submitterFieldValue(item, 'id')
-    if (!rowId || submitterSubmissionStatus(item) !== 'pending' || submitterSubmittingId.value || submitterRejectingId.value || submitterBatchSubmitting.value) return
-    submitterSubmittingId.value = String(rowId)
-    submitterError.value = ''
-    try {
-      await submitterApi.withdrawVideo(rowId)
-      Object.assign(item, {
-        ydbi_submitted: 0,
-        ydbi_submission_status: 'unuploaded',
-        ydbi_submission_id: null,
-        ydbi_submitted_at: null,
-        ydbi_rejected_at: null,
-      })
-      await loadSubmitterVideos(true)
-      submitterMessage.value = '已撤稿，恢复为未投稿状态。'
-    } catch (err) {
-      submitterError.value = err instanceof Error ? err.message : String(err)
-      await loadSubmitterVideos(true)
-    } finally {
-      submitterSubmittingId.value = ''
-    }
-  }
-
-  async function loadSubmitterAuthorTypes() {
-    submitterAuthorTypeError.value = ''
-    try {
-      const payload = await submitterApi.listAuthorTypes()
-      const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
-      const authorRows = new Map()
-      for (const item of submitterAuthors.value) {
-        const normalized = normalizeSubmitterAuthorRow(item)
-        if (normalized.author) authorRows.set(normalized.author, normalized)
-      }
-      for (const author of byAuthor.keys()) {
-        if (!authorRows.has(author)) authorRows.set(author, { author })
-      }
-      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...authorRows.values()].map(authorRow => {
-        const author = authorRow.author
-        const item = byAuthor.get(author)
-        const resetCover = item?.resetCover === true
-        const coverOrientation = resetCover ? normalizeCoverOrientation(item?.coverOrientation || item?.cover_orientation) : ''
-        return {
-          author,
-          source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || authorRow.source),
-          authorUrl: String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || authorRow.authorUrl || ''),
-          type: String(item?.type || ''),
-          draftType: String(item?.type || ''),
-          taskType: String(item?.taskType || item?.task_type || 'dubbing'),
-          draftTaskType: String(item?.taskType || item?.task_type || 'dubbing'),
-          hasBackgroundAudio: item?.hasBackgroundAudio !== false,
-          draftHasBackgroundAudio: item?.hasBackgroundAudio !== false,
-          resetCover,
-          draftResetCover: resetCover,
-          coverOrientation,
-          draftCoverOrientation: coverOrientation,
-          fetchNewVideos: item?.fetchNewVideos === true,
-          draftFetchNewVideos: item?.fetchNewVideos === true,
-          bilibiliExists: item?.bilibiliExists === true,
-          draftBilibiliExists: item?.bilibiliExists === true,
-          sourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
-          draftSourceLanguage: String(item?.sourceLanguage || item?.source_language || '英文'),
-          targetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
-          draftTargetLanguage: String(item?.targetLanguage || item?.target_language || '中文'),
-        }
-      }))
-    } catch (err) {
-      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  function normalizeSubmitterAuthorRow(item) {
-    if (typeof item === 'string') {
-      return {
-        author: item,
-        source: inferSubmitterAuthorSource(item),
-        authorUrl: inferSubmitterAuthorUrl(item),
-      }
-    }
-    const author = String(item?.author || item?.uploader || item?.name || item?.id || '').trim()
-    const authorUrl = String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || item?.url || '').trim()
-    return {
-      author,
-      source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || inferSubmitterAuthorSource(authorUrl || author)),
-      authorUrl: authorUrl || inferSubmitterAuthorUrl(author),
-    }
-  }
-
-  function normalizeSubmitterAuthorSource(value) {
-    const source = String(value || '').trim().toLowerCase()
-    if (source.includes('youtube') || source === 'yt') return 'youtube'
-    if (source.includes('tiktok')) return 'tiktok'
-    if (source.includes('douyin') || source.includes('iesdouyin')) return 'douyin'
-    return ''
-  }
-
-  function inferSubmitterAuthorSource(value) {
-    const text = String(value || '').trim().toLowerCase()
-    if (/youtu\.?be|youtube\.com/.test(text)) return 'youtube'
-    if (/tiktok\.com/.test(text)) return 'tiktok'
-    if (/douyin\.com|iesdouyin\.com/.test(text)) return 'douyin'
-    return ''
-  }
-
-  function inferSubmitterAuthorUrl(value) {
-    const text = String(value || '').trim()
-    if (/^https?:\/\//i.test(text)) return text
-    return ''
-  }
-
-  async function loadSubmitterTaskTypes() {
-    submitterAuthorTypeError.value = ''
-    try {
-      const payload = await submitterApi.listTaskTypes()
-      submitterTaskTypes.value = (payload || [])
-        .map(item => ({
-          taskType: String(item?.taskType || item?.task_type || '').trim(),
-          name: String(item?.name || '').trim(),
-          description: String(item?.description || '').trim(),
-        }))
-        .filter(item => item.taskType)
-    } catch (err) {
-      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
-    }
-  }
-
-  function sortSubmitterAuthorTypeRows(rows) {
-    return rows.sort((left, right) => {
-      const leftType = String(left?.type || left?.draftType || '').trim()
-      const rightType = String(right?.type || right?.draftType || '').trim()
-      if (leftType && !rightType) return -1
-      if (!leftType && rightType) return 1
-      const typeOrder = leftType.localeCompare(rightType)
-      if (typeOrder !== 0) return typeOrder
-      return String(left?.author || '').localeCompare(String(right?.author || ''))
-    })
-  }
-
-  async function saveSubmitterAuthorType(row) {
-    const type = String(row?.draftType || '').trim()
-    const sourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
-    const targetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
-    if (submitterAuthorTypeSaving.value === row?.author) return
-    if (!row?.author || !type) return
-    if (
-      type === row.type
-      && row.draftTaskType === row.taskType
-      && row.draftHasBackgroundAudio === row.hasBackgroundAudio
-      && row.draftResetCover === row.resetCover
-      && row.draftCoverOrientation === row.coverOrientation
-      && row.draftFetchNewVideos === row.fetchNewVideos
-      && row.draftBilibiliExists === row.bilibiliExists
-      && sourceLanguage === row.sourceLanguage
-      && targetLanguage === row.targetLanguage
-    ) return
-    submitterAuthorTypeSaving.value = row.author
-    submitterAuthorTypeError.value = ''
-    try {
-      const taskType = String(row.draftTaskType || row.taskType || 'dubbing').trim()
-      row.draftTaskType = taskType
-      const hasBackgroundAudio = row.draftHasBackgroundAudio !== false
-      const resetCover = row.draftResetCover === true
-      const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
-      const fetchNewVideos = row.draftFetchNewVideos === true
-      const bilibiliExists = row.draftBilibiliExists === true
-      const payload = await submitterApi.saveAuthorType(row.author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists)
-      row.type = String(payload?.type || type)
-      row.draftType = row.type
-      row.taskType = String(payload?.taskType || payload?.task_type || taskType)
-      row.draftTaskType = row.taskType
-      row.hasBackgroundAudio = payload?.hasBackgroundAudio !== false
-      row.draftHasBackgroundAudio = row.hasBackgroundAudio
-      row.resetCover = payload?.resetCover === true
-      row.draftResetCover = row.resetCover
-      row.coverOrientation = row.resetCover ? normalizeCoverOrientation(payload?.coverOrientation || payload?.cover_orientation || coverOrientation) : ''
-      row.draftCoverOrientation = row.coverOrientation
-      row.fetchNewVideos = payload?.fetchNewVideos === true
-      row.draftFetchNewVideos = row.fetchNewVideos
-      row.bilibiliExists = payload?.bilibiliExists === true
-      row.draftBilibiliExists = row.bilibiliExists
-      row.sourceLanguage = String(payload?.sourceLanguage || payload?.source_language || sourceLanguage)
-      row.draftSourceLanguage = row.sourceLanguage
-      row.targetLanguage = String(payload?.targetLanguage || payload?.target_language || targetLanguage)
-      row.draftTargetLanguage = row.targetLanguage
-      submitterAuthorTypeRows.value = sortSubmitterAuthorTypeRows([...submitterAuthorTypeRows.value])
-    } catch (err) {
-      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      submitterAuthorTypeSaving.value = ''
-    }
-  }
-
-  async function autosaveSubmitterAuthorType(row) {
-    row.draftType = String(row?.draftType || '').trim()
-    row.draftSourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
-    row.draftTargetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
-    row.draftCoverOrientation = row.draftResetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
-    await saveSubmitterAuthorType(row)
-  }
-
-  function normalizeCoverOrientation(value) {
-    return String(value || '').trim() === 'vertical' ? 'vertical' : 'horizontal'
-  }
-
-  async function deleteSubmitterAuthor(row) {
-    const author = String(row?.author || '').trim()
-    if (!author || submitterAuthorDeleting.value || submitterAuthorTypeSaving.value) return
-    if (!window.confirm(`确定删除作者 ${author} 并清理其所有视频？`)) return
-    submitterAuthorDeleting.value = author
-    submitterAuthorTypeError.value = ''
-    try {
-      const result = await submitterApi.deleteAuthorType(author)
-      const deletedAuthorRows = Number(result?.deletedAuthorRows || 0)
-      const deletedVideoRows = Number(result?.deletedVideoRows || 0)
-      const deletedImportRows = Number(result?.deletedImportRows || 0)
-      const matchedBatchCount = Array.isArray(result?.matchedBatches) ? result.matchedBatches.length : 0
-      submitterMessage.value = `已删除作者配置 ${deletedAuthorRows} 条，视频 ${deletedVideoRows} 条，导入批次 ${deletedImportRows} 条，匹配 batch ${matchedBatchCount} 个`
-      console.info('submitter author deleted', result)
-      submitterAuthorTypeRows.value = submitterAuthorTypeRows.value.filter(item => item.author !== author)
-      submitterAuthors.value = submitterAuthors.value.filter(item => normalizeSubmitterAuthorRow(item).author !== author)
-      if (submitterUploader.value === author) {
-        submitterUploader.value = ''
-      }
-      if (submitterTypeFilter.value && !submitterAuthorTypeFilters.value.includes(submitterTypeFilter.value)) {
-        submitterTypeFilter.value = ''
-      }
-      await loadSubmitterVideos(true)
-    } catch (err) {
-      submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      submitterAuthorDeleting.value = ''
-    }
-  }
+  const {
+    refreshSubmitterImportStatus,
+    updateSubmitterPolling,
+    clearSubmitterPolling,
+  } = useSubmitterPolling({
+    submitterApi,
+    submitterActiveRows,
+    submitterActiveBatch,
+    submitterActiveStatus,
+    submitterMessage,
+    submitterError,
+    loadSubmitterVideos,
+  })
 
   async function setSubmitterPage(page) {
     submitterPage.value = Math.min(Math.max(1, page), submitterPageCount.value)
@@ -694,66 +362,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
-  async function refreshSubmitterImportStatus() {
-    if (!submitterActiveBatch.value) return
-    try {
-      const payload = await submitterApi.getImportStatus(submitterActiveBatch.value)
-      submitterActiveStatus.value = payload
-      submitterMessage.value = submitterImportStatusText(payload)
-      if (['done', 'failed'].includes(payload.status)) {
-        submitterActiveBatch.value = ''
-      }
-    } catch (err) {
-      submitterActiveBatch.value = ''
-      submitterActiveStatus.value = null
-      submitterMessage.value = err instanceof Error ? err.message : '导入任务状态不可用。'
-    }
-  }
-
-  function updateSubmitterPolling() {
-    const shouldPoll = submitterActiveRows.value > 0 || Boolean(submitterActiveBatch.value)
-    if (shouldPoll && !submitterTimer) {
-      submitterTimer = window.setInterval(async () => {
-        try {
-          await refreshSubmitterImportStatus()
-          await loadSubmitterVideos(true)
-        } catch (err) {
-          submitterError.value = err instanceof Error ? err.message : String(err)
-        }
-      }, 3000)
-    } else if (!shouldPoll && submitterTimer) {
-      clearSubmitterPolling()
-    }
-  }
-
-  function clearSubmitterPolling() {
-    if (submitterTimer) {
-      window.clearInterval(submitterTimer)
-      submitterTimer = null
-    }
-  }
-
-  function submitterImportStatusText(status) {
-    const discovered = formatNumber(status?.discovered || status?.registered || 0)
-    const skipped = formatNumber(status?.skipped || 0)
-    const saved = formatNumber(status?.saved || 0)
-    const failed = formatNumber(status?.failed || 0)
-    const current = status?.current_title ? ` 当前：${status.current_title}` : ''
-    if (status?.status === 'scanning') {
-      return `正在扫描频道，新增 ${discovered} 个视频，跳过已存在 ${skipped} 个。`
-    }
-    if (status?.status === 'processing') {
-      return `正在处理新增视频，已保存 ${saved} 个，跳过 ${skipped} 个，失败 ${failed} 个。${current}`
-    }
-    if (status?.status === 'done') {
-      return `导入完成：新增 ${discovered} 个视频，跳过 ${skipped} 个，已保存 ${saved} 个，失败 ${failed} 个。`
-    }
-    if (status?.status === 'failed') {
-      return `导入失败：${status.error || '未知错误'}。新增 ${discovered} 个视频，跳过 ${skipped} 个，已保存 ${saved} 个，失败 ${failed} 个。`
-    }
-    return '导入任务正在后台运行。'
-  }
-
   function submitterVideoHref(item) {
     const data = submitterSource(item)
     return submitterFieldValue(item, 'webpage_url') || data.original_url || item?.input_url || ''
@@ -761,44 +369,6 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   function submitterVideoTitle(item) {
     return submitterFieldValue(item, 'title') || '-'
-  }
-
-  function submitterVideoThumb(item) {
-    return normalizeSubmitterThumbnailUrl(submitterFieldValue(item, 'thumbnail') || '')
-  }
-
-  function normalizeSubmitterThumbnailUrl(url) {
-    const text = String(url || '').trim()
-    if (!text) return ''
-    try {
-      const parsed = new URL(text)
-      if (parsed.hostname === 'i.ytimg.com') {
-        const match = parsed.pathname.match(/^\/vi_lc\/([^/]+)\/([^/]+)$/)
-        if (match) {
-          const [, videoId, fileName] = match
-          parsed.pathname = `/vi/${videoId}/${fileName.replace(/_en(?=\.)/, '')}`
-          return parsed.toString()
-        }
-      }
-    } catch {
-      return text
-    }
-    return text
-  }
-
-  function submitterCachedThumb(item) {
-    const url = submitterVideoThumb(item)
-    return submitterThumbUrls.value[url] || url
-  }
-
-  async function cacheSubmitterThumbnail(url) {
-    await cacheImageUrl(url, 'submitter-thumbnails-v1', submitterThumbUrls)
-  }
-
-  function warmSubmitterThumbnails() {
-    for (const item of submitterVideos.value.slice(0, 100)) {
-      cacheSubmitterThumbnail(submitterVideoThumb(item))
-    }
   }
 
   function closeSubmitterJson() {

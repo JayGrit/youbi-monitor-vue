@@ -1,5 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useCopyToast } from '../composables/useCopyToast'
+import { usePageVisibilityPolling } from '../composables/usePageVisibilityPolling'
+import { recentTimeRanges, timeRangeParams } from '../composables/useTimeRangeFilter'
 import { formatDuration, formatNumber, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 import { formatJson } from '../utils/jsonDisplay'
 import { buildPromptTemplateDisplay } from '../utils/promptTemplateDisplay'
@@ -27,13 +30,13 @@ const total = ref(0)
 const pageCount = ref(0)
 const loading = ref(false)
 const error = ref('')
-const copyToastVisible = ref(false)
 const detailRow = ref(null)
-const pageVisible = ref(typeof document === 'undefined' || document.visibilityState === 'visible')
-let pollTimer = null
 let filterTimer = null
-let copyToastTimer = null
 let requestToken = 0
+const { copyToastVisible, copyText } = useCopyToast()
+const { syncPolling, stopPolling } = usePageVisibilityPolling(() => {
+  loadQueue({ silent: true })
+}, () => hasActiveQueue.value)
 
 const statusFilters = computed(() => [
   { value: '', label: '全部' },
@@ -42,12 +45,7 @@ const statusFilters = computed(() => [
   { value: 'success', label: '成功' },
   { value: 'failed', label: '失败' },
 ])
-const timeRanges = [
-  { value: 'recent', label: '近3小时' },
-  { value: 'today', label: '今天' },
-  { value: 'yesterday', label: '昨天' },
-  { value: 'beforeYesterday', label: '前天' },
-]
+const timeRanges = recentTimeRanges
 const hasActiveQueue = computed(() => rows.value.some(item => [props.waitingStatus, 'running'].includes(item.status)))
 const hasDetailDialog = computed(() => props.detailFields.length > 0)
 const visibleDetailFields = computed(() => {
@@ -64,14 +62,11 @@ const visibleDetailFields = computed(() => {
 onMounted(() => {
   restoreQuery()
   loadQueue()
-  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
   stopPolling()
   clearFilterTimer()
-  clearCopyToastTimer()
-  document.removeEventListener('visibilitychange', handleVisibility)
 })
 
 function restoreQuery() {
@@ -156,66 +151,6 @@ function setPage(nextPage) {
   if (normalized === page.value) return
   page.value = normalized
   loadQueue()
-}
-
-function handleVisibility() {
-  pageVisible.value = document.visibilityState === 'visible'
-  syncPolling()
-}
-
-function syncPolling() {
-  stopPolling()
-  if (!pageVisible.value || !hasActiveQueue.value) return
-  pollTimer = window.setInterval(() => {
-    loadQueue({ silent: true })
-  }, 10000)
-}
-
-function stopPolling() {
-  if (pollTimer) window.clearInterval(pollTimer)
-  pollTimer = null
-}
-
-async function copyText(text) {
-  const value = String(text || '').trim()
-  if (!value) return
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value)
-    } else {
-      copyTextFallback(value)
-    }
-    showCopyToast()
-  } catch {
-    copyTextFallback(value)
-    showCopyToast()
-  }
-}
-
-function copyTextFallback(text) {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', '')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
-}
-
-function showCopyToast() {
-  copyToastVisible.value = true
-  clearCopyToastTimer()
-  copyToastTimer = window.setTimeout(() => {
-    copyToastVisible.value = false
-    copyToastTimer = null
-  }, 1400)
-}
-
-function clearCopyToastTimer() {
-  if (copyToastTimer) window.clearTimeout(copyToastTimer)
-  copyToastTimer = null
 }
 
 function statusText(status) {
@@ -338,38 +273,6 @@ function relativeTime(value) {
   if (isSameDate(date, yesterday)) return `昨天 ${formatTime(date)}`
   if (isSameDate(date, beforeYesterday)) return `前天 ${formatTime(date)}`
   return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`
-}
-
-function timeRangeParams(range) {
-  const now = new Date()
-  if (range === 'today') return dayRange(now)
-  if (range === 'yesterday') return dayRange(addDays(now, -1))
-  if (range === 'beforeYesterday') return dayRange(addDays(now, -2))
-  const from = new Date(now.getTime() - 3 * 60 * 60 * 1000)
-  return {
-    createdFrom: localDateTime(from),
-    createdTo: localDateTime(now),
-  }
-}
-
-function dayRange(date) {
-  const from = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const to = new Date(from)
-  to.setDate(to.getDate() + 1)
-  return {
-    createdFrom: localDateTime(from),
-    createdTo: localDateTime(to),
-  }
-}
-
-function addDays(date, days) {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function localDateTime(date) {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 }
 
 function positiveInt(value, fallback) {

@@ -8,6 +8,8 @@ import {
 import { shortValue } from '../utils/jsonDisplay'
 import { normalizeResourceUrl, youtubeThumbnailUrl } from '../utils/media'
 import { createTaskFlowMedia } from './task-flow/taskFlowMedia'
+import { useTaskFlowDiagnostics } from './task-flow/useTaskFlowDiagnostics'
+import { useSpeechRows } from './task-flow/useSpeechRows'
 
 export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   const selectedTaskFlow = ref(null)
@@ -20,18 +22,25 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   const speechEditDraft = ref('')
   const speechEditSaving = ref(false)
   const speechEditError = ref('')
-  const uploaderDiagnosticsByOpId = ref({})
-  const uploaderDiagnosticsLoading = ref(false)
-  const uploaderDiagnosticsLoadingTask = ref('')
-  const uploaderDiagnosticsError = ref('')
   const whisperWordTimestampsByTask = ref({})
   const whisperProcessingByTask = ref({})
   let flowTimer = null
-  let uploaderDiagnosticsTimer = null
   let flowRequestId = 0
   let flowPollingActive = false
-  let diagnosticsPollingRequested = false
   const { stageMedia, demucsAudioMedia } = createTaskFlowMedia({ selectedTaskFlow })
+  const {
+    uploaderDiagnostics,
+    uploaderDiagnosticsLoading,
+    uploaderDiagnosticsError,
+    resetDiagnosticsPolling,
+    clearUploaderDiagnosticsPolling,
+    loadSelectedUploaderDiagnostics,
+    startUploaderDiagnosticsPolling,
+  } = useTaskFlowDiagnostics({
+    taskFlowApi,
+    canPoll: () => flowPollingActive && flowPageOpen.value,
+    currentStageKey: () => baseStageKey(selectedStageKey.value),
+  })
 
   const selectedStage = computed(() => {
     const stages = selectedTaskFlow.value?.stages || []
@@ -82,10 +91,6 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     }
   })
 
-  const uploaderDiagnostics = computed(() => {
-    return Object.values(uploaderDiagnosticsByOpId.value).flat()
-  })
-
   const whisperWordTimestamps = computed(() => {
     const taskId = selectedTaskFlow.value?.task?.id
     return taskId ? whisperWordTimestampsByTask.value[taskId] || [] : []
@@ -98,8 +103,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
 
   async function openTaskFlow(task, stageKey = 'downloader', subStage = 'main') {
     if (!task?.taskId) return
-    diagnosticsPollingRequested = false
-    clearUploaderDiagnosticsPolling()
+    resetDiagnosticsPolling()
     flowPageOpen.value = true
     selectedStageKey.value = detailStageKey(stageKey, subStage)
     selectedTaskFlow.value = null
@@ -129,9 +133,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
       return
     }
     startFlowPolling()
-    if (diagnosticsPollingRequested && ['uploader', 'publisher'].includes(baseStageKey(selectedStageKey.value))) {
-      startUploaderDiagnosticsPolling()
-    }
+    startUploaderDiagnosticsPolling()
   }
 
   async function loadTaskFlowPage(taskId, quiet = false) {
@@ -186,8 +188,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     if (!taskId) return
     const normalized = detailStageKey(stageKey, subStage)
     if (normalized === selectedStageKey.value && selectedTaskFlow.value) return
-    diagnosticsPollingRequested = false
-    clearUploaderDiagnosticsPolling()
+    resetDiagnosticsPolling()
     selectedStageKey.value = normalized
     cancelSpeechEdit()
     selectedTaskFlow.value = { ...selectedTaskFlow.value, stages: [], minioObjects: [] }
@@ -210,7 +211,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     selectedTaskProgress.value = null
     flowError.value = ''
     cancelSpeechEdit()
-    diagnosticsPollingRequested = false
+    resetDiagnosticsPolling()
     clearFlowPolling()
   }
 
@@ -220,62 +221,6 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
       flowTimer = null
     }
     clearUploaderDiagnosticsPolling()
-  }
-
-  function clearUploaderDiagnosticsPolling() {
-    if (uploaderDiagnosticsTimer) {
-      window.clearInterval(uploaderDiagnosticsTimer)
-      uploaderDiagnosticsTimer = null
-    }
-  }
-
-  function refreshTaskFlow() {
-    const taskId = selectedTaskFlow.value?.task?.id
-    if (taskId) {
-      loadTaskFlowPage(taskId)
-    }
-  }
-
-  async function loadUploaderDiagnostics(target, force = false) {
-    const opId = operatorOpId(target)
-    if (!opId || (!force && uploaderDiagnosticsByOpId.value[opId]) || uploaderDiagnosticsLoadingTask.value === opId) return
-    uploaderDiagnosticsLoading.value = true
-    uploaderDiagnosticsLoadingTask.value = opId
-    uploaderDiagnosticsError.value = ''
-    try {
-      const response = await taskFlowApi.loadOperatorDiagnostics(opId)
-      uploaderDiagnosticsByOpId.value = {
-        ...uploaderDiagnosticsByOpId.value,
-        [opId]: Array.isArray(response?.items) ? response.items : [],
-      }
-    } catch (err) {
-      uploaderDiagnosticsError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      if (uploaderDiagnosticsLoadingTask.value === opId) {
-        uploaderDiagnosticsLoading.value = false
-        uploaderDiagnosticsLoadingTask.value = ''
-      }
-    }
-  }
-
-  function loadSelectedUploaderDiagnostics(target) {
-    const opId = operatorOpId(target)
-    if (opId) {
-      diagnosticsPollingRequested = true
-      loadUploaderDiagnostics(target, true)
-      startUploaderDiagnosticsPolling()
-    } else {
-      uploaderDiagnosticsError.value = '缺少 operatorOpId'
-    }
-  }
-
-  function startUploaderDiagnosticsPolling() {
-    clearUploaderDiagnosticsPolling()
-    if (!flowPollingActive || !flowPageOpen.value || !diagnosticsPollingRequested) return
-    if (!['uploader', 'publisher'].includes(baseStageKey(selectedStageKey.value))) return
-    uploaderDiagnosticsTimer = window.setInterval(() => {
-      Object.keys(uploaderDiagnosticsByOpId.value).forEach(opId => loadUploaderDiagnostics({ operatorOpId: opId }, true))
-    }, 5000)
   }
 
   async function submitNarrationSegments(response) {
@@ -356,117 +301,18 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     return shortValue(value, 70)
   }
 
-  function speechRows(view = 'whisper') {
-    if (view === 'translator-chunk') {
-      return translatorChunkRows()
-    }
-    const stages = selectedTaskFlow.value?.stages || []
-    const whisper = stages.find(stage => stage.key === 'whisper')
-    const speaker = stages.find(stage => stage.key === 'speaker') || stages.find(stage => stage.key === 'translator')
-    const asrSegments = tableRows(whisper, 'whisper_asr_segment')
-    const asrByIndex = rowsByIndex(asrSegments)
-    const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
-    const indexes = [...new Set([...Object.keys(asrByIndex), ...Object.keys(speakerByIndex)])]
-      .map(index => Number(index))
-      .filter(index => Number.isFinite(index))
-      .sort((left, right) => left - right)
-    return indexes.map(index => {
-      const asr = asrByIndex[index] || {}
-      const segment = speakerByIndex[index] || {}
-      return {
-        row_key: `whisper:${index}`,
-        speech_view: 'whisper',
-        segment_id: segment.id || '',
-        item_index: index,
-        start_time: segment.start_time ?? asr.start_time,
-        end_time: segment.end_time ?? asr.end_time,
-        asr_text: asr.text || '',
-        src_text: segment.src_text || '',
-        source_text: segment.src_text || asr.text || '',
-        dst_text: segment.dst_text || '',
-        speaker: segment.speaker || asr.speaker || '',
-        status: segment.status || '',
-        attempt_count: segment.attempt_count ?? '',
-        speed_ratio: formatRatio(segment.speed_ratio),
-        actual_start_time: segment.actual_start_time ?? '',
-        actual_end_time: segment.actual_end_time ?? '',
-        src_lang: segment.src_lang || '',
-        dst_lang: segment.dst_lang || '',
-        reference_wav_url: segment.reference_wav_url || '',
-        tts_wav_url: segment.tts_wav_url || '',
-        error_message: segment.error_message || '',
-      }
-    })
-  }
-
-  function translatorChunkRows() {
-    const stages = selectedTaskFlow.value?.stages || []
-    const translator = stages.find(stage => stage.key === 'translator')
-    const speaker = stages.find(stage => stage.key === 'speaker') || translator
-    const chunkRows = translatorChunkTableRows(translator)
-    const translatorByIndex = rowsByIndex(tableRows(translator, 'translator_segment'))
-    const speakerByIndex = rowsByIndex(tableRows(speaker, 'speaker_segment'))
-    return [...chunkRows]
-      .filter(row => {
-        const role = row.row_role || (row.is_reference ? 'reference' : 'normal')
-        return !Boolean(Number(row.is_reference || 0)) && role === 'normal'
-      })
-      .sort((left, right) => {
-        const leftChunk = Number(left.chunk_index ?? 0)
-        const rightChunk = Number(right.chunk_index ?? 0)
-        const leftOrder = Number(left.row_order ?? 0)
-        const rightOrder = Number(right.row_order ?? 0)
-        return leftChunk - rightChunk || leftOrder - rightOrder || Number(left.id || 0) - Number(right.id || 0)
-      })
-      .map(row => {
-        const itemIndex = Number(row.item_index)
-        const translation = translatorByIndex[itemIndex] || {}
-        const segment = speakerByIndex[itemIndex] || {}
-        return {
-          row_key: `translator-chunk:${row.chunk_index}:${row.row_order}:${itemIndex}`,
-          speech_view: 'translator-chunk',
-          segment_id: segment.id || '',
-          translation_item_index: itemIndex,
-          item_index: itemIndex,
-          start_time: segment.start_time ?? translation.start_time ?? row.start_time,
-          end_time: segment.end_time ?? translation.end_time ?? row.end_time,
-          asr_text: row.text || '',
-          src_text: segment.src_text || translation.src_text || row.text || '',
-          source_text: segment.src_text || translation.src_text || row.text || '',
-          dst_text: segment.dst_text || translation.dst_text || '',
-          speaker: segment.speaker || translation.speaker || '',
-          status: segment.status || '',
-          attempt_count: segment.attempt_count ?? '',
-          speed_ratio: formatRatio(segment.speed_ratio),
-          actual_start_time: segment.actual_start_time ?? '',
-          actual_end_time: segment.actual_end_time ?? '',
-          src_lang: segment.src_lang || translation.src_lang || '',
-          dst_lang: segment.dst_lang || translation.dst_lang || '',
-          reference_wav_url: segment.reference_wav_url || '',
-          tts_wav_url: segment.tts_wav_url || '',
-          error_message: segment.error_message || '',
-          chunk_index: row.chunk_index,
-          row_order: row.row_order,
-          row_role: 'normal',
-          is_reference: false,
-          normal_text_len: row.normal_text_len,
-          normal_item_count: row.normal_item_count,
-          chunk_start_time: row.chunk_start_time,
-          chunk_end_time: row.chunk_end_time,
-          gap_before_ms: row.gap_before_ms,
-          gap_after_ms: row.gap_after_ms,
-        }
-      })
-  }
-
-  function translatorChunkTableRows(stage) {
-    const currentRows = tableRows(stage, 'translator_chunk')
-    return currentRows.length ? currentRows : tableRows(stage, 'translator-chunk')
-  }
-
   function tableRows(stage, tableName) {
     return stage?.tables?.find(table => table.name === tableName)?.rows || []
   }
+
+  const {
+    speechRows,
+    speechColumns,
+    showSpeechColumn,
+    speechMoreRows,
+    speechAudioAsset,
+    speechTables,
+  } = useSpeechRows({ selectedTaskFlow, tableRows })
 
   function uploadSubmissionRows(stage) {
     return tableRows(stage, 'uploader_task')
@@ -496,71 +342,6 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
 
   function uploadPlatformName(platform) {
     return uploadPlatformText[platform] || platform || ''
-  }
-
-  function operatorOpId(row) {
-    return String(row?.operatorOpId || row?.operator_op_id || row?.opId || row?.op_id || row?.operator_run_id || '').trim()
-  }
-
-  function rowsByIndex(rows) {
-    const byIndex = {}
-    for (const row of rows || []) {
-      const index = Number(row.item_index ?? row.index)
-      if (Number.isFinite(index)) {
-        byIndex[index] = row
-      }
-    }
-    return byIndex
-  }
-
-  function speechColumns() {
-    return [
-      'text',
-      'more_info',
-    ]
-  }
-
-  function showSpeechColumn(row, column) {
-    return true
-  }
-
-  function sameText(left, right) {
-    return normalizeText(left) !== '' && normalizeText(left) === normalizeText(right)
-  }
-
-  function normalizeText(value) {
-    return String(value || '').trim().replace(/\s+/g, ' ')
-  }
-
-  function speechMoreRows(row) {
-    const rows = [
-      ['segment_id', row.segment_id || '-'],
-      ['chunk_index', row.chunk_index ?? '-'],
-      ['row_role', row.row_role || '-'],
-      ['row_order', row.row_order ?? '-'],
-      ['start_time', formatTimeline(row.start_time)],
-      ['end_time', formatTimeline(row.end_time)],
-      ['actual_start_time', formatTimeline(row.actual_start_time)],
-      ['actual_end_time', formatTimeline(row.actual_end_time)],
-      ['src_lang', row.src_lang || '-'],
-      ['dst_lang', row.dst_lang || '-'],
-      ['speaker', row.speaker || '-'],
-      ['status', row.status || '-'],
-      ['attempt_count', row.attempt_count === '' ? '-' : row.attempt_count],
-      ['speed_ratio', row.speed_ratio || '-'],
-      ['error_message', row.error_message || '-'],
-    ]
-    if (row.speech_view === 'translator-chunk') {
-      rows.push(
-        ['normal_text_len', row.normal_text_len ?? '-'],
-        ['normal_item_count', row.normal_item_count ?? '-'],
-        ['chunk_start_time', formatTimeline(row.chunk_start_time)],
-        ['chunk_end_time', formatTimeline(row.chunk_end_time)],
-        ['gap_before_ms', row.gap_before_ms ?? '-'],
-        ['gap_after_ms', row.gap_after_ms ?? '-'],
-      )
-    }
-    return rows
   }
 
   function speechRowKey(row) {
@@ -609,38 +390,6 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
     } finally {
       speechEditSaving.value = false
     }
-  }
-
-  function formatRatio(value) {
-    if (value === null || value === undefined || value === '') return ''
-    const number = Number(value)
-    return Number.isFinite(number) ? number.toFixed(2) : String(value)
-  }
-
-  function speechAudioAsset(row, column) {
-    const url = normalizeResourceUrl(row?.[column])
-    if (!url) return null
-    return {
-      name: column,
-      kind: 'audio',
-      url,
-    }
-  }
-
-  function speechTables() {
-    const stages = selectedTaskFlow.value?.stages || []
-    return stages
-      .filter(stage => SPEECH_STAGE_KEYS.includes(stage.key))
-      .flatMap(stage => stage.tables || [])
-  }
-
-  function formatTimeline(value) {
-    if (value === null || value === undefined || value === '') return '-'
-    const totalMs = Math.max(0, Number(value || 0))
-    if (!Number.isFinite(totalMs)) return String(value)
-    const minutes = Math.floor(totalMs / 60000)
-    const seconds = (totalMs % 60000) / 1000
-    return `${minutes}:${seconds.toFixed(3).padStart(6, '0')}`
   }
 
   function fieldRows(stage) {
