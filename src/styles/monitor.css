@@ -1018,6 +1018,10 @@
   overflow-wrap: anywhere;
 }
 
+.script-generation-output {
+  margin-top: 0;
+}
+
 .narration-segment-paragraphs p {
   margin: 12px 0;
   line-height: 1.85;

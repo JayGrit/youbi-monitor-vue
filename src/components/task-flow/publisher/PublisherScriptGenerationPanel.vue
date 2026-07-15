@@ -35,6 +35,7 @@ const inputText = computed(() => {
     jobInput.value.text,
   )
 })
+const sourceMaterialText = computed(() => sourceMaterialFromRequest(inputText.value))
 const outputText = computed(() => {
   return firstText(
     narration.value.text,
@@ -72,6 +73,12 @@ function templateFromRequest(text) {
   )
   return template === text ? '' : template
 }
+
+function sourceMaterialFromRequest(text) {
+  if (!text) return ''
+  const match = text.match(/<source_material>\s*([\s\S]*?)\s*<\/source_material>/)
+  return firstText(match?.[1], text)
+}
 </script>
 
 <template>
@@ -85,7 +92,7 @@ function templateFromRequest(text) {
 
       <details class="script-generation-details">
         <summary>调用 operator 的入参文本</summary>
-        <pre v-if="inputText" class="script-generation-text">{{ inputText }}</pre>
+        <pre v-if="sourceMaterialText" class="script-generation-text">{{ sourceMaterialText }}</pre>
         <p v-else class="flow-muted">当前详情数据未包含完整 operator 入参文本。</p>
       </details>
 
@@ -98,7 +105,7 @@ function templateFromRequest(text) {
 
     <section class="flow-section narration-section">
       <h4>出参文本</h4>
-      <p v-if="outputText" class="narration-text">{{ outputText }}</p>
+      <pre v-if="outputText" class="script-generation-text script-generation-output">{{ outputText }}</pre>
       <p v-else class="flow-muted">暂无生成口播稿。</p>
       <pre v-if="scriptJob.error_message || narration.error_message" class="flow-stage-error">{{ scriptJob.error_message || narration.error_message }}</pre>
     </section>
