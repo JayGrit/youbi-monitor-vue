@@ -1,5 +1,5 @@
 <script setup>
-import GenericSubStageDetail from './GenericSubStageDetail.vue'
+import PublisherScriptGenerationPanel from '../publisher/PublisherScriptGenerationPanel.vue'
 
 defineProps({
   context: { type: Object, required: true },
@@ -7,12 +7,9 @@ defineProps({
 </script>
 
 <template>
-  <GenericSubStageDetail
-    :context="context"
-    title="口播稿生成"
-    :summary-tables="['product_narration']"
-    :data-tables="['product_narration_sentence']"
-    :job-tables="['publisher_jobs']"
-    :job-pattern="/script|prompt|generation|narration/i"
+  <PublisherScriptGenerationPanel
+    :narrations="context.stageTableRows(context.stage, 'product_narration')"
+    :jobs="context.stageTableRows(context.stage, 'publisher_jobs')"
+    :operator-tasks="context.stageTableRows(context.stage, 'operator_task')"
   />
 </template>

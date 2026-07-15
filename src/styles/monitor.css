@@ -999,6 +999,25 @@
   line-height: 1.8;
 }
 
+.script-generation-details {
+  margin-top: 12px;
+}
+
+.script-generation-text {
+  margin: 10px 0 0;
+  max-height: 520px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #243044;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  padding: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .narration-segment-paragraphs p {
   margin: 12px 0;
   line-height: 1.85;
