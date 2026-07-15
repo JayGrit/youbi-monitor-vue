@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { stageNameText } from '../domain/constants'
 import { formatDateTime } from '../utils/format'
+import { normalizeUploadPlatform } from '../utils/uploadPlatform'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -24,10 +25,12 @@ const props = defineProps({
   allSelected: { type: Boolean, default: false },
   actualPublishedSelectedRows: { type: Array, default: () => [] },
   retryUploadSelectedRows: { type: Array, default: () => [] },
+  abandonUploadSelectedRows: { type: Array, default: () => [] },
   deferSelectedRows: { type: Array, default: () => [] },
   loadFailureLogs: { type: Function, required: true },
   markSelectedActualPublished: { type: Function, required: true },
   retrySelectedUploads: { type: Function, required: true },
+  abandonSelectedUploads: { type: Function, required: true },
   deferSelectedTasks: { type: Function, required: true },
   toggleRow: { type: Function, required: true },
   toggleAll: { type: Function, required: true },
@@ -71,10 +74,14 @@ function openTask(row) {
 }
 
 function canMarkActualPublished(row) {
-  return row.stage === 'uploader' && Boolean(row.platform)
+  return row.stage === 'uploader' && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
 }
 
 function canRetryUpload(row) {
+  return canMarkActualPublished(row)
+}
+
+function canAbandonUpload(row) {
   return canMarkActualPublished(row)
 }
 
@@ -85,8 +92,9 @@ function canDeferTask(row) {
 function canSelectRow(row) {
   if (actionMode.value === 'actual-published') return canMarkActualPublished(row)
   if (actionMode.value === 'retry-upload') return canRetryUpload(row)
+  if (actionMode.value === 'abandon-upload') return canAbandonUpload(row)
   if (actionMode.value === 'defer') return canDeferTask(row)
-  return canMarkActualPublished(row) || canRetryUpload(row) || canDeferTask(row)
+  return canMarkActualPublished(row) || canRetryUpload(row) || canAbandonUpload(row) || canDeferTask(row)
 }
 
 function openActionMode(mode) {
@@ -109,6 +117,10 @@ function submitSelectedAction() {
     props.retrySelectedUploads()
     return
   }
+  if (actionMode.value === 'abandon-upload') {
+    props.abandonSelectedUploads()
+    return
+  }
   if (actionMode.value === 'defer') {
     props.deferSelectedTasks()
   }
@@ -117,6 +129,7 @@ function submitSelectedAction() {
 function selectedActionCount() {
   if (actionMode.value === 'actual-published') return props.actualPublishedSelectedRows.length
   if (actionMode.value === 'retry-upload') return props.retryUploadSelectedRows.length
+  if (actionMode.value === 'abandon-upload') return props.abandonUploadSelectedRows.length
   if (actionMode.value === 'defer') return props.deferSelectedRows.length
   return 0
 }
@@ -124,8 +137,19 @@ function selectedActionCount() {
 function actionModeText() {
   if (actionMode.value === 'actual-published') return '实际发布'
   if (actionMode.value === 'retry-upload') return '重试上传'
+  if (actionMode.value === 'abandon-upload') return '放弃发布'
   if (actionMode.value === 'defer') return '稍后执行'
   return '批量操作'
+}
+
+function parseUploadLogId(logId) {
+  const parts = String(logId || '').split(':')
+  if (parts.length !== 3 || parts[0] !== 'uploader' || !parts[1]) return null
+  const id = Number(parts[2])
+  if (!Number.isSafeInteger(id) || id <= 0) return null
+  const platform = normalizeUploadPlatform(parts[1])
+  if (!platform) return null
+  return { platform, id }
 }
 </script>
 
@@ -145,6 +169,9 @@ function actionModeText() {
         </button>
         <button type="button" :class="{ active: actionMode === 'retry-upload' }" @click="openActionMode('retry-upload')">
           重试上传
+        </button>
+        <button type="button" :class="{ active: actionMode === 'abandon-upload' }" @click="openActionMode('abandon-upload')">
+          放弃发布
         </button>
         <button type="button" :class="{ active: actionMode === 'defer' }" @click="openActionMode('defer')">
           稍后执行

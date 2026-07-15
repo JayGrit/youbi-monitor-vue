@@ -37,5 +37,11 @@ export function createDistributorApi(apiBase, service = 'distributor') {
       if (!normalized) throw new Error(`Unsupported upload platform: ${platform}`)
       return postJson(`${apiBase}/upload-submissions/${encodeURIComponent(normalized)}/actual-published`, { ids }, describe('标记投稿已实际发布'))
     },
+
+    abandonUploadSubmissions(platform, ids) {
+      const normalized = normalizeUploadPlatform(platform)
+      if (!normalized) throw new Error(`Unsupported upload platform: ${platform}`)
+      return postJson(`${apiBase}/upload-submissions/${encodeURIComponent(normalized)}/abandon`, { ids }, describe('放弃投稿子任务发布'))
+    },
   }
 }

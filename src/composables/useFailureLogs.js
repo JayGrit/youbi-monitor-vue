@@ -30,7 +30,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
     })
     .sort((left, right) => errorLength(left) - errorLength(right)))
   const selectedSet = computed(() => new Set(selectedIds.value))
-  const selectableRows = computed(() => filteredRows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canDeferTask(row)))
+  const selectableRows = computed(() => filteredRows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canAbandonUpload(row) || canDeferTask(row)))
   const allSelected = computed(() => {
     const rows = selectableRows.value
     return rows.length > 0 && rows.every(row => selectedSet.value.has(row.id))
@@ -41,6 +41,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
   })
   const actualPublishedSelectedRows = computed(() => selectedRows.value.filter(canMarkActualPublished))
   const retryUploadSelectedRows = computed(() => selectedRows.value.filter(canRetryUpload))
+  const abandonUploadSelectedRows = computed(() => selectedRows.value.filter(canAbandonUpload))
   const deferSelectedRows = computed(() => selectedRows.value.filter(canDeferTask))
 
   async function loadFailureLogs() {
@@ -124,6 +125,28 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
     }
   }
 
+  async function abandonSelectedUploads() {
+    const targets = abandonUploadSelectedRows.value
+    if (targets.length === 0 || actionBusy.value) return
+    if (!window.confirm(`确认放弃选中的 ${targets.length} 个平台发布？\n\n此操作只会把选中的上传平台标记为已放弃，不删除任务，也不影响同一任务的其他平台。`)) {
+      return
+    }
+    actionBusy.value = true
+    actionError.value = ''
+    try {
+      const groups = groupedUploadTargets(targets)
+      for (const [platform, ids] of groups.entries()) {
+        await distributorApi.abandonUploadSubmissions(platform, ids)
+      }
+      selectedIds.value = selectedIds.value.filter(id => !targets.some(row => row.id === id))
+      await loadFailureLogs()
+    } catch (err) {
+      actionError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      actionBusy.value = false
+    }
+  }
+
   async function deferSelectedTasks() {
     const targets = deferSelectedRows.value
     if (targets.length === 0 || actionBusy.value) return
@@ -146,7 +169,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
   }
 
   function toggleRow(row) {
-    if (!row?.id || (!canRetryUpload(row) && !canMarkActualPublished(row) && !canDeferTask(row))) return
+    if (!row?.id || (!canRetryUpload(row) && !canMarkActualPublished(row) && !canAbandonUpload(row) && !canDeferTask(row))) return
     const selected = selectedSet.value
     selectedIds.value = selected.has(row.id)
       ? selectedIds.value.filter(id => id !== row.id)
@@ -180,7 +203,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
   }
 
   function normalizeSelection() {
-    const validIds = new Set(rows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canDeferTask(row)).map(row => row.id))
+    const validIds = new Set(rows.value.filter(row => canRetryUpload(row) || canMarkActualPublished(row) || canAbandonUpload(row) || canDeferTask(row)).map(row => row.id))
     selectedIds.value = selectedIds.value.filter(id => validIds.has(id))
   }
 
@@ -206,11 +229,13 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
     allSelected,
     actualPublishedSelectedRows,
     retryUploadSelectedRows,
+    abandonUploadSelectedRows,
     deferSelectedRows,
     loadFailureLogs,
     markActualPublished,
     markSelectedActualPublished,
     retrySelectedUploads,
+    abandonSelectedUploads,
     deferSelectedTasks,
     toggleRow,
     toggleAll,
@@ -224,6 +249,10 @@ function canMarkActualPublished(row) {
 }
 
 function canRetryUpload(row) {
+  return canMarkActualPublished(row)
+}
+
+function canAbandonUpload(row) {
   return canMarkActualPublished(row)
 }
 
