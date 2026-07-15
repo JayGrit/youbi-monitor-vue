@@ -8,9 +8,6 @@ const props = defineProps({
   accountKeyGroups: { type: Array, default: () => [] },
   backupperDiskStatus: { type: Object, default: null },
   backupperDiskStatusText: { type: String, default: '' },
-  uploadIncompleteReport: { type: Object, default: null },
-  uploadIncompleteReportLoading: { type: Boolean, default: false },
-  uploadIncompleteReportError: { type: String, default: '' },
   accountPlatforms: { type: Array, default: () => [] },
   bilibiliQrCode: { type: Object, default: null },
   bilibiliQrMessage: { type: String, default: '' },
@@ -52,7 +49,6 @@ const props = defineProps({
   runUploaderPhoneAccountScript: { type: Function, required: true },
   updateYoutubeDownloaderCookies: { type: Function, required: true },
   runStandaloneAccount: { type: Function, required: true },
-  generateUploadIncompleteReport: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
@@ -66,15 +62,6 @@ const props = defineProps({
 
 const STALE_READY_MINUTES = 10
 const OVERVIEW_TOOL_ACCOUNT_TYPES = new Set(['chatgpt', 'doubao', 'notebooklm'])
-const UPLOAD_REPORT_PLATFORMS = [
-  { key: 'bilibili', label: 'B站' },
-  { key: 'douyin', label: '抖音' },
-  { key: 'jinritoutiao', label: '头条' },
-  { key: 'kuaishou', label: '快手' },
-  { key: 'shipinhao', label: '视频号' },
-  { key: 'xiaohongshu', label: '小红书' },
-  { key: 'youtube', label: 'YouTube' },
-]
 
 const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
@@ -86,33 +73,6 @@ const standaloneLabels = {
 }
 
 const youtubeCookieUpdating = computed(() => props.uploaderPhoneAgentBusyKey === 'youtube:cookies:default')
-
-const uploadReportRows = computed(() => props.uploadIncompleteReport?.rows || [])
-const uploadReportSummary = computed(() => props.uploadIncompleteReport?.summary || {})
-const uploadReportStatusCounts = computed(() => uploadReportSummary.value.statusCounts || [])
-const uploadReportPlatformStatusCounts = computed(() => uploadReportSummary.value.platformStatusCounts || [])
-
-const uploadReportGeneratedText = computed(() => {
-  const value = props.uploadIncompleteReport?.generatedAt
-  return value ? formatDateTime(value) : ''
-})
-
-function reportPlatformStatus(row, platform) {
-  return row?.platforms?.[platform] || '-'
-}
-
-function reportBackupperText(row) {
-  const backupper = row?.backupper || {}
-  return [
-    `素材 ${backupper.processAssets || '-'}`,
-    `封面 ${backupper.cover || '-'}`,
-    `成片 ${backupper.finalVideo || '-'}`,
-  ].join(' / ')
-}
-
-function reportTaskState(row) {
-  return `${row?.taskStatus || '-'}/${row?.currentStage || '-'}`
-}
 
 const phonePlatformAccounts = computed(() => {
   const groups = new Map()
@@ -587,13 +547,6 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       <div class="account-page-head">
         <div></div>
         <div class="account-edit-actions">
-          <button
-            type="button"
-            :disabled="uploadIncompleteReportLoading"
-            @click="generateUploadIncompleteReport"
-          >
-            {{ uploadIncompleteReportLoading ? '生成中' : '生成上传未完成报表' }}
-          </button>
           <template v-if="accountEditMode">
             <button type="button" @click="cancelAccountEditMode">完成</button>
           </template>
@@ -790,66 +743,6 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
         </section>
       </div>
       <div v-else class="empty-state">暂无账号配置</div>
-
-      <section
-        v-if="uploadIncompleteReport || uploadIncompleteReportError || uploadIncompleteReportLoading"
-        class="upload-incomplete-report"
-        aria-label="上传未完成 MinIO 报表"
-      >
-        <div class="upload-report-head">
-          <div>
-            <strong>上传未完成报表</strong>
-            <span v-if="uploadReportGeneratedText">
-              {{ uploadReportGeneratedText }} · {{ uploadReportRows.length }} 个任务 · {{ uploadReportSummary.rowSize || '0B' }}
-            </span>
-            <span v-else-if="uploadIncompleteReportLoading">正在扫描 MinIO 和任务状态</span>
-          </div>
-          <div class="upload-report-summary" aria-label="报表汇总">
-            <span v-for="item in uploadReportStatusCounts" :key="item.status">
-              {{ item.status }} {{ item.count }}
-            </span>
-          </div>
-        </div>
-        <div v-if="uploadIncompleteReportError" class="upload-report-error">{{ uploadIncompleteReportError }}</div>
-        <div v-if="uploadReportPlatformStatusCounts.length" class="upload-report-platform-summary">
-          <span v-for="item in uploadReportPlatformStatusCounts" :key="item.platformStatus">
-            {{ item.platformStatus }} {{ item.count }}
-          </span>
-        </div>
-        <div v-if="uploadReportRows.length" class="upload-report-table-wrap">
-          <table class="upload-report-table">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>Type</th>
-                <th>状态</th>
-                <th>Uploader</th>
-                <th>对象</th>
-                <th>体积</th>
-                <th v-for="platform in UPLOAD_REPORT_PLATFORMS" :key="platform.key">{{ platform.label }}</th>
-                <th>回收</th>
-                <th>未完成项</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in uploadReportRows" :key="row.taskId">
-                <td class="upload-report-task">{{ row.taskId }}</td>
-                <td>{{ row.type || '-' }}/{{ row.taskType || '-' }}</td>
-                <td>{{ reportTaskState(row) }}</td>
-                <td>{{ row.uploaderStatus || '-' }}</td>
-                <td>{{ row.remainingObjectCount }}</td>
-                <td>{{ row.remainingSize }}</td>
-                <td v-for="platform in UPLOAD_REPORT_PLATFORMS" :key="platform.key">
-                  {{ reportPlatformStatus(row, platform.key) }}
-                </td>
-                <td>{{ reportBackupperText(row) }}</td>
-                <td class="upload-report-detail">{{ row.unfinishedUploadDetail || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else-if="uploadIncompleteReport && !uploadIncompleteReportLoading" class="empty-state">暂无上传未完成任务</div>
-      </section>
 
       <div v-if="accountEditMode && uploadBackfillOpen && uploadBackfillContext" class="upload-backfill-panel">
         <div class="upload-retry-head">

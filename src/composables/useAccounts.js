@@ -16,16 +16,13 @@ import { useUploadBackfill } from './accounts/useUploadBackfill'
 import { useUploaderPhones } from './accounts/useUploaderPhones'
 import { ref } from 'vue'
 
-export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIconUrls, serverApi = null) {
+export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIconUrls) {
   let accountTimer = null
 
   const platformAccounts = usePlatformAccounts(accountsApi, accountPlatforms)
   const uploaderPhones = useUploaderPhones(accountsApi, agentApi)
   const backupperDiskStatus = ref(null)
   const backupperDiskStatusText = ref('')
-  const uploadIncompleteReport = ref(null)
-  const uploadIncompleteReportLoading = ref(false)
-  const uploadIncompleteReportError = ref('')
 
   async function loadAccountPage() {
     await Promise.allSettled([
@@ -40,19 +37,6 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
     const status = await accountsApi.backupperStatus()
     backupperDiskStatus.value = status || null
     backupperDiskStatusText.value = status?.statusText || ''
-  }
-
-  async function generateUploadIncompleteReport() {
-    if (!serverApi?.generateUploadIncompleteReport) return
-    uploadIncompleteReportLoading.value = true
-    uploadIncompleteReportError.value = ''
-    try {
-      uploadIncompleteReport.value = await serverApi.generateUploadIncompleteReport()
-    } catch (err) {
-      uploadIncompleteReportError.value = err instanceof Error ? err.message : String(err)
-    } finally {
-      uploadIncompleteReportLoading.value = false
-    }
   }
 
   function startAccountPolling() {
@@ -119,10 +103,6 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
     accountKeyGroups: platformAccounts.accountKeyGroups,
     backupperDiskStatus,
     backupperDiskStatusText,
-    uploadIncompleteReport,
-    uploadIncompleteReportLoading,
-    uploadIncompleteReportError,
-    generateUploadIncompleteReport,
     ...uploadBackfill,
     ...uploaderPhones,
     loadAccountPage,

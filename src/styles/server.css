@@ -80,6 +80,112 @@
   font-size: 13px;
 }
 
+.upload-incomplete-report {
+  display: grid;
+  gap: 12px;
+}
+
+.upload-report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.upload-report-head h2 {
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.upload-report-head p {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.upload-report-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-report-controls button {
+  min-height: 30px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243044;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.upload-report-controls button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.upload-report-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.upload-report-summary span {
+  border: 1px solid #dbe3ee;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #64748b;
+  padding: 3px 7px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.upload-report-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+}
+
+.upload-report-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.upload-report-table th,
+.upload-report-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.upload-report-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+}
+
+.upload-report-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.upload-report-task {
+  color: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.upload-report-platform-icons {
+  justify-content: flex-start;
+  min-width: 120px;
+}
+
 @media (max-width: 720px) {
   .server-page-head {
     display: grid;
@@ -87,5 +193,9 @@
 
   .server-actions {
     justify-content: flex-start;
+  }
+
+  .upload-report-head {
+    display: grid;
   }
 }

@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import ServerDiskStatusPanel from '../components/ServerDiskStatusPanel.vue'
+import { uploadPlatformText } from '../domain/constants'
 
 const props = defineProps({
   backupperDiskStatus: { type: Object, default: null },
@@ -9,14 +10,19 @@ const props = defineProps({
   error: { type: String, default: '' },
   actionBusy: { type: String, default: '' },
   actionMessage: { type: String, default: '' },
+  uploadIncompleteReport: { type: Object, default: null },
+  uploadIncompleteReportError: { type: String, default: '' },
+  platformIconUrls: { type: Object, default: () => ({}) },
   loadServerStatus: { type: Function, required: true },
   refreshServerStatus: { type: Function, required: true },
   runMinioCleanup: { type: Function, required: true },
   clearBuildCache: { type: Function, required: true },
   clearMysqlBinlog: { type: Function, required: true },
   clearDiagnostics: { type: Function, required: true },
+  generateUploadIncompleteReport: { type: Function, required: true },
 })
 
+const uploadReportSort = ref('type')
 const backupperStatusSummary = computed(() => {
   if (props.backupperDiskStatusText) return `硬盘占用 ${props.backupperDiskStatusText}`
   if (props.loading) return '加载中'
@@ -41,6 +47,47 @@ const backupperStatTimeText = computed(() => {
     hour12: false,
   }).format(date).replace(/\//g, '-')
 })
+
+const uploadReportRows = computed(() => {
+  const rows = [...(props.uploadIncompleteReport?.rows || [])]
+  if (uploadReportSort.value === 'size') {
+    return rows.sort((a, b) => Number(b?.remainingBytes || 0) - Number(a?.remainingBytes || 0))
+  }
+  return rows.sort((a, b) => {
+    const left = `${a?.type || ''}/${a?.taskType || ''}/${a?.taskId || ''}`
+    const right = `${b?.type || ''}/${b?.taskType || ''}/${b?.taskId || ''}`
+    return left.localeCompare(right)
+  })
+})
+
+const uploadReportSummary = computed(() => props.uploadIncompleteReport?.summary || {})
+const uploadReportStatusCounts = computed(() => uploadReportSummary.value.statusCounts || [])
+const uploadReportGeneratedText = computed(() => {
+  const value = props.uploadIncompleteReport?.generatedAt
+  if (!value) return ''
+  const match = String(value).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (match) return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`
+  return backupperStatTimeText.value
+})
+
+function reportTaskState(row) {
+  return `${row?.taskStatus || '-'}/${row?.currentStage || '-'}`
+}
+
+function platformStatuses(row) {
+  return Object.entries(row?.platforms || {})
+    .filter(([, status]) => status && !['no_need', 'skipped'].includes(status))
+    .map(([platform, status]) => ({ platform, status }))
+}
+
+function platformTitle(platformStatus) {
+  const platform = uploadPlatformText[platformStatus.platform] || platformStatus.platform
+  return `${platform} · ${platformStatus.status}`
+}
+
+function stageDone(row, stage) {
+  return row?.backupper?.[stage] === 'success'
+}
 
 const minioConsoleUrl = 'http://120.53.92.66:9001/'
 </script>
@@ -103,6 +150,13 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
           >
             {{ actionBusy === 'diagnostics' ? '清理中' : '成功诊断' }}
           </button>
+          <button
+            type="button"
+            :disabled="Boolean(actionBusy)"
+            @click="generateUploadIncompleteReport"
+          >
+            {{ actionBusy === 'upload-incomplete-report' ? '生成中' : '生成报表' }}
+          </button>
         </div>
       </div>
 
@@ -113,6 +167,93 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
 
       <p v-if="actionMessage" class="inline-message">{{ actionMessage }}</p>
       <p v-if="error" class="inline-error">{{ error }}</p>
+    </section>
+
+    <section
+      v-if="uploadIncompleteReport || uploadIncompleteReportError || actionBusy === 'upload-incomplete-report'"
+      class="biliup-panel upload-incomplete-report"
+      aria-label="上传未完成 MinIO 报表"
+    >
+      <div class="upload-report-head">
+        <div>
+          <h2>上传未完成报表</h2>
+          <p v-if="uploadReportGeneratedText">
+            {{ uploadReportGeneratedText }} · {{ uploadReportRows.length }} 个任务 · {{ uploadReportSummary.rowSize || '0B' }}
+          </p>
+          <p v-else>正在扫描 MinIO 和任务状态</p>
+        </div>
+        <div class="upload-report-controls">
+          <button
+            type="button"
+            :class="{ active: uploadReportSort === 'type' }"
+            @click="uploadReportSort = 'type'"
+          >
+            Type
+          </button>
+          <button
+            type="button"
+            :class="{ active: uploadReportSort === 'size' }"
+            @click="uploadReportSort = 'size'"
+          >
+            体积
+          </button>
+        </div>
+      </div>
+
+      <div v-if="uploadReportStatusCounts.length" class="upload-report-summary">
+        <span v-for="item in uploadReportStatusCounts" :key="item.status">{{ item.status }} {{ item.count }}</span>
+      </div>
+      <p v-if="uploadIncompleteReportError" class="inline-error">{{ uploadIncompleteReportError }}</p>
+
+      <div v-if="uploadReportRows.length" class="upload-report-table-wrap">
+        <table class="upload-report-table">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Type</th>
+              <th>状态</th>
+              <th>Uploader</th>
+              <th>对象</th>
+              <th>体积</th>
+              <th>平台</th>
+              <th>素材</th>
+              <th>封面</th>
+              <th>成片</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in uploadReportRows" :key="row.taskId">
+              <td class="upload-report-task">{{ row.taskId }}</td>
+              <td>{{ row.type || '-' }}/{{ row.taskType || '-' }}</td>
+              <td>{{ reportTaskState(row) }}</td>
+              <td>{{ row.uploaderStatus || '-' }}</td>
+              <td>{{ row.remainingObjectCount }}</td>
+              <td>{{ row.remainingSize }}</td>
+              <td>
+                <span class="uploader-platform-icons upload-report-platform-icons" aria-label="上传平台状态">
+                  <span
+                    v-for="platformStatus in platformStatuses(row)"
+                    :key="platformStatus.platform"
+                    :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
+                    :title="platformTitle(platformStatus)"
+                  >
+                    <img
+                      v-if="platformIconUrls[platformStatus.platform]"
+                      :src="platformIconUrls[platformStatus.platform]"
+                      :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
+                      loading="lazy"
+                    />
+                  </span>
+                </span>
+              </td>
+              <td>{{ stageDone(row, 'processAssets') }}</td>
+              <td>{{ stageDone(row, 'cover') }}</td>
+              <td>{{ stageDone(row, 'finalVideo') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else-if="uploadIncompleteReport && actionBusy !== 'upload-incomplete-report'" class="empty-state">暂无上传未完成任务</div>
     </section>
   </section>
 </template>

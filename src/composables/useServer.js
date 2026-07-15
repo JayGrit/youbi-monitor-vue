@@ -7,6 +7,8 @@ export function useServer(serverApi) {
   const error = ref('')
   const actionBusy = ref('')
   const actionMessage = ref('')
+  const uploadIncompleteReport = ref(null)
+  const uploadIncompleteReportError = ref('')
 
   async function loadServerStatus() {
     loading.value = true
@@ -99,6 +101,21 @@ export function useServer(serverApi) {
     return runServerAction('diagnostics', '确认删除 success 任务的诊断截图和 HTML？')
   }
 
+  async function generateUploadIncompleteReport() {
+    actionBusy.value = 'upload-incomplete-report'
+    actionMessage.value = ''
+    uploadIncompleteReportError.value = ''
+    error.value = ''
+    try {
+      uploadIncompleteReport.value = await serverApi.generateUploadIncompleteReport()
+      actionMessage.value = uploadIncompleteReport.value?.message || '上传未完成报表已生成'
+    } catch (err) {
+      uploadIncompleteReportError.value = err?.message || String(err)
+    } finally {
+      actionBusy.value = ''
+    }
+  }
+
   return {
     backupperDiskStatus,
     backupperDiskStatusText,
@@ -106,11 +123,14 @@ export function useServer(serverApi) {
     error,
     actionBusy,
     actionMessage,
+    uploadIncompleteReport,
+    uploadIncompleteReportError,
     loadServerStatus,
     refreshServerStatus,
     runMinioCleanup,
     clearBuildCache,
     clearMysqlBinlog,
     clearDiagnostics,
+    generateUploadIncompleteReport,
   }
 }
