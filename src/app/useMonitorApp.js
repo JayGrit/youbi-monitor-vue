@@ -378,6 +378,7 @@ export function useMonitorApp() {
     loadFailureLogs,
     loadStaticAssets,
     loadServerStatus,
+    generateUploadIncompleteReport: generateServerUploadIncompleteReport,
     clearAccountPolling,
     clearFlowPolling,
     clearSubmitterPolling,

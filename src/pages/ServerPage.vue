@@ -110,6 +110,18 @@ function shortDateTime(value) {
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
+function uploadReportRowUrl(row) {
+  const taskId = String(row?.taskId || '').trim()
+  if (!taskId) return ''
+  return `${minioConsoleUrl}browser/ydbi/${encodeURIComponent(`${taskId}/`)}`
+}
+
+function openUploadReportRow(row) {
+  const url = uploadReportRowUrl(row)
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 async function copyTaskId(taskId) {
   const text = String(taskId || '').trim()
   if (!text) return
@@ -189,13 +201,6 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
           >
             {{ actionBusy === 'diagnostics' ? '清理中' : '成功诊断' }}
           </button>
-          <button
-            type="button"
-            :disabled="Boolean(actionBusy)"
-            @click="generateUploadIncompleteReport"
-          >
-            {{ actionBusy === 'upload-incomplete-report' ? '生成中' : '生成报表' }}
-          </button>
         </div>
       </div>
 
@@ -236,6 +241,14 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
           >
             体积
           </button>
+          <button
+            type="button"
+            class="upload-report-retry"
+            :disabled="Boolean(actionBusy)"
+            @click="generateUploadIncompleteReport"
+          >
+            {{ actionBusy === 'upload-incomplete-report' ? '拉取中' : '重试' }}
+          </button>
         </div>
       </div>
 
@@ -261,9 +274,19 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in uploadReportRows" :key="row.taskId">
+            <tr
+              v-for="row in uploadReportRows"
+              :key="row.taskId"
+              class="upload-report-row"
+              role="link"
+              tabindex="0"
+              :title="uploadReportRowUrl(row)"
+              @click="openUploadReportRow(row)"
+              @keydown.enter="openUploadReportRow(row)"
+              @keydown.space.prevent="openUploadReportRow(row)"
+            >
               <td>
-                <button type="button" class="upload-report-task" @click="copyTaskId(row.taskId)">
+                <button type="button" class="upload-report-task" @click.stop="copyTaskId(row.taskId)">
                   {{ row.taskId }}
                 </button>
               </td>

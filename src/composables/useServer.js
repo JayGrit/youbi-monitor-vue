@@ -108,7 +108,7 @@ export function useServer(serverApi) {
     error.value = ''
     try {
       uploadIncompleteReport.value = await serverApi.generateUploadIncompleteReport()
-      actionMessage.value = uploadIncompleteReport.value?.message || '上传未完成报表已生成'
+      actionMessage.value = uploadIncompleteReport.value?.message || '上传未完成报表已拉取'
     } catch (err) {
       uploadIncompleteReportError.value = err?.message || String(err)
     } finally {
