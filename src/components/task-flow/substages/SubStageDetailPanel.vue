@@ -115,6 +115,8 @@ const detailTitle = computed(() => {
   const [stage, ...subStageParts] = detailKey.value.split(':')
   const subStage = subStageParts.join(':') || 'main'
   const stageLabel = stageNameText[stage] || stage || '-'
+  const selectedLabel = String(props.selectedStage?.label || '').trim()
+  if (selectedLabel) return `${stageLabel} - ${selectedLabel}`
   const subStageLabel = subStageNameText[subStage] || subStage || '-'
   return `${stageLabel} - ${subStageLabel}`
 })
