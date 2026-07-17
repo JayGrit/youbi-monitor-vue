@@ -70,6 +70,7 @@ const accountAvatarCache = ref({})
 const uploaderPhoneEditMode = ref(false)
 
 const standaloneLabels = {
+  douyin: '抖音',
   notebooklm: 'NotebookLM',
   chatgpt: 'ChatGPT',
 }
