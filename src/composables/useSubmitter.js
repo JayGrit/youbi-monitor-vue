@@ -40,12 +40,13 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterTotal = ref(0)
   const submitterAuthorTypeRows = ref([])
   const submitterTaskTypes = ref([])
+  const submitterTopics = ref([])
   const submitterAuthorTypeSaving = ref('')
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
 
   const submitterAuthorTopicFilters = computed(() => {
-    const types = new Set()
+    const types = new Set(submitterTopics.value.map(item => String(item?.topic || '').trim()).filter(Boolean))
     for (const row of submitterAuthorTypeRows.value) {
       const type = String(row?.topic || row?.draftTopic || '').trim()
       if (type) types.add(type)
@@ -145,8 +146,19 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       await Promise.all([
         loadSubmitterAuthorTypes(),
         loadSubmitterTaskTypes(),
+        loadSubmitterTopics(),
       ])
     } catch (err) {
+      submitterError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadSubmitterTopics() {
+    try {
+      const payload = await submitterApi.listTopics()
+      submitterTopics.value = Array.isArray(payload) ? payload : []
+    } catch (err) {
+      submitterTopics.value = []
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
   }
