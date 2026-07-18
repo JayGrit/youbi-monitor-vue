@@ -36,7 +36,7 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
   async function loadBackupperStatus() {
     const status = await accountsApi.backupperStatus()
     backupperDiskStatus.value = status || null
-    backupperDiskStatusText.value = status?.statusText || ''
+    backupperDiskStatusText.value = status?.components?.disk?.payload?.statusText || status?.statusText || ''
   }
 
   function startAccountPolling() {

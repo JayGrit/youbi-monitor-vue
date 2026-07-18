@@ -43,7 +43,7 @@ export function useServer(serverApi) {
 
   function applyServerStatus(status) {
     backupperDiskStatus.value = status || null
-    backupperDiskStatusText.value = status?.statusText || ''
+    backupperDiskStatusText.value = status?.components?.disk?.payload?.statusText || status?.statusText || ''
   }
 
   function formatServerStatTime(value) {

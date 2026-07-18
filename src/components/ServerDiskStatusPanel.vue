@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps({
   status: { type: Object, default: null },
@@ -18,25 +18,42 @@ const DISK_CHART_COLORS = [
   '#64748b',
   '#f8fafc',
 ]
+const nowTick = ref(Date.now())
+let relativeTimer = null
 
 const diskUsageContext = computed(() => {
   const gib = 1024 ** 3
   const status = props.status || {}
-  const usedBytes = Math.max(0, Number(status.usedGb || 0) * gib)
-  const availableBytes = Math.max(0, Number(status.availableGb || 0) * gib)
+  const disk = status.components?.disk?.payload || status.summary?.disk || status
+  const minio = status.components?.minio?.payload || {}
+  const minioBucketBytes = minio.bucketBytes || status.summary?.minioBucketBytes || {}
+  const docker = status.components?.docker?.payload || status.summary?.docker || {}
+  const workfolder = status.components?.workfolder?.payload || {}
+  const mysql = status.components?.mysql?.payload || {}
+  const mysqlBinlog = status.components?.mysql_binlog?.payload || {}
+  const componentTimes = {
+    disk: status.components?.disk?.createdAt || status.createdAt,
+    minio: status.components?.minio?.createdAt || status.createdAt,
+    docker: status.components?.docker?.createdAt || status.createdAt,
+    workfolder: status.components?.workfolder?.createdAt || status.createdAt,
+    mysql: status.components?.mysql?.createdAt || status.createdAt,
+    mysql_binlog: status.components?.mysql_binlog?.createdAt || status.createdAt,
+  }
+  const usedBytes = Math.max(0, Number(disk.usedGb || status.usedGb || 0) * gib)
+  const availableBytes = Math.max(0, Number(disk.availableGb || status.availableGb || 0) * gib)
   const totalBytes = Math.max(
-    Number(status.totalGb || 0) * gib,
+    Number(disk.totalGb || status.totalGb || 0) * gib,
     usedBytes + availableBytes,
   )
-  const minioYdbiBytes = Math.max(0, Number(status.minioYdbiBytes ?? status.minioBytes ?? 0))
-  const minioDiagnosticsBytes = Math.max(0, Number(status.minioDiagnosticsBytes || 0))
-  const dockerImageBytes = Math.max(0, Number(status.dockerImageBytes || 0))
-  const danglingBytes = Math.min(dockerImageBytes, Math.max(0, Number(status.dockerDanglingImageBytes || 0)))
+  const minioYdbiBytes = Math.max(0, Number(minioBucketBytes.ydbi ?? status.minioYdbiBytes ?? status.minioBytes ?? 0))
+  const minioDiagnosticsBytes = Math.max(0, Number(minioBucketBytes['youbi-diagnostics'] ?? status.minioDiagnosticsBytes ?? 0))
+  const dockerImageBytes = Math.max(0, Number(docker.imageBytes ?? status.dockerImageBytes ?? 0))
+  const danglingBytes = Math.min(dockerImageBytes, Math.max(0, Number(docker.danglingImageBytes ?? status.dockerDanglingImageBytes ?? 0)))
   const dockerNonDanglingImageBytes = Math.max(0, dockerImageBytes - danglingBytes)
-  const buildCacheBytes = Math.max(0, Number(status.dockerBuildCacheBytes || 0))
-  const workfolderBytes = Math.max(0, Number(status.workfolderBytes || 0))
-  const mysqlBytes = Math.max(0, Number(status.mysqlBytes || 0))
-  const mysqlBinlogBytes = Math.max(0, Number(status.mysqlBinlogBytes || 0))
+  const buildCacheBytes = Math.max(0, Number(docker.buildCacheBytes ?? status.dockerBuildCacheBytes ?? 0))
+  const workfolderBytes = Math.max(0, Number(workfolder.bytes ?? status.summary?.workfolderBytes ?? status.workfolderBytes ?? 0))
+  const mysqlBytes = Math.max(0, Number(mysql.bytes ?? status.summary?.mysqlBytes ?? status.mysqlBytes ?? 0))
+  const mysqlBinlogBytes = Math.max(0, Number(mysqlBinlog.bytes ?? status.summary?.mysqlBinlogBytes ?? status.mysqlBinlogBytes ?? 0))
   const knownUsedBytes = minioYdbiBytes + minioDiagnosticsBytes + dockerNonDanglingImageBytes + danglingBytes
     + buildCacheBytes + workfolderBytes + mysqlBytes + mysqlBinlogBytes
 
@@ -46,15 +63,16 @@ const diskUsageContext = computed(() => {
     availableBytes,
     knownUsedBytes,
     items: [
-      { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0] },
-      { label: 'MinIO 诊断', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1] },
-      { label: 'Docker 镜像', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2] },
-      { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[3] },
-      { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4] },
-      { label: 'YouBi workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5] },
-      { label: 'MySQL 数据', value: mysqlBytes, color: DISK_CHART_COLORS[6] },
-      { label: 'MySQL binlog', value: mysqlBinlogBytes, color: DISK_CHART_COLORS[7] },
+      { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0], createdAt: componentTimes.minio },
+      { label: 'MinIO 诊断', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1], createdAt: componentTimes.minio },
+      { label: 'Docker 镜像', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2], createdAt: componentTimes.docker },
+      { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[3], createdAt: componentTimes.docker },
+      { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4], createdAt: componentTimes.docker },
+      { label: 'YouBi workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5], createdAt: componentTimes.workfolder },
+      { label: 'MySQL 数据', value: mysqlBytes, color: DISK_CHART_COLORS[6], createdAt: componentTimes.mysql },
+      { label: 'MySQL binlog', value: mysqlBinlogBytes, color: DISK_CHART_COLORS[7], createdAt: componentTimes.mysql_binlog },
     ],
+    diskCreatedAt: componentTimes.disk,
   }
 })
 
@@ -63,8 +81,8 @@ const diskUsageItems = computed(() => {
   const otherUsedBytes = Math.max(0, context.usedBytes - context.knownUsedBytes)
   return [
     ...context.items,
-    { label: '其他系统占用', value: otherUsedBytes, color: DISK_CHART_COLORS[8] },
-    { label: '可用空间', value: context.availableBytes, color: DISK_CHART_COLORS[9] },
+    { label: '其他系统占用', value: otherUsedBytes, color: DISK_CHART_COLORS[8], createdAt: context.diskCreatedAt },
+    { label: '可用空间', value: context.availableBytes, color: DISK_CHART_COLORS[9], createdAt: context.diskCreatedAt },
   ].filter(item => item.value > 0 || item.label === '可用空间')
 })
 
@@ -110,20 +128,47 @@ function diskUsagePercent(value) {
   if (!diskUsageTotal.value) return '0.0%'
   return `${(Number(value || 0) / diskUsageTotal.value * 100).toFixed(1)}%`
 }
+
+function relativeTime(value) {
+  if (!value) return ''
+  const text = String(value).trim()
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text)
+    ? text.replace(' ', 'T')
+    : text
+  const time = new Date(normalized).getTime()
+  if (Number.isNaN(time)) return ''
+  const diffMs = Math.max(0, nowTick.value - time)
+  const minutes = Math.floor(diffMs / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+  return `${Math.floor(hours / 24)} 天前`
+}
+
+onMounted(() => {
+  relativeTimer = window.setInterval(() => {
+    nowTick.value = Date.now()
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (relativeTimer) window.clearInterval(relativeTimer)
+})
 </script>
 
 <template>
   <div class="disk-status-panel-body">
     <div class="disk-status-chart" :style="diskChartStyle" aria-label="服务器磁盘占用饼图">
       <div>
-        <strong>{{ status?.usedPercent || 0 }}%</strong>
+        <strong>{{ status?.components?.disk?.payload?.usedPercent || status?.usedPercent || 0 }}%</strong>
         <span>{{ statusText || '暂无状态' }}</span>
       </div>
     </div>
     <div class="disk-status-legend">
       <div v-for="item in diskUsageItems" :key="item.label" class="disk-status-legend-row">
         <span class="disk-status-color" :style="{ background: item.color }"></span>
-        <span>{{ item.label }}</span>
+        <span>{{ item.label }} <em v-if="relativeTime(item.createdAt)">{{ relativeTime(item.createdAt) }}</em></span>
         <strong>{{ formatStorageBytes(item.value) }}</strong>
         <small>{{ diskUsagePercent(item.value) }}</small>
       </div>
