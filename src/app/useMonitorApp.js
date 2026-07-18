@@ -66,7 +66,7 @@ export function useMonitorApp() {
     toggleAll: toggleFailureLogAll,
     clearSelection: clearFailureLogSelection,
     resetFilters: resetFailureLogFilters,
-  } = useFailureLogs(failureLogsApi, distributorApi)
+  } = useFailureLogs(failureLogsApi, distributorApi, submitterApi)
 
   const {
     tasks,

@@ -72,6 +72,10 @@
   padding: 0 32px 0 10px;
 }
 
+.failure-log-filters label:nth-child(2) select {
+  min-width: 220px;
+}
+
 .failure-log-platform-filter {
   position: relative;
 }

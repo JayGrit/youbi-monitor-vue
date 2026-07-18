@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { parseLocalDateTime } from '../utils/format'
 import { normalizeUploadPlatform } from '../utils/uploadPlatform'
 
-export function useFailureLogs(failureLogsApi, distributorApi) {
+export function useFailureLogs(failureLogsApi, distributorApi, submitterApi) {
   const rows = ref([])
   const loading = ref(false)
   const error = ref('')
@@ -15,9 +15,13 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
   const timeFilter = ref('all')
   const platformFilter = ref([])
   const selectedIds = ref([])
+  const taskTopics = ref([])
 
   const stageOptions = computed(() => uniqueOptions(rows.value.map(row => row.stage)))
-  const topicOptions = computed(() => uniqueOptions(rows.value.map(row => row.topic)))
+  const topicOptions = computed(() => uniqueOptions([
+    ...taskTopics.value.map(item => item?.topic),
+    ...rows.value.map(row => row.topic),
+  ]))
   const platformOptions = computed(() => uniqueOptions(rows.value.map(row => row.platform)))
 
   const filteredRows = computed(() => rows.value
@@ -48,8 +52,12 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
     loading.value = true
     error.value = ''
     try {
-      const payload = await failureLogsApi.loadFailureLogs()
+      const [payload, topicsPayload] = await Promise.all([
+        failureLogsApi.loadFailureLogs(),
+        submitterApi?.listTopics ? submitterApi.listTopics().catch(() => []) : Promise.resolve([]),
+      ])
       rows.value = Array.isArray(payload?.rows) ? payload.rows : []
+      taskTopics.value = Array.isArray(topicsPayload) ? topicsPayload : []
       loadedAt.value = payload?.loadedAt || ''
       normalizeFilters()
       normalizeSelection()

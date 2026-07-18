@@ -9,7 +9,7 @@ defineProps({
 <template>
   <FailureLogsPage
     v-model:stage-filter="app.failureLogStageFilter"
-    v-model:type-filter="app.failureLogTypeFilter"
+    v-model:topic-filter="app.failureLogTypeFilter"
     v-model:time-filter="app.failureLogTimeFilter"
     v-model:platform-filter="app.failureLogPlatformFilter"
     :rows="app.failureLogRows"
@@ -20,7 +20,7 @@ defineProps({
     :action-busy="app.failureLogActionBusy"
     :loaded-at="app.failureLogLoadedAt"
     :stage-options="app.failureLogStageOptions"
-    :type-options="app.failureLogTypeOptions"
+    :topic-options="app.failureLogTypeOptions"
     :platform-options="app.failureLogPlatformOptions"
     :platform-icon-urls="app.platformIconUrls"
     :selected-ids="app.failureLogSelectedIds"
