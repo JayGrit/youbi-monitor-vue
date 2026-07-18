@@ -10,7 +10,7 @@ defineProps({
   <SubmitterPage
     v-bind="app"
     v-model:submitter-input="app.submitterInput"
-    v-model:submitter-type-filter="app.submitterTypeFilter"
+    v-model:submitter-topic-filter="app.submitterTopicFilter"
     v-model:submitter-uploader="app.submitterUploader"
     v-model:submitter-video-name="app.submitterVideoName"
     v-model:submitter-duration-filter="app.submitterDurationFilter"
