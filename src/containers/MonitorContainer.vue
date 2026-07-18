@@ -10,7 +10,7 @@ defineProps({
   <MonitorPage
     v-bind="app"
     @update:task-status-filter="app.setTaskStatusFilter"
-    @update:task-type-filter="app.setTaskTypeFilter"
+    @update:topic-filter="app.setTopicFilter"
     @update:task-stage-filter="app.setTaskStageFilter"
     @update:task-id-filter="app.setTaskIdFilter"
     @update:task-sort="app.setTaskSort"

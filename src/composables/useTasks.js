@@ -441,7 +441,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     return `${size}MB(${Math.floor(objectCount)})`
   }
 
-  function setTaskTypeFilter(value) {
+  function setTopicFilter(value) {
     topicFilter.value = value
     taskPage.value = 1
     loadTasks()
@@ -667,7 +667,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     uploadAccountText,
     topicText,
     minioStorageText,
-    setTaskTypeFilter,
+    setTopicFilter,
     setTaskStatusFilter,
     setTaskStageFilter,
     setTaskIdFilter,
