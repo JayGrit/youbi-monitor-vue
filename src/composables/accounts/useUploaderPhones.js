@@ -47,20 +47,20 @@ export function useUploaderPhones(accountsApi, agentApi) {
   async function runStandaloneAccount(row) {
     if (!row?.platform || standaloneAccountBusyKey.value) return
     const action = row.exists ? 'open' : 'new'
-    const accountKey = row.accountKey || (row.platform === 'chatgpt' ? 'default' : 'server-profile')
+    const topic = row.topic || (row.platform === 'chatgpt' ? 'default' : 'server-profile')
     standaloneAccountBusyKey.value = row.platform
     try {
-      await runUploaderPhoneAccountScript(row.platform, action, accountKey)
+      await runUploaderPhoneAccountScript(row.platform, action, topic)
     } finally {
       standaloneAccountBusyKey.value = ''
     }
   }
 
-  async function runUploaderPhoneAccountScript(platform, action, accountKey) {
-    const busyKey = `${platform}:${action}:${accountKey}`
+  async function runUploaderPhoneAccountScript(platform, action, topic) {
+    const busyKey = `${platform}:${action}:${topic}`
     uploaderPhoneAgentBusyKey.value = busyKey
     try {
-      const payload = await agentApi.runAccountScript(platform, action, accountKey)
+      const payload = await agentApi.runAccountScript(platform, action, topic)
       uploaderPhoneError.value = ''
       return payload
     } catch (err) {
@@ -104,9 +104,9 @@ export function useUploaderPhones(accountsApi, agentApi) {
     }
   }
 
-  async function waitAccountScript(platform, action, accountKey) {
+  async function waitAccountScript(platform, action, topic) {
     for (let attempt = 0; attempt < 90; attempt += 1) {
-      const payload = await agentApi.accountScriptStatus(platform, action, accountKey)
+      const payload = await agentApi.accountScriptStatus(platform, action, topic)
       if (payload?.status === 'success') return payload
       if (payload?.status === 'failed') {
         throw new Error(payload.message || '脚本执行失败')

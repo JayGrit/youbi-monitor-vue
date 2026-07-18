@@ -274,7 +274,7 @@
   font-size: 13px;
 }
 
-.account-key-list {
+.account-topic-list {
   width: min(95vw, 100%);
   display: grid;
   gap: 0;
@@ -282,13 +282,13 @@
   overflow-x: hidden;
 }
 
-.account-key-list.editing {
+.account-topic-list.editing {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
 }
 
-.account-key-group {
+.account-topic-group {
   border-top: 1px solid #e2e8f0;
 }
 
@@ -781,7 +781,7 @@
   width: 76px;
 }
 
-.account-key-input {
+.account-topic-input {
   width: 100%;
   min-height: 30px;
   padding: 0 8px;

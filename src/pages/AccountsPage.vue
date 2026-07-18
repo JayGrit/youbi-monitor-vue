@@ -7,7 +7,7 @@ import { normalizeAccountAvatarUrl } from '../utils/accountAvatar'
 import { formatDateTime, formatTime, isSameDate, pad2, parseLocalDateTime } from '../utils/format'
 
 const props = defineProps({
-  accountKeyGroups: { type: Array, default: () => [] },
+  topicGroups: { type: Array, default: () => [] },
   backupperDiskStatus: { type: Object, default: null },
   backupperDiskStatusText: { type: String, default: '' },
   accountPlatforms: { type: Array, default: () => [] },
@@ -91,10 +91,10 @@ const phoneRows = computed(() => (props.uploaderPhoneMatrix?.phones || []).filte
 
 const accountRowsByPlatformKey = computed(() => {
   const rows = new Map()
-  for (const group of props.accountKeyGroups || []) {
+  for (const group of props.topicGroups || []) {
     for (const item of group.rows || []) {
-      if (item?.type && item?.row?.accountKey) {
-        rows.set(`${item.type}:${item.row.accountKey}`, item.row)
+      if (item?.type && item?.row?.topic) {
+        rows.set(`${item.type}:${item.row.topic}`, item.row)
       }
     }
   }
@@ -114,7 +114,7 @@ function accountAvatar(type, row) {
 function accountDraft(row, type) {
   return {
     enabled: row.enabled !== false,
-    key: row.accountKey || '',
+    key: row.topic || '',
     cooldownMinMinutes: cooldownDraftMinutes(row.uploadCooldownMinSeconds, 60),
     cooldownMaxMinutes: cooldownDraftMinutes(row.uploadCooldownMaxSeconds, 120),
     uploadQuietStartTime: timeInputValue(row.uploadQuietStartTime, '01:00'),
@@ -176,10 +176,10 @@ function cancelAccountEditMode() {
 }
 
 function configuredAccounts() {
-  return props.accountKeyGroups.flatMap(group => group.rows.filter(item => item.configured))
+  return props.topicGroups.flatMap(group => group.rows.filter(item => item.configured))
 }
 
-async function saveAccountKeyEdit(item) {
+async function saveTopicEdit(item) {
   if (!item?.configured || !accountChanges(item).key) return
   await props.savePlatformKey(item.type, item.row)
 }
@@ -210,7 +210,7 @@ async function saveAccountEnabledEdit(item) {
 }
 
 function accountRowBusyKey(item) {
-  return String(item?.row?.accountKey || item?.row?.draftKey || '').trim()
+  return String(item?.row?.topic || item?.row?.draftKey || '').trim()
 }
 
 function accountRowSaving(item) {
@@ -229,7 +229,7 @@ function visibleRows(group) {
 }
 
 const visibleAccountGroups = computed(() => {
-  return (props.accountKeyGroups || [])
+  return (props.topicGroups || [])
     .map(group => ({
       ...group,
       visibleRows: visibleRows(group),
@@ -386,14 +386,14 @@ function phoneAccountName(account) {
   const remark = String(account?.remark || '').trim()
   if (remark) return remark
   const displayName = String(account?.displayName || '').trim()
-  const accountKey = String(account?.accountKey || '').trim()
-  return displayName && displayName !== accountKey ? displayName : ''
+  const topic = String(account?.topic || '').trim()
+  return displayName && displayName !== topic ? displayName : ''
 }
 
 function phoneSelectedAccountRow(phone, platform) {
   const account = selectedPhoneAccount(phone, platform)
-  if (!account?.accountKey) return null
-  return accountRowsByPlatformKey.value.get(`${platform}:${account.accountKey}`) || null
+  if (!account?.topic) return null
+  return accountRowsByPlatformKey.value.get(`${platform}:${account.topic}`) || null
 }
 
 function phoneAccountProfileName(phone, platform) {
@@ -407,9 +407,9 @@ function phoneAccountProfileAvatar(phone, platform) {
   return row ? accountAvatar(platform, row) : phoneAccountAvatar(account)
 }
 
-function syncPhoneAccountOption(platform, accountKey, profile) {
-  if (!accountKey || !profile) return
-  const account = phoneAccountOptions(platform).find(item => item.accountKey === accountKey)
+function syncPhoneAccountOption(platform, topic, profile) {
+  if (!topic || !profile) return
+  const account = phoneAccountOptions(platform).find(item => item.topic === topic)
   if (!account) return
   if (Object.prototype.hasOwnProperty.call(profile, 'displayName')) {
     account.remark = profile.displayName || ''
@@ -424,9 +424,9 @@ function phoneAccountOptions(platform) {
 }
 
 function accountOptionText(account) {
-  const name = account?.displayName || account?.accountKey || ''
+  const name = account?.displayName || account?.topic || ''
   const remark = account?.remark || ''
-  const text = name === account?.accountKey ? name : `${name} (${account.accountKey})`
+  const text = name === account?.topic ? name : `${name} (${account.topic})`
   return remark ? `${text} - ${remark}` : text
 }
 
@@ -447,7 +447,7 @@ function findPhoneAccountOption(platform, value) {
   return phoneAccountOptions(platform).find(account => {
     return [
       String(account.id),
-      account.accountKey,
+      account.topic,
       account.displayName,
       accountOptionText(account),
     ].filter(Boolean).some(item => String(item).trim() === normalized)
@@ -461,7 +461,7 @@ function phoneAccountAvatar(account) {
 }
 
 function phoneAccountInitial(account) {
-  const text = account?.displayName || account?.accountKey || ''
+  const text = account?.displayName || account?.topic || ''
   return text.trim().slice(0, 1).toUpperCase() || 'A'
 }
 
@@ -474,12 +474,12 @@ function phoneCellUnavailable(phone, platform) {
 }
 
 function phoneCellAgentBusy(phone, platform) {
-  const accountKey = selectedPhoneAccount(phone, platform)?.accountKey || ''
+  const topic = selectedPhoneAccount(phone, platform)?.topic || ''
   return props.uploaderPhoneAgentBusyKey.startsWith(`${platform}:`)
-    && (!accountKey || props.uploaderPhoneAgentBusyKey.endsWith(`:${accountKey}`))
+    && (!topic || props.uploaderPhoneAgentBusyKey.endsWith(`:${topic}`))
 }
 
-function defaultNewAccountKey(phone, platform) {
+function defaultNewTopic(phone, platform) {
   const phoneDigits = String(phone?.phone || '').replace(/\D/g, '')
   return `${platform}-${phoneDigits || phone?.id || 'new'}`
 }
@@ -487,15 +487,15 @@ function defaultNewAccountKey(phone, platform) {
 async function runPhoneCellAction(phone, platform) {
   if (uploaderPhoneEditMode.value || phoneCellAgentBusy(phone, platform)) return
   const account = selectedPhoneAccount(phone, platform)
-  if (account?.accountKey) {
+  if (account?.topic) {
     const action = account.isAvailable === false ? 'renew' : 'open'
-    await props.runUploaderPhoneAccountScript(platform, action, account.accountKey)
+    await props.runUploaderPhoneAccountScript(platform, action, account.topic)
     return
   }
 
-  const accountKey = window.prompt('请输入新账号 key', defaultNewAccountKey(phone, platform))
-  if (!accountKey?.trim()) return
-  const normalizedKey = accountKey.trim()
+  const topic = window.prompt('请输入新topic', defaultNewTopic(phone, platform))
+  if (!topic?.trim()) return
+  const normalizedKey = topic.trim()
   if (!window.confirm(`确认新建 ${platform} 账号：${normalizedKey}？`)) return
   if (!window.confirm(`请再次确认：将执行 new，并使用 key ${normalizedKey}。`)) return
   await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey)
@@ -522,7 +522,7 @@ async function savePhoneAccountProfile(phone, platform, event) {
   if (nextName === currentName) return
   row.draftDisplayName = nextName
   const profile = await props.savePlatformAccountProfile(platform, row)
-  syncPhoneAccountOption(platform, account.accountKey, profile)
+  syncPhoneAccountOption(platform, account.topic, profile)
 }
 
 async function uploadPhoneAccountAvatar(phone, platform, event) {
@@ -532,7 +532,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
   if (!row || !account || !file) return
   try {
     const profile = await props.uploadPlatformAccountAvatar(platform, row, file)
-    syncPhoneAccountOption(platform, account.accountKey, profile)
+    syncPhoneAccountOption(platform, account.topic, profile)
     if (profile?.avatarUrl) {
       const avatarUrl = normalizeAccountAvatarUrl(profile.avatarUrl)
       delete accountAvatarCache.value[avatarUrl]
@@ -578,7 +578,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       :next-send-running="nextSendRunning"
       :open-running-task="openRunningTask"
       :next-send-display="nextSendDisplay"
-      :save-account-key-edit="saveAccountKeyEdit"
+      :save-topic-edit="saveTopicEdit"
       :open-upload-backfill="openUploadBackfill"
       :save-account-cooldown-edit="saveAccountCooldownEdit"
       :save-account-quiet-time-edit="saveAccountQuietTimeEdit"

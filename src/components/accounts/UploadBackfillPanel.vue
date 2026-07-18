@@ -26,7 +26,7 @@ defineProps([
             {{ uploadBackfillLoading ? '正在加载历史视频' : `补发候选 ${uploadBackfillRows.length} 个` }}
           </strong>
           <span class="upload-backfill-context">
-            {{ uploadBackfillContext.type }} · {{ uploadBackfillContext.platformLabel }}/{{ uploadBackfillContext.accountKey }}
+            {{ uploadBackfillContext.platformLabel }}/{{ uploadBackfillContext.topic }}
           </span>
           <div class="upload-retry-actions">
             <button type="button" :disabled="uploadBackfillLoading || uploadBackfillRows.length === 0" @click="toggleUploadBackfillAll">
@@ -50,7 +50,7 @@ defineProps([
         </div>
         <p v-if="uploadBackfillError" class="inline-error">{{ uploadBackfillError }}</p>
         <div v-if="!uploadBackfillLoading && uploadBackfillRows.length === 0" class="upload-retry-empty">
-          当前 type 暂无可补发历史视频
+          当前 topic 暂无可补发历史视频
         </div>
         <div v-else class="upload-retry-list">
           <label

@@ -22,7 +22,7 @@ const props = defineProps({
   generateUploadIncompleteReport: { type: Function, required: true },
 })
 
-const uploadReportSort = ref('type')
+const uploadReportSort = ref('topic')
 const backupperStatusSummary = computed(() => {
   if (props.backupperDiskStatusText) return `硬盘占用 ${props.backupperDiskStatusText}`
   if (props.loading) return '加载中'
@@ -54,8 +54,8 @@ const uploadReportRows = computed(() => {
     return rows.sort((a, b) => Number(b?.remainingBytes || 0) - Number(a?.remainingBytes || 0))
   }
   return rows.sort((a, b) => {
-    const left = `${a?.type || ''}/${a?.taskId || ''}`
-    const right = `${b?.type || ''}/${b?.taskId || ''}`
+    const left = `${a?.topic || ''}/${a?.taskId || ''}`
+    const right = `${b?.topic || ''}/${b?.taskId || ''}`
     return left.localeCompare(right)
   })
 })
@@ -232,7 +232,7 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
             :class="{ active: uploadReportSort === 'type' }"
             @click="uploadReportSort = 'type'"
           >
-            Type
+            Topic
           </button>
           <button
             type="button"
@@ -262,7 +262,7 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
           <thead>
             <tr>
               <th>Task</th>
-              <th>Type</th>
+              <th>Topic</th>
               <th>状态</th>
               <th>Uploader</th>
               <th>对象</th>
@@ -290,7 +290,7 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
                   {{ row.taskId }}
                 </button>
               </td>
-              <td>{{ row.type || '-' }}</td>
+              <td>{{ row.topic || '-' }}</td>
               <td>{{ reportTaskState(row) }}</td>
               <td>{{ row.uploaderStatus || '-' }}</td>
               <td>{{ row.remainingObjectCount }}</td>

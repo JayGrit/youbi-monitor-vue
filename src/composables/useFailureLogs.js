@@ -11,19 +11,19 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
   const actionBusy = ref(false)
   const loadedAt = ref('')
   const stageFilter = ref('all')
-  const typeFilter = ref('all')
+  const topicFilter = ref('all')
   const timeFilter = ref('all')
   const platformFilter = ref([])
   const selectedIds = ref([])
 
   const stageOptions = computed(() => uniqueOptions(rows.value.map(row => row.stage)))
-  const typeOptions = computed(() => uniqueOptions(rows.value.map(row => row.type)))
+  const topicOptions = computed(() => uniqueOptions(rows.value.map(row => row.topic)))
   const platformOptions = computed(() => uniqueOptions(rows.value.map(row => row.platform)))
 
   const filteredRows = computed(() => rows.value
     .filter(row => {
       if (stageFilter.value !== 'all' && row.stage !== stageFilter.value) return false
-      if (typeFilter.value !== 'all' && row.type !== typeFilter.value) return false
+      if (topicFilter.value !== 'all' && row.topic !== topicFilter.value) return false
       if (timeFilter.value !== 'all' && failureTimeGroup(row.failedAt) !== timeFilter.value) return false
       if (platformFilter.value.length > 0 && !platformFilter.value.includes(row.platform)) return false
       return true
@@ -190,7 +190,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
 
   function resetFilters() {
     stageFilter.value = 'all'
-    typeFilter.value = 'all'
+    topicFilter.value = 'all'
     timeFilter.value = 'all'
     platformFilter.value = []
     selectedIds.value = []
@@ -198,7 +198,7 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
 
   function normalizeFilters() {
     if (!stageOptions.value.includes(stageFilter.value)) stageFilter.value = 'all'
-    if (!typeOptions.value.includes(typeFilter.value)) typeFilter.value = 'all'
+    if (!topicOptions.value.includes(topicFilter.value)) topicFilter.value = 'all'
     platformFilter.value = platformFilter.value.filter(platform => platformOptions.value.includes(platform))
   }
 
@@ -216,11 +216,11 @@ export function useFailureLogs(failureLogsApi, distributorApi) {
     actionBusy,
     loadedAt,
     stageFilter,
-    typeFilter,
+    topicFilter,
     timeFilter,
     platformFilter,
     stageOptions,
-    typeOptions,
+    topicOptions,
     platformOptions,
     filteredRows,
     selectedIds,

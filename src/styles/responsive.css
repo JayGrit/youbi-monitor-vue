@@ -26,7 +26,7 @@
     width: 100%;
   }
 
-  .account-key-list {
+  .account-topic-list {
     width: 100%;
   }
 
@@ -275,7 +275,7 @@
     gap: 10px;
   }
 
-  .account-key-list {
+  .account-topic-list {
     width: 100%;
     overflow-x: visible;
   }

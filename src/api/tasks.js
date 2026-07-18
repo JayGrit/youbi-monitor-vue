@@ -8,7 +8,7 @@ export function createTasksApi(apiBase, service = 'monitor') {
     loadMonitorTasks(page = 1, limit = 20, filters = {}) {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) })
       if (filters.status && filters.status !== 'all') params.set('status', filters.status)
-      if (filters.type && filters.type !== 'all') params.set('type', filters.type)
+      if (filters.topic && filters.topic !== 'all') params.set('topic', filters.topic)
       if (filters.stage && filters.stage !== 'all') params.set('stage', filters.stage)
       if (filters.taskId) params.set('taskId', filters.taskId)
       if (filters.sort && filters.sort !== 'created_desc') params.set('sort', filters.sort)

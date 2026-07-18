@@ -123,7 +123,7 @@ function relativeTime(value) {
     <dl class="operator-meta-grid">
       <div>
         <dt>账号</dt>
-        <dd>{{ execution.accountKey || '-' }}</dd>
+        <dd>{{ execution.topic || '-' }}</dd>
       </div>
       <div>
         <dt>诊断</dt>

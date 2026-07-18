@@ -18,7 +18,7 @@ defineProps([
   'nextSendRunning',
   'openRunningTask',
   'nextSendDisplay',
-  'saveAccountKeyEdit',
+  'saveTopicEdit',
   'openUploadBackfill',
   'saveAccountCooldownEdit',
   'saveAccountQuietTimeEdit',
@@ -28,9 +28,9 @@ defineProps([
 </script>
 
 <template>
-      <div v-if="visibleAccountGroups.length" class="account-key-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
+      <div v-if="visibleAccountGroups.length" class="topic-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
         <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
-          <span class="account-type-header">Type</span>
+          <span class="account-type-header">Topic</span>
           <div class="account-row account-header account-platform-row">
             <span>Platform</span>
             <span>头像</span>
@@ -52,7 +52,7 @@ defineProps([
             <span v-if="accountEditMode">启用</span>
           </div>
         </div>
-        <section v-for="group in visibleAccountGroups" :key="group.key" class="account-key-group">
+        <section v-for="group in visibleAccountGroups" :key="group.key" class="topic-group">
           <div class="account-group-grid" :class="{ editing: accountEditMode }">
             <strong class="account-type-cell">{{ group.key }}</strong>
             <div class="account-table" :class="{ editing: accountEditMode }">
@@ -121,11 +121,11 @@ defineProps([
                   v-if="item.configured"
                   v-model="item.row.draftKey"
                   type="text"
-                  class="account-key-input"
-                  aria-label="账号 key"
-                  placeholder="账号 key"
+                  class="topic-input"
+                  aria-label="topic"
+                  placeholder="topic"
                   :disabled="accountRowSaving(item)"
-                  @change="saveAccountKeyEdit(item)"
+                  @change="saveTopicEdit(item)"
                 />
                 <template v-else>-</template>
               </span>
@@ -135,7 +135,7 @@ defineProps([
                   type="button"
                   class="account-backfill-button"
                   :disabled="accountRowSaving(item)"
-                  @click="openUploadBackfill(item.type, item.label, item.row.accountKey, group.key)"
+                  @click="openUploadBackfill(item.type, item.label, item.row.topic, group.key)"
                 >
                   补发历史
                 </button>

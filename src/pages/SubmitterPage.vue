@@ -16,11 +16,11 @@ defineProps({
   submitterStatusCounts: { type: String, default: '' },
   submitterInput: { type: String, default: '' },
   submitterBusy: { type: Boolean, default: false },
-  submitterTypeFilter: { type: String, default: '' },
+  submitterTopicFilter: { type: String, default: '' },
   submitterUploader: { type: String, default: '' },
   submitterVideoName: { type: String, default: '' },
   submitterAuthors: { type: Array, default: () => [] },
-  submitterAuthorTypeFilters: { type: Array, default: () => [] },
+  submitterAuthorTopicFilters: { type: Array, default: () => [] },
   submitterAuthorOptions: { type: Array, default: () => [] },
   submitterDurationFilter: { type: String, default: 'all' },
   submitterPublishedFilter: { type: String, default: 'all' },
@@ -65,7 +65,7 @@ defineProps({
 
 const emit = defineEmits([
   'update:submitterInput',
-  'update:submitterTypeFilter',
+  'update:submitterTopicFilter',
   'update:submitterUploader',
   'update:submitterVideoName',
   'update:submitterDurationFilter',
@@ -114,13 +114,13 @@ const emit = defineEmits([
           />
         </label>
         <label>
-          <span>Type</span>
+          <span>Topic</span>
           <select
-            :value="submitterTypeFilter"
-            @change="emit('update:submitterTypeFilter', $event.target.value); emit('update:submitterUploader', ''); applySubmitterFilters()"
+            :value="submitterTopicFilter"
+            @change="emit('update:submitterTopicFilter', $event.target.value); emit('update:submitterUploader', ''); applySubmitterFilters()"
           >
-            <option value="">全部 type</option>
-            <option v-for="type in submitterAuthorTypeFilters" :key="type" :value="type">{{ type }}</option>
+            <option value="">全部 topic</option>
+            <option v-for="topic in submitterAuthorTopicFilters" :key="topic" :value="topic">{{ topic }}</option>
           </select>
         </label>
         <label>

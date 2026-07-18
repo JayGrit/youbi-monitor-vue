@@ -26,7 +26,7 @@ export function accountRows(accounts) {
   return accounts.map((account, index) => ({
     ...account,
     slot: index + 1,
-    draftKey: account.accountKey || '',
+    draftKey: account.topic || '',
     draftCooldownMinMinutes: cooldownMinutes(account.uploadCooldownMinSeconds, 60),
     draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
     draftUploadQuietStartTime: timeInputValue(account.uploadQuietStartTime, '01:00'),
@@ -100,26 +100,26 @@ export function accountCountText(value) {
 }
 
 export function rowKey(row) {
-  return row?.accountKey || `slot_${row?.slot || 0}`
+  return row?.topic || `slot_${row?.slot || 0}`
 }
 
 export function rowStatus(row) {
-  if (!row.accountKey) return '空'
+  if (!row.topic) return '空'
   if (row.valid === true) return '已登录'
   if (row.valid === false) return '未登录'
   return row.message || '已保存'
 }
 
 export function accountDisplay(row, platform) {
-  if (!row.accountKey) return ''
+  if (!row.topic) return ''
   const commonName = row.displayName || row.display_name || row.accountName || row.account_name || row.name
   if (commonName) {
     return commonName
   }
   if (platform === 'bilibili') {
-    return row.uname || row.accountKey
+    return row.uname || row.topic
   }
-  return row.nickname || row.accountKey
+  return row.nickname || row.topic
 }
 
 export function accountAvatarUrl(row) {
@@ -135,7 +135,7 @@ export function accountAvatarUrl(row) {
 }
 
 export function accountAvatarInitial(row, platform) {
-  const name = accountDisplay(row, platform) || row?.accountKey || '?'
+  const name = accountDisplay(row, platform) || row?.topic || '?'
   return String(name).trim().slice(0, 1).toUpperCase() || '?'
 }
 

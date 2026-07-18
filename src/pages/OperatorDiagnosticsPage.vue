@@ -15,7 +15,7 @@ const props = defineProps({
 
 const filters = reactive({
   platform: '',
-  accountKey: '',
+  topic: '',
   opId: '',
   taskId: '',
   timeRange: 'recent',
@@ -103,7 +103,7 @@ async function loadAllQueuePages(token) {
 function queueParams() {
   return {
     platform: filters.platform,
-    accountKey: filters.accountKey,
+    topic: filters.topic,
     opId: filters.opId,
     taskId: filters.taskId,
     ...timeRangeParams(filters.timeRange),
@@ -150,7 +150,7 @@ function closeScreenshotDialog() {
 function screenshotDialogTitle(task) {
   return [
     queueTaskType(task),
-    task?.accountKey,
+    task?.topic,
   ].filter(Boolean).join(' / ') || '诊断截图'
 }
 
@@ -252,8 +252,8 @@ function canOpenScreenshotDialog(task) {
       </div>
       <div class="operator-search-row">
         <label>
-          account_key
-          <input v-model.trim="filters.accountKey" type="search" @input="filterChangedDebounced" />
+          topic
+          <input v-model.trim="filters.topic" type="search" @input="filterChangedDebounced" />
         </label>
         <label>
           op_id
@@ -331,7 +331,7 @@ function canOpenScreenshotDialog(task) {
                 <span v-else>-</span>
               </td>
               <td>{{ queueTaskType(task) }}</td>
-              <td>{{ task.accountKey || '-' }}</td>
+              <td>{{ task.topic || '-' }}</td>
               <td>{{ relativeTime(task.createdAt) }}</td>
               <td>{{ waitingDurationText(task) }}</td>
               <td>{{ durationText(task) }}</td>

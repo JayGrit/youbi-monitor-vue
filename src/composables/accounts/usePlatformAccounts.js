@@ -24,12 +24,12 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   const bilibiliRenewing = ref(false)
   const qrTimers = Object.fromEntries(QR_LOGIN_PLATFORM_TYPES.map(platform => [platform, null]))
 
-  const accountKeyGroups = computed(() => {
+  const topicGroups = computed(() => {
     const groups = new Map()
     for (const platform of accountPlatforms) {
       const rows = platformState[platform.type]?.rows.value || []
       for (const row of rows) {
-        const key = String(row.accountKey || row.draftKey || '').trim()
+        const key = String(row.topic || row.draftKey || '').trim()
         if (!key) continue
         if (!groups.has(key)) groups.set(key, { key, platforms: {} })
         groups.get(key).platforms[platform.type] = row
@@ -44,7 +44,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
           .map(platform => ({
             ...platform,
             row: group.platforms[platform.type],
-            configured: Boolean(group.platforms[platform.type]?.accountKey),
+            configured: Boolean(group.platforms[platform.type]?.topic),
             exists: true,
           })),
       }))
@@ -58,7 +58,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
         const state = platformState[platform]
         state.accounts.value = payload?.[platform] || []
         state.rows.value = accountRows(state.accounts.value)
-        state.account.value = state.rows.value.find(row => row.accountKey) || state.rows.value[0]
+        state.account.value = state.rows.value.find(row => row.topic) || state.rows.value[0]
         state.error.value = ''
       }
       loadAccountOverviewStats()
@@ -101,7 +101,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   async function startPlatformLogin(platform, row) {
     if (!QR_LOGIN_PLATFORM_TYPES.includes(platform)) return null
     try {
-      const key = row?.accountKey || '_auto'
+      const key = row?.topic || '_auto'
       setPlatformBusy(platform, rowKey(row), 'login')
       const payload = await accountsApi[platform].startQrLogin(key)
       platformState[platform].qrCode.value = payload
@@ -125,7 +125,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     const state = platformState[platform]
     if (!state.qrCode.value?.authCode) return
     try {
-      const key = state.qrCode.value.accountKey || '_auto'
+      const key = state.qrCode.value.topic || '_auto'
       const payload = await accountsApi[platform].pollQrLogin(key, state.qrCode.value.authCode)
       state.qrMessage.value = payload.message || '等待扫码确认'
       if (payload.code === 'expired') {
@@ -143,11 +143,11 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function renewBilibiliAccount(row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     bilibiliRenewing.value = true
     setPlatformBusy('bilibili', rowKey(row), 'renew')
     try {
-      platformState.bilibili.account.value = await accountsApi.bilibili.renew(row.accountKey)
+      platformState.bilibili.account.value = await accountsApi.bilibili.renew(row.topic)
       await loadAccountOverview()
       platformState.bilibili.error.value = ''
     } catch (err) {
@@ -159,9 +159,9 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function refreshPlatformRow(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     try {
-      await accountsApi[platform].refresh(row.accountKey)
+      await accountsApi[platform].refresh(row.topic)
       await loadAccountOverview()
       platformState[platform].error.value = ''
     } catch (err) {
@@ -170,12 +170,12 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformKey(platform, row) {
-    if (!row?.accountKey) return null
+    if (!row?.topic) return null
     const nextKey = (row.draftKey || '').trim()
-    if (!nextKey || nextKey === row.accountKey) return null
+    if (!nextKey || nextKey === row.topic) return null
     setPlatformBusy(platform, rowKey(row), 'key')
     try {
-      const payload = await accountsApi[platform].saveKey(row.accountKey, nextKey)
+      const payload = await accountsApi[platform].saveKey(row.topic, nextKey)
       mergePlatformRow(platform, payload, row.slot)
       platformState[platform].error.value = ''
       return payload
@@ -188,13 +188,13 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function togglePlatformEnabled(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     const nextEnabled = row.draftEnabled !== false
     const previousEnabled = row.enabled
     row.enabled = nextEnabled
     setPlatformBusy(platform, rowKey(row), 'enabled')
     try {
-      const payload = await accountsApi[platform].setEnabled(row.accountKey, nextEnabled)
+      const payload = await accountsApi[platform].setEnabled(row.topic, nextEnabled)
       mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
@@ -207,7 +207,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformCooldown(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     const minMinutes = Number(row.draftCooldownMinMinutes)
     const maxMinutes = Number(row.draftCooldownMaxMinutes)
     if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 0 || maxMinutes < minMinutes) {
@@ -217,7 +217,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     setPlatformBusy(platform, rowKey(row), 'cooldown')
     try {
       const payload = await accountsApi[platform].setCooldown(
-        row.accountKey,
+        row.topic,
         Math.round(minMinutes * 60),
         Math.round(maxMinutes * 60),
       )
@@ -231,7 +231,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformDownloaderMaxStagedCount(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     const maxStagedCount = Number(row.draftDownloaderMaxStagedCount)
     if (!Number.isInteger(maxStagedCount) || maxStagedCount < 0 || maxStagedCount > 100) {
       setPlatformError(platform, '最大暂存个数范围无效')
@@ -239,7 +239,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'downloaderMaxStagedCount')
     try {
-      const payload = await accountsApi[platform].setDownloaderMaxStagedCount(row.accountKey, maxStagedCount)
+      const payload = await accountsApi[platform].setDownloaderMaxStagedCount(row.topic, maxStagedCount)
       mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
@@ -250,11 +250,11 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformNextUploadAllowedAt(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
     setPlatformBusy(platform, rowKey(row), 'nextUploadAllowedAt')
     try {
-      const payload = await accountsApi[platform].setNextUploadAllowedAt(row.accountKey, nextUploadAllowedAt || null)
+      const payload = await accountsApi[platform].setNextUploadAllowedAt(row.topic, nextUploadAllowedAt || null)
       mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
@@ -265,7 +265,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformQuietTime(platform, row) {
-    if (!row?.accountKey) return
+    if (!row?.topic) return
     const startTime = normalizeTimeInput(row.draftUploadQuietStartTime)
     const endTime = normalizeTimeInput(row.draftUploadQuietEndTime)
     if (!startTime || !endTime) {
@@ -274,7 +274,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
     setPlatformBusy(platform, rowKey(row), 'quietTime')
     try {
-      const payload = await accountsApi[platform].setQuietTime(row.accountKey, startTime, endTime)
+      const payload = await accountsApi[platform].setQuietTime(row.topic, startTime, endTime)
       mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
     } catch (err) {
@@ -292,11 +292,11 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function savePlatformAccountProfile(platform, row) {
-    if (!row?.accountKey) return null
+    if (!row?.topic) return null
     const displayName = String(row.draftDisplayName || '').trim()
     setPlatformBusy(platform, rowKey(row), 'profile')
     try {
-      const profile = await accountsApi[platform].updateProfile(row.accountKey, displayName)
+      const profile = await accountsApi[platform].updateProfile(row.topic, displayName)
       row.displayName = profile?.displayName || ''
       row.display_name = profile?.displayName || ''
       row.draftDisplayName = row.displayName || accountDisplay(row, platform)
@@ -311,10 +311,10 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   async function uploadPlatformAccountAvatar(platform, row, file) {
-    if (!row?.accountKey || !file) return null
+    if (!row?.topic || !file) return null
     setPlatformBusy(platform, rowKey(row), 'avatar')
     try {
-      const profile = await accountsApi[platform].uploadAvatar(row.accountKey, file)
+      const profile = await accountsApi[platform].uploadAvatar(row.topic, file)
       row.avatarUrl = profile?.avatarUrl || ''
       row.avatar_url = profile?.avatarUrl || ''
       row.draftAvatarUrl = row.avatarUrl
@@ -329,15 +329,15 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
   }
 
   function mergePlatformRow(platform, account, preferredSlot) {
-    if (!account?.accountKey) return
+    if (!account?.topic) return
     const state = platformState[platform]
     const rows = [...state.rows.value]
-    let index = rows.findIndex(row => row.accountKey === account.accountKey)
+    let index = rows.findIndex(row => row.topic === account.topic)
     if (index < 0 && preferredSlot) {
       index = rows.findIndex(row => row.slot === preferredSlot)
     }
     if (index < 0) {
-      index = rows.findIndex(row => !row.accountKey)
+      index = rows.findIndex(row => !row.topic)
     }
     if (index < 0) {
       index = 0
@@ -345,11 +345,11 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     const previous = rows[index] || {}
     const nextRow = mergeAccountPayload(previous, account)
     rows[index] = nextRow
-    state.rows.value = rows.filter(row => row.accountKey)
-    state.accounts.value = state.accounts.value.some(row => row.accountKey === previous.accountKey || row.accountKey === account.accountKey)
-      ? state.accounts.value.map(row => (row.accountKey === previous.accountKey || row.accountKey === account.accountKey ? nextRow : row))
+    state.rows.value = rows.filter(row => row.topic)
+    state.accounts.value = state.accounts.value.some(row => row.topic === previous.topic || row.topic === account.topic)
+      ? state.accounts.value.map(row => (row.topic === previous.topic || row.topic === account.topic ? nextRow : row))
       : [...state.accounts.value, nextRow]
-    state.account.value = rows.find(row => row.accountKey === state.account.value?.accountKey) || rows.find(row => row.accountKey) || rows[0]
+    state.account.value = rows.find(row => row.topic === state.account.value?.topic) || rows.find(row => row.topic) || rows[0]
   }
 
   function mergeAccountPayload(previous, account) {
@@ -367,17 +367,17 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
 
   function mergePlatformStats(platform, statsRows) {
     const state = platformState[platform]
-    const statsByKey = new Map((statsRows || []).map(row => [row.accountKey, row]))
+    const statsByKey = new Map((statsRows || []).map(row => [row.topic, row]))
     const rows = state.rows.value.map(row => {
-      const stats = statsByKey.get(row.accountKey)
+      const stats = statsByKey.get(row.topic)
       return stats ? { ...row, ...stats, statsLoading: false } : row
     })
     state.rows.value = rows
     state.accounts.value = state.accounts.value.map(account => {
-      const stats = statsByKey.get(account.accountKey)
+      const stats = statsByKey.get(account.topic)
       return stats ? { ...account, ...stats, statsLoading: false } : account
     })
-    state.account.value = rows.find(row => row.accountKey === state.account.value?.accountKey) || rows.find(row => row.accountKey) || rows[0]
+    state.account.value = rows.find(row => row.topic === state.account.value?.topic) || rows.find(row => row.topic) || rows[0]
   }
 
   function platformBusyKey(platform) {
@@ -421,7 +421,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
 
   return {
     platformState,
-    accountKeyGroups,
+    topicGroups,
     bilibiliRenewing,
     loadAccountOverview,
     clearQrPolling,

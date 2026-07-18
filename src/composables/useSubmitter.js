@@ -14,7 +14,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterMessage = ref('')
   const submitterInput = ref('')
   const submitterBusy = ref(false)
-  const submitterTypeFilter = ref('')
+  const submitterTopicFilter = ref('')
   const submitterUploader = ref('')
   const submitterVideoName = ref('')
   const submitterDurationFilter = ref('all')
@@ -44,19 +44,19 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
 
-  const submitterAuthorTypeFilters = computed(() => {
+  const submitterAuthorTopicFilters = computed(() => {
     const types = new Set()
     for (const row of submitterAuthorTypeRows.value) {
-      const type = String(row?.type || row?.draftType || '').trim()
+      const type = String(row?.topic || row?.draftTopic || '').trim()
       if (type) types.add(type)
     }
     return [...types].sort((left, right) => left.localeCompare(right))
   })
 
   const submitterAuthorOptions = computed(() => {
-    const typeFilter = submitterTypeFilter.value.trim()
+    const topicFilter = submitterTopicFilter.value.trim()
     return submitterAuthorTypeRows.value
-      .filter(row => !typeFilter || String(row?.type || row?.draftType || '').trim() === typeFilter)
+      .filter(row => !topicFilter || String(row?.topic || row?.draftTopic || '').trim() === topicFilter)
       .map(row => String(row?.author || '').trim())
       .filter(Boolean)
   })
@@ -152,7 +152,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   }
 
   async function resetSubmitterFilters() {
-    submitterTypeFilter.value = ''
+    submitterTopicFilter.value = ''
     submitterUploader.value = ''
     submitterVideoName.value = ''
     submitterDurationFilter.value = 'all'
@@ -217,7 +217,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     return {
       detail: submitterListDetail.value,
       batch: submitterFocusedBatch.value,
-      type: submitterTypeFilter.value,
+      topic: submitterTopicFilter.value,
       uploader: submitterUploader.value,
       videoName: submitterVideoName.value.trim(),
       sort: submitterSort.value,
@@ -307,8 +307,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthorTypeError,
     submitterMessage,
     submitterUploader,
-    submitterTypeFilter,
-    submitterAuthorTypeFilters,
+    submitterTopicFilter,
+    submitterAuthorTopicFilters,
     loadSubmitterVideos,
   })
 
@@ -383,7 +383,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterMessage,
     submitterInput,
     submitterBusy,
-    submitterTypeFilter,
+    submitterTopicFilter,
     submitterUploader,
     submitterVideoName,
     submitterDurationFilter,
@@ -415,7 +415,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterFilteredTotal,
     submitterPageCount,
     submitterStatusCounts,
-    submitterAuthorTypeFilters,
+    submitterAuthorTopicFilters,
     submitterAuthorOptions,
     loadSubmitterVideos,
     applySubmitterFilters,

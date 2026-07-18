@@ -45,7 +45,7 @@ function diagnosticsTitle(submission) {
     <div class="upload-submission-grid">
       <article
         v-for="submission in rows"
-        :key="submission.id || `${submission.platform}-${submission.account_key}`"
+        :key="submission.id || `${submission.platform}-${submission.topic}`"
         :class="['upload-submission-card', `status-${submission.status}`]"
       >
         <img

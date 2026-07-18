@@ -100,7 +100,7 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
     jinritoutiaoRows: platformState.jinritoutiao.rows,
     jinritoutiaoError: platformState.jinritoutiao.error,
     jinritoutiaoBusyKey: platformState.jinritoutiao.busyKey,
-    accountKeyGroups: platformAccounts.accountKeyGroups,
+    topicGroups: platformAccounts.topicGroups,
     backupperDiskStatus,
     backupperDiskStatusText,
     ...uploadBackfill,

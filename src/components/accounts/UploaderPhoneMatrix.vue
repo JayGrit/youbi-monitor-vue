@@ -120,7 +120,7 @@ defineEmits(['toggle-edit-mode'])
                   <img
                     v-if="phoneAccountProfileAvatar(phone, platform.type)"
                     :src="phoneAccountProfileAvatar(phone, platform.type)"
-                    :alt="phoneAccountProfileName(phone, platform.type) || selectedPhoneAccount(phone, platform.type).accountKey"
+                    :alt="phoneAccountProfileName(phone, platform.type) || selectedPhoneAccount(phone, platform.type).topic"
                     loading="lazy"
                     decoding="async"
                   />
@@ -129,7 +129,7 @@ defineEmits(['toggle-edit-mode'])
                     type="file"
                     accept="image/*"
                     aria-label="上传账号头像"
-                    :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
+                    :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).topic"
                     @change="uploadPhoneAccountAvatar(phone, platform.type, $event)"
                   />
                 </label>
@@ -138,7 +138,7 @@ defineEmits(['toggle-edit-mode'])
                   class="uploader-phone-profile-name"
                   :value="phoneAccountProfileName(phone, platform.type)"
                   placeholder="账号名"
-                  :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).accountKey"
+                  :disabled="platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).topic"
                   @change="savePhoneAccountProfile(phone, platform.type, $event)"
                   @keyup.enter="savePhoneAccountProfile(phone, platform.type, $event)"
                 />
@@ -157,7 +157,7 @@ defineEmits(['toggle-edit-mode'])
                   <img
                     v-if="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
                     :src="phoneAccountAvatar(selectedPhoneAccount(phone, platform.type))"
-                    :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).accountKey"
+                    :alt="selectedPhoneAccount(phone, platform.type).displayName || selectedPhoneAccount(phone, platform.type).topic"
                     loading="lazy"
                     decoding="async"
                   />

@@ -12,15 +12,15 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
     standaloneAccounts() {
       return requestJson(`${normalizedBaseUrl}/api/accounts/standalone`, undefined, describe('查询本机独立账号状态'))
     },
-    runAccountScript(platform, action, accountKey) {
+    runAccountScript(platform, action, topic) {
       return postJson(
         accountScriptUrl(platform, action),
-        { accountKey },
+        { topic },
         describe('执行本机账号维护脚本'),
       )
     },
-    accountScriptStatus(platform, action, accountKey) {
-      const query = new URLSearchParams({ accountKey: String(accountKey || '') })
+    accountScriptStatus(platform, action, topic) {
+      const query = new URLSearchParams({ topic: String(topic || '') })
       return requestJson(
         `${accountScriptUrl(platform, action)}/status?${query.toString()}`,
         undefined,
@@ -30,7 +30,7 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
     updateYoutubeCookies() {
       return postJson(
         accountScriptUrl('youtube', 'cookies'),
-        { accountKey: 'default' },
+        { topic: 'default' },
         describe('更新 YouTube 下载 Cookie'),
       )
     },

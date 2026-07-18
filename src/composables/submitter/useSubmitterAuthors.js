@@ -8,8 +8,8 @@ export function useSubmitterAuthors({
   submitterAuthorTypeError,
   submitterMessage,
   submitterUploader,
-  submitterTypeFilter,
-  submitterAuthorTypeFilters,
+  submitterTopicFilter,
+  submitterAuthorTopicFilters,
   loadSubmitterVideos,
 }) {
   async function loadSubmitterAuthorTypes() {
@@ -34,8 +34,8 @@ export function useSubmitterAuthors({
           author,
           source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || authorRow.source),
           authorUrl: String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || authorRow.authorUrl || ''),
-          type: String(item?.type || ''),
-          draftType: String(item?.type || ''),
+          topic: String(item?.topic || ''),
+          draftTopic: String(item?.topic || ''),
           taskType: String(item?.taskType || item?.task_type || 'dubbing'),
           draftTaskType: String(item?.taskType || item?.task_type || 'dubbing'),
           hasBackgroundAudio: item?.hasBackgroundAudio !== false,
@@ -116,8 +116,8 @@ export function useSubmitterAuthors({
 
   function sortSubmitterAuthorTypeRows(rows) {
     return rows.sort((left, right) => {
-      const leftType = String(left?.type || left?.draftType || '').trim()
-      const rightType = String(right?.type || right?.draftType || '').trim()
+      const leftType = String(left?.topic || left?.draftTopic || '').trim()
+      const rightType = String(right?.topic || right?.draftTopic || '').trim()
       if (leftType && !rightType) return -1
       if (!leftType && rightType) return 1
       const typeOrder = leftType.localeCompare(rightType)
@@ -127,13 +127,13 @@ export function useSubmitterAuthors({
   }
 
   async function saveSubmitterAuthorType(row) {
-    const type = String(row?.draftType || '').trim()
+    const topic = String(row?.draftTopic || '').trim()
     const sourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
     const targetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
     if (submitterAuthorTypeSaving.value === row?.author) return
-    if (!row?.author || !type) return
+    if (!row?.author || !topic) return
     if (
-      type === row.type
+      topic === row.topic
       && row.draftTaskType === row.taskType
       && row.draftHasBackgroundAudio === row.hasBackgroundAudio
       && row.draftResetCover === row.resetCover
@@ -153,9 +153,9 @@ export function useSubmitterAuthors({
       const coverOrientation = resetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
       const fetchNewVideos = row.draftFetchNewVideos === true
       const bilibiliExists = row.draftBilibiliExists === true
-      const payload = await submitterApi.saveAuthorType(row.author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists)
-      row.type = String(payload?.type || type)
-      row.draftType = row.type
+      const payload = await submitterApi.saveAuthorType(row.author, topic, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists)
+      row.topic = String(payload?.topic || topic)
+      row.draftTopic = row.topic
       row.taskType = String(payload?.taskType || payload?.task_type || taskType)
       row.draftTaskType = row.taskType
       row.hasBackgroundAudio = payload?.hasBackgroundAudio !== false
@@ -181,7 +181,7 @@ export function useSubmitterAuthors({
   }
 
   async function autosaveSubmitterAuthorType(row) {
-    row.draftType = String(row?.draftType || '').trim()
+    row.draftTopic = String(row?.draftTopic || '').trim()
     row.draftSourceLanguage = String(row?.draftSourceLanguage || '').trim() || '英文'
     row.draftTargetLanguage = String(row?.draftTargetLanguage || '').trim() || '中文'
     row.draftCoverOrientation = row.draftResetCover ? normalizeCoverOrientation(row.draftCoverOrientation) : ''
@@ -211,8 +211,8 @@ export function useSubmitterAuthors({
       if (submitterUploader.value === author) {
         submitterUploader.value = ''
       }
-      if (submitterTypeFilter.value && !submitterAuthorTypeFilters.value.includes(submitterTypeFilter.value)) {
-        submitterTypeFilter.value = ''
+      if (submitterTopicFilter.value && !submitterAuthorTopicFilters.value.includes(submitterTopicFilter.value)) {
+        submitterTopicFilter.value = ''
       }
       await loadSubmitterVideos(true)
     } catch (err) {

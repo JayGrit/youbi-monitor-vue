@@ -26,11 +26,11 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   const restartTaskId = ref('')
   const deleteTaskId = ref('')
   const taskStatusFilter = ref('all')
-  const taskTypeFilter = ref('all')
+  const topicFilter = ref('all')
   const taskStageFilter = ref('all')
   const taskIdFilter = ref('')
   const taskSort = ref('created_desc')
-  const taskTypeFilters = ref([])
+  const topicFilters = ref([])
   const taskPage = ref(1)
   const taskTotalCount = ref(0)
   const taskActionsExpanded = ref(false)
@@ -60,7 +60,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   const filteredTasks = computed(() => {
     return tasks.value.filter(task => {
       if (taskStatusFilter.value !== 'all' && task.status !== taskStatusFilter.value) return false
-      if (taskTypeFilter.value !== 'all' && taskTypeText(task) !== taskTypeFilter.value) return false
+      if (topicFilter.value !== 'all' && topicText(task) !== topicFilter.value) return false
       if (taskStageFilter.value !== 'all' && String(task.currentStage || '') !== taskStageFilter.value) return false
       if (taskIdFilter.value && !String(task.taskId || '').includes(taskIdFilter.value.trim())) return false
       return true
@@ -69,7 +69,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
 
   const hasTaskFilter = computed(() => {
     return taskStatusFilter.value !== 'all'
-      || taskTypeFilter.value !== 'all'
+      || topicFilter.value !== 'all'
       || taskStageFilter.value !== 'all'
       || Boolean(taskIdFilter.value.trim())
   })
@@ -107,7 +107,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     try {
       const payload = await tasksApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE, {
         status: taskStatusFilter.value,
-        type: taskTypeFilter.value,
+        topic: topicFilter.value,
         stage: taskStageFilter.value,
         taskId: taskIdFilter.value.trim(),
         sort: taskSort.value,
@@ -262,7 +262,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   async function loadTaskTypes() {
     try {
       const payload = await tasksApi.loadTaskTypes()
-      taskTypeFilters.value = [...new Set((payload?.items || [])
+      topicFilters.value = [...new Set((payload?.items || [])
         .map(type => String(type || '').trim())
         .filter(Boolean))]
         .sort((left, right) => left.localeCompare(right))
@@ -421,13 +421,13 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
 
   function uploadAccountText(task) {
     const name = String(task?.bilibiliUploadAccountName || '').trim()
-    const key = String(task?.bilibiliUploadAccountKey || '').trim()
+    const key = String(task?.bilibiliUploadTopic || '').trim()
     if (name && key && name !== key) return `${name} · ${key}`
     return name || key
   }
 
-  function taskTypeText(task) {
-    return String(task?.taskType || '').trim() || '-'
+  function topicText(task) {
+    return String(task?.topic || '').trim() || '-'
   }
 
   function minioStorageText(task) {
@@ -442,7 +442,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   function setTaskTypeFilter(value) {
-    taskTypeFilter.value = value
+    topicFilter.value = value
     taskPage.value = 1
     loadTasks()
   }
@@ -617,7 +617,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     restartTaskId,
     deleteTaskId,
     taskStatusFilter,
-    taskTypeFilter,
+    topicFilter,
     taskStageFilter,
     taskIdFilter,
     taskSort,
@@ -630,7 +630,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     taskDetailsExpanded,
     taskProgressLoading,
     taskProgressError,
-    taskTypeFilters,
+    topicFilters,
     taskStageFilters,
     filteredTasks,
     hasTaskFilter,
@@ -665,7 +665,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     warmTaskThumbnails,
     sourceDurationSeconds,
     uploadAccountText,
-    taskTypeText,
+    topicText,
     minioStorageText,
     setTaskTypeFilter,
     setTaskStatusFilter,

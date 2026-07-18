@@ -31,7 +31,7 @@ export function useSubmitterActions({
         ydbi_rejected_at: null,
       })
       removeSubmittedRows([rowId], submitterTotal)
-      submitterMessage.value = `已投稿到 YouBi 待执行队列，type=${payload.type || 'unknown'}。`
+      submitterMessage.value = `已投稿到 YouBi 待执行队列，topic=${payload.topic || 'unknown'}。`
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
       window.alert(submitterError.value)

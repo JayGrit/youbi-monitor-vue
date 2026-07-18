@@ -18,15 +18,13 @@ export function useUploadBackfill(accountsApi, loadAccountPage) {
     return rows.length > 0 && rows.every(row => uploadBackfillSelectedSet.value.has(row.taskId))
   })
 
-  async function openUploadBackfill(platform, platformLabel, accountKey, type) {
-    const normalizedAccountKey = String(accountKey || '').trim()
-    const normalizedType = String(type || '').trim()
-    if (!platform || !normalizedAccountKey || !normalizedType) return
+  async function openUploadBackfill(platform, platformLabel, topic) {
+    const normalizedTopic = String(topic || '').trim()
+    if (!platform || !normalizedTopic) return
     uploadBackfillContext.value = {
       platform,
       platformLabel: platformLabel || platform,
-      accountKey: normalizedAccountKey,
-      type: normalizedType,
+      topic: normalizedTopic,
     }
     uploadBackfillOpen.value = true
     uploadBackfillSelectedIds.value = []
@@ -46,7 +44,7 @@ export function useUploadBackfill(accountsApi, loadAccountPage) {
     if (!context || uploadBackfillLoading.value) return
     uploadBackfillLoading.value = true
     try {
-      const payload = await accountsApi.uploadBackfillCandidates(context.platform, context.accountKey, context.type)
+      const payload = await accountsApi.uploadBackfillCandidates(context.platform, context.topic)
       uploadBackfillRows.value = payload.rows || []
       uploadBackfillSelectedIds.value = uploadBackfillSelectedIds.value.filter(id => {
         return uploadBackfillRows.value.some(row => row.taskId === id && row.selectable)
@@ -78,14 +76,13 @@ export function useUploadBackfill(accountsApi, loadAccountPage) {
   async function registerSelectedUploadBackfill() {
     const context = uploadBackfillContext.value
     if (!context || uploadBackfillSelectedIds.value.length === 0 || uploadBackfillBusy.value) return
-    const confirmed = window.confirm(`确认注册 ${uploadBackfillSelectedIds.value.length} 个历史视频到 ${context.platformLabel}/${context.accountKey}？`)
+    const confirmed = window.confirm(`确认注册 ${uploadBackfillSelectedIds.value.length} 个历史视频到 ${context.platformLabel}/${context.topic}？`)
     if (!confirmed) return
     uploadBackfillBusy.value = true
     try {
       await accountsApi.registerUploadBackfill(
         context.platform,
-        context.accountKey,
-        context.type,
+        context.topic,
         [...uploadBackfillSelectedIds.value],
       )
       uploadBackfillSelectedIds.value = []

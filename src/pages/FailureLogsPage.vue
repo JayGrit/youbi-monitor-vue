@@ -13,11 +13,11 @@ const props = defineProps({
   actionBusy: { type: Boolean, default: false },
   loadedAt: { type: String, default: '' },
   stageFilter: { type: String, default: 'all' },
-  typeFilter: { type: String, default: 'all' },
+  topicFilter: { type: String, default: 'all' },
   timeFilter: { type: String, default: 'all' },
   platformFilter: { type: Array, default: () => [] },
   stageOptions: { type: Array, default: () => [] },
-  typeOptions: { type: Array, default: () => [] },
+  topicOptions: { type: Array, default: () => [] },
   platformOptions: { type: Array, default: () => [] },
   platformIconUrls: { type: Object, default: () => ({}) },
   selectedIds: { type: Array, default: () => [] },
@@ -45,7 +45,7 @@ const actionMode = ref('')
 
 const emit = defineEmits([
   'update:stageFilter',
-  'update:typeFilter',
+  'update:topicFilter',
   'update:timeFilter',
   'update:platformFilter',
 ])
@@ -196,10 +196,10 @@ function parseUploadLogId(logId) {
         </select>
       </label>
       <label>
-        <span>Type</span>
-        <select :value="typeFilter" @change="emit('update:typeFilter', $event.target.value)">
-          <option value="all">全部 Type</option>
-          <option v-for="type in typeOptions" :key="type" :value="type">{{ type }}</option>
+        <span>Topic</span>
+        <select :value="topicFilter" @change="emit('update:topicFilter', $event.target.value)">
+          <option value="all">全部 Topic</option>
+          <option v-for="topic in topicOptions" :key="topic" :value="topic">{{ topic }}</option>
         </select>
       </label>
       <label>
@@ -267,7 +267,7 @@ function parseUploadLogId(logId) {
           <tr>
             <th v-if="actionsExpanded" class="failure-log-select-column">选择</th>
             <th>阶段</th>
-            <th>Type</th>
+            <th>Topic</th>
             <th class="failure-log-platform-column">平台</th>
             <th class="failure-log-task-column">任务</th>
             <th class="failure-log-time-column">失败时间</th>
@@ -288,7 +288,7 @@ function parseUploadLogId(logId) {
               <span v-else>-</span>
             </td>
             <td><span class="failure-log-stage">{{ stageText(row) }}</span></td>
-            <td>{{ row.type || '-' }}</td>
+            <td>{{ row.topic || '-' }}</td>
             <td class="failure-log-platform-column">
               <img
                 v-if="row.platform && platformIconUrls[row.platform]"

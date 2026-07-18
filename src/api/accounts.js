@@ -4,34 +4,34 @@ function genericPlatformAccountApi(apiBase, platform, context) {
   const base = `${apiBase}/accounts/${platform}`
   const describe = summary => ({ ...context, summary })
   return {
-    refresh(accountKey) {
-      return requestJson(`${base}/${encodeURIComponent(accountKey)}`, undefined, describe('刷新平台账号实时状态'))
+    refresh(topic) {
+      return requestJson(`${base}/${encodeURIComponent(topic)}`, undefined, describe('刷新平台账号实时状态'))
     },
-    saveKey(accountKey, newAccountKey) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/key`, { newAccountKey }, describe('保存平台账号登录标识'))
+    saveKey(topic, newTopic) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/key`, { newTopic }, describe('保存平台账号登录标识'))
     },
-    setEnabled(accountKey, enabled) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/enabled`, { enabled }, describe('切换平台账号启用状态'))
+    setEnabled(topic, enabled) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/enabled`, { enabled }, describe('切换平台账号启用状态'))
     },
-    setCooldown(accountKey, minSeconds, maxSeconds) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/cooldown`, { minSeconds, maxSeconds }, describe('保存账号投稿冷却区间'))
+    setCooldown(topic, minSeconds, maxSeconds) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/cooldown`, { minSeconds, maxSeconds }, describe('保存账号投稿冷却区间'))
     },
-    setNextUploadAllowedAt(accountKey, nextUploadAllowedAt) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/next-upload-allowed-at`, { nextUploadAllowedAt }, describe('保存账号下次可投时间'))
+    setNextUploadAllowedAt(topic, nextUploadAllowedAt) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/next-upload-allowed-at`, { nextUploadAllowedAt }, describe('保存账号下次可投时间'))
     },
-    setQuietTime(accountKey, startTime, endTime) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/quiet-time`, { startTime, endTime }, describe('保存账号静默投稿时段'))
+    setQuietTime(topic, startTime, endTime) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/quiet-time`, { startTime, endTime }, describe('保存账号静默投稿时段'))
     },
-    setDownloaderMaxStagedCount(accountKey, maxStagedCount) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/downloader-max-staged-count`, { maxStagedCount }, describe('保存下载暂存任务上限'))
+    setDownloaderMaxStagedCount(topic, maxStagedCount) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/downloader-max-staged-count`, { maxStagedCount }, describe('保存下载暂存任务上限'))
     },
-    updateProfile(accountKey, displayName) {
-      return postJson(`${base}/${encodeURIComponent(accountKey)}/profile`, { displayName }, describe('更新平台账号展示名'))
+    updateProfile(topic, displayName) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/profile`, { displayName }, describe('更新平台账号展示名'))
     },
-    uploadAvatar(accountKey, file) {
+    uploadAvatar(topic, file) {
       const form = new FormData()
       form.append('file', file)
-      return requestJson(`${base}/${encodeURIComponent(accountKey)}/avatar`, {
+      return requestJson(`${base}/${encodeURIComponent(topic)}/avatar`, {
         method: 'POST',
         body: form,
       }, describe('上传平台账号头像文件'))
@@ -56,12 +56,12 @@ export function createAccountsApi(apiBase, distributorApiBase = apiBase, service
     backupperStatus() {
       return requestJson(`${apiBase}/accounts/backupper-status`, undefined, monitor('查询账号备份服务状态'))
     },
-    uploadBackfillCandidates(platform, accountKey, type) {
-      const params = new URLSearchParams({ platform, accountKey, type })
+    uploadBackfillCandidates(platform, topic) {
+      const params = new URLSearchParams({ platform, topic })
       return requestJson(`${distributorApiBase}/upload-backfill/candidates?${params.toString()}`, undefined, distributor('查询账号补投候选任务'))
     },
-    registerUploadBackfill(platform, accountKey, type, taskIds) {
-      return postJson(`${distributorApiBase}/upload-backfill/register`, { platform, accountKey, type, taskIds }, distributor('登记账号补投任务'))
+    registerUploadBackfill(platform, topic, taskIds) {
+      return postJson(`${distributorApiBase}/upload-backfill/register`, { platform, topic, taskIds }, distributor('登记账号补投任务'))
     },
     uploaderPhones() {
       return requestJson(`${apiBase}/uploader-phones`, undefined, monitor('查询上传手机账号矩阵'))

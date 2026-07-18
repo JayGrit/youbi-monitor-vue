@@ -36,7 +36,7 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
     listVideos({
       detail,
       batch,
-      type,
+      topic,
       uploader,
       videoName,
       sort,
@@ -55,7 +55,7 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       if (offset !== undefined && offset !== null) params.set('offset', String(offset))
       if (detail || batch) params.set('detail', '1')
       if (batch) params.set('batch', batch)
-      if (type) params.set('type', type)
+      if (topic) params.set('topic', topic)
       if (uploader) params.set('uploader', uploader)
       if (videoName) params.set('video_name', videoName)
       if (sort) params.set('sort', sort)
@@ -126,10 +126,10 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return requestJson(`${submitterApiBase}/submitter-author-types/task-types`, undefined, describe('查询投稿任务类型选项'))
     },
 
-    saveAuthorType(author, type, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
+    saveAuthorType(author, topic, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
       return postJson(`${submitterApiBase}/submitter-author-types`, {
         author,
-        type,
+        topic,
         taskType,
         hasBackgroundAudio,
         sourceLanguage,

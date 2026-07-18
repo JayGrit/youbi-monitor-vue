@@ -35,7 +35,7 @@ defineProps([
   'nextSendRunning',
   'openRunningTask',
   'nextSendDisplay',
-  'saveAccountKeyEdit',
+  'saveTopicEdit',
   'openUploadBackfill',
   'saveAccountCooldownEdit',
   'saveAccountQuietTimeEdit',
@@ -80,7 +80,7 @@ defineProps([
         :next-send-running="nextSendRunning"
         :open-running-task="openRunningTask"
         :next-send-display="nextSendDisplay"
-        :save-account-key-edit="saveAccountKeyEdit"
+        :save-topic-edit="saveTopicEdit"
         :open-upload-backfill="openUploadBackfill"
         :save-account-cooldown-edit="saveAccountCooldownEdit"
         :save-account-quiet-time-edit="saveAccountQuietTimeEdit"

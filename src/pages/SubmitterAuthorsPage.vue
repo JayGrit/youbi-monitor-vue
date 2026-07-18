@@ -19,11 +19,11 @@ const typeAutosaveTimers = new Map()
 const authorTypeGroups = computed(() => {
   const groups = new Map()
   for (const row of props.submitterAuthorTypeRows) {
-    const type = String(row?.draftType || row?.type || '').trim() || '未设置'
-    if (!groups.has(type)) groups.set(type, [])
-    groups.get(type).push(row)
+    const topic = String(row?.draftTopic || row?.topic || '').trim() || '未设置'
+    if (!groups.has(topic)) groups.set(topic, [])
+    groups.get(topic).push(row)
   }
-  return [...groups.entries()].map(([type, rows]) => ({ type, rows }))
+  return [...groups.entries()].map(([topic, rows]) => ({ topic, rows }))
 })
 
 function scheduleTypeAutosave(row, autosave) {
@@ -129,9 +129,9 @@ function settingRows(row) {
       </header>
       <div class="submitter-author-type-body" :class="{ editing: editMode }">
         <p v-if="submitterAuthorTypeRows.length === 0" class="submitter-empty">暂无作者</p>
-        <section v-for="group in authorTypeGroups" :key="group.type" class="submitter-author-type-group">
+        <section v-for="group in authorTypeGroups" :key="group.topic" class="submitter-author-type-group">
           <header class="submitter-author-type-title">
-            <strong>{{ group.type }}</strong>
+            <strong>{{ group.topic }}</strong>
             <span>{{ group.rows.length }} 位作者</span>
           </header>
           <div class="submitter-author-type-head" aria-hidden="true">
@@ -160,9 +160,9 @@ function settingRows(row) {
               <span v-else class="submitter-author-name">{{ row.author }}</span>
               <div v-if="editMode" class="submitter-author-type-edit">
                 <input
-                  v-model="row.draftType"
+                  v-model="row.draftTopic"
                   type="text"
-                  placeholder="投稿 type"
+                  placeholder="投稿 topic"
                   :disabled="submitterAuthorTypeSaving === row.author"
                   @input="scheduleTypeAutosave(row, autosaveSubmitterAuthorType)"
                   @change="flushTypeAutosave(row, autosaveSubmitterAuthorType)"

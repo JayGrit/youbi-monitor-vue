@@ -10,8 +10,8 @@ const props = defineProps({
   serviceHeartbeats: { type: Array, default: () => [] },
   taskStatusFilters: { type: Array, default: () => [] },
   taskStatusFilter: { type: String, default: 'all' },
-  taskTypeFilter: { type: String, default: 'all' },
-  taskTypeFilters: { type: Array, default: () => [] },
+  topicFilter: { type: String, default: 'all' },
+  topicFilters: { type: Array, default: () => [] },
   taskStageFilter: { type: String, default: 'all' },
   taskStageFilters: { type: Array, default: () => [] },
   taskIdFilter: { type: String, default: '' },
@@ -40,7 +40,7 @@ const props = defineProps({
   markImageBroken: { type: Function, required: true },
   copyTaskId: { type: Function, required: true },
   sourceDurationSeconds: { type: Function, required: true },
-  taskTypeText: { type: Function, required: true },
+  topicText: { type: Function, required: true },
   minioStorageText: { type: Function, required: true },
   stageName: { type: Function, required: true },
   nodeProgress: { type: Function, required: true },
@@ -62,7 +62,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'update:taskStatusFilter',
-  'update:taskTypeFilter',
+  'update:topicFilter',
   'update:taskStageFilter',
   'update:taskIdFilter',
   'update:taskSort',
@@ -163,12 +163,12 @@ function onlineDeviceNames(service) {
       </template>
       <select
         class="task-type-filter"
-        :value="taskTypeFilter"
-        aria-label="按任务 type 筛选"
-        @change="emit('update:taskTypeFilter', $event.target.value)"
+        :value="topicFilter"
+        aria-label="按任务 topic 筛选"
+        @change="emit('update:topicFilter', $event.target.value)"
       >
-        <option value="all">Type</option>
-        <option v-for="type in taskTypeFilters" :key="type" :value="type">{{ type }}</option>
+        <option value="all">Topic</option>
+        <option v-for="type in topicFilters" :key="type" :value="type">{{ type }}</option>
       </select>
       <form class="task-id-filter" @submit.prevent="emit('applyTaskIdFilter')">
         <input
@@ -263,7 +263,7 @@ function onlineDeviceNames(service) {
             @keydown.space.prevent="copyTaskId(task)"
           >{{ task.taskId }}</span>
           <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
-          <span class="task-type">{{ taskTypeText(task) }}</span>
+          <span class="task-type">{{ topicText(task) }}</span>
           <span
             v-if="minioStorageText(task)"
             class="task-minio-storage"
