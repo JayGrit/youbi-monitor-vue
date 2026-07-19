@@ -25,13 +25,12 @@ const completion = computed(() => {
 })
 const coverImages = computed(() => [
   normalizeResourceUrl(result.value.source_cover_url || taskInfo.value.source_thumbnail_url || ''),
-  normalizeResourceUrl(result.value.clean_cover_url || ''),
   normalizeResourceUrl(result.value.final_cover_url || ''),
 ])
 const showCover = computed(() => {
   const reset = taskInfo.value.reset_cover ?? result.value.reset_cover
   return ![false, null, undefined, 0, '0', 'false', ''].includes(reset)
-    || Boolean(result.value.clean_cover_url || result.value.final_cover_url)
+    || Boolean(result.value.final_cover_url)
 })
 
 function isExpanded(key) {
