@@ -10,11 +10,11 @@ const props = defineProps({
 
 const expanded = ref(new Set())
 const result = computed(() => props.rows[0] || {})
-const videoInfo = computed(() => props.flow?.videoInfo || {})
+const taskInfo = computed(() => props.flow?.taskInfo || {})
 const comparisonRows = computed(() => [
-  { key: 'title', label: '标题', original: videoInfo.value.title || props.flow?.task?.title || '-', generated: videoInfo.value.upload_title || result.value.upload_title || '-' },
-  { key: 'description', label: '简介', original: videoInfo.value.source_description || '-', generated: videoInfo.value.upload_description || result.value.upload_description || '-', collapsible: true },
-  { key: 'tags', label: '标签', original: formatTags(videoInfo.value.source_tags_json), generated: formatTags(videoInfo.value.upload_tags || result.value.upload_tags) },
+  { key: 'title', label: '标题', original: taskInfo.value.title || props.flow?.task?.title || '-', generated: taskInfo.value.upload_title || result.value.upload_title || '-' },
+  { key: 'description', label: '简介', original: taskInfo.value.source_description || '-', generated: taskInfo.value.upload_description || result.value.upload_description || '-', collapsible: true },
+  { key: 'tags', label: '标签', original: formatTags(taskInfo.value.source_tags_json), generated: formatTags(taskInfo.value.upload_tags || result.value.upload_tags) },
 ])
 const completion = computed(() => {
   const status = String(result.value.status || '').toLowerCase()
@@ -24,12 +24,12 @@ const completion = computed(() => {
   return { text: '未完成', className: 'status-pending' }
 })
 const coverImages = computed(() => [
-  normalizeResourceUrl(result.value.source_cover_url || videoInfo.value.source_thumbnail_url || ''),
+  normalizeResourceUrl(result.value.source_cover_url || taskInfo.value.source_thumbnail_url || ''),
   normalizeResourceUrl(result.value.clean_cover_url || ''),
   normalizeResourceUrl(result.value.final_cover_url || ''),
 ])
 const showCover = computed(() => {
-  const reset = videoInfo.value.reset_cover ?? result.value.reset_cover
+  const reset = taskInfo.value.reset_cover ?? result.value.reset_cover
   return ![false, null, undefined, 0, '0', 'false', ''].includes(reset)
     || Boolean(result.value.clean_cover_url || result.value.final_cover_url)
 })

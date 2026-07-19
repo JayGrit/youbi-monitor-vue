@@ -17,12 +17,12 @@ const props = defineProps({
   uploadImage: { type: Function, required: true },
 })
 
-const videoInfo = computed(() => props.flow?.videoInfo || {})
+const taskInfo = computed(() => props.flow?.taskInfo || {})
 const metadataRows = computed(() => [
-  { key: 'title', label: 'Title', value: videoInfo.value.upload_title || '-' },
-  { key: 'coverText', label: '封面文字', value: videoInfo.value.cover_text || '-' },
-  { key: 'description', label: '简介', value: videoInfo.value.upload_description || '-' },
-  { key: 'tags', label: 'Tags', value: formatTags(videoInfo.value.upload_tags) },
+  { key: 'title', label: 'Title', value: taskInfo.value.upload_title || '-' },
+  { key: 'coverText', label: '封面文字', value: taskInfo.value.cover_text || '-' },
+  { key: 'description', label: '简介', value: taskInfo.value.upload_description || '-' },
+  { key: 'tags', label: 'Tags', value: formatTags(taskInfo.value.upload_tags) },
 ])
 const images = computed(() => [
   {
@@ -30,14 +30,14 @@ const images = computed(() => [
     label: '竖版封面',
     ratio: '3:4',
     prompt: jobPrompt(props.jobs, 'generate_narration_vertical_cover', '', '3:4'),
-    url: videoInfo.value.vertical_cover_url || '',
+    url: taskInfo.value.vertical_cover_url || '',
   },
   {
     kind: 'horizontal',
     label: '横版封面',
     ratio: '4:3',
     prompt: jobPrompt(props.jobs, 'generate_narration_horizontal_cover', '', '4:3'),
-    url: videoInfo.value.horizontal_cover_url || '',
+    url: taskInfo.value.horizontal_cover_url || '',
   },
 ])
 const diagnosticItems = computed(() => [

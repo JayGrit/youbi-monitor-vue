@@ -248,15 +248,15 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
 
   function flowTaskTitle(flow) {
     const task = flow?.task || {}
-    return task.title || flow?.videoInfo?.title || task.id || '任务详情'
+    return task.title || flow?.taskInfo?.title || task.id || '任务详情'
   }
 
   function flowPrimaryCoverUrl(flow) {
-    return normalizeResourceUrl(flow?.videoInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || '')
+    return normalizeResourceUrl(flow?.taskInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || '')
   }
 
   function flowSourceUrl(flow) {
-    return flow?.videoInfo?.source_webpage_url || flow?.videoInfo?.source_url || flow?.task?.source_url || ''
+    return flow?.taskInfo?.source_webpage_url || flow?.taskInfo?.source_url || flow?.task?.source_url || ''
   }
 
   function flowCoverUrl(flow) {
@@ -266,7 +266,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   }
 
   function flowDurationSeconds(flow) {
-    const value = Number(flow?.videoInfo?.source_duration_seconds || flow?.task?.source_duration_seconds)
+    const value = Number(flow?.taskInfo?.source_duration_seconds || flow?.task?.source_duration_seconds)
     return Number.isFinite(value) && value > 0 ? value : null
   }
 

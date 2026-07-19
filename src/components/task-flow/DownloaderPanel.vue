@@ -12,14 +12,14 @@ const props = defineProps({
   taskKinds: { type: Array, default: () => ['metadata', 'audio', 'video'] },
 })
 
-const videoInfo = computed(() => props.flow?.videoInfo || {})
+const taskInfo = computed(() => props.flow?.taskInfo || {})
 const subtitleManifest = ref([])
 const subtitleModal = ref(null)
 const subtitleModalLoading = ref(false)
 const subtitleModalError = ref('')
 
 watch(
-  () => videoInfo.value.source_subtitles_url,
+  () => taskInfo.value.source_subtitles_url,
   async value => {
     subtitleManifest.value = []
     const url = normalizeResourceUrl(value || '')
@@ -54,7 +54,7 @@ const taskRows = computed(() => {
 })
 
 const videoAsset = computed(() => {
-  const url = normalizeResourceUrl(videoInfo.value.video_source_url || '')
+  const url = normalizeResourceUrl(taskInfo.value.video_source_url || '')
   if (url) {
     return { name: 'video_source_url', kind: 'video', url }
   }
@@ -63,10 +63,10 @@ const videoAsset = computed(() => {
 
 const subtitleLinks = computed(() => {
   const links = []
-  addSubtitleLink(links, '源语言', 'srt', videoInfo.value.source_subtitle_srt_url)
-  addSubtitleLink(links, '源语言', 'txt', videoInfo.value.source_subtitle_txt_url)
-  addSubtitleLink(links, '中文', 'srt', videoInfo.value.chinese_subtitle_srt_url || videoInfo.value.zh_hans_subtitle_srt_url)
-  addSubtitleLink(links, '中文', 'txt', videoInfo.value.chinese_subtitle_txt_url || videoInfo.value.zh_hans_subtitle_txt_url)
+  addSubtitleLink(links, '源语言', 'srt', taskInfo.value.source_subtitle_srt_url)
+  addSubtitleLink(links, '源语言', 'txt', taskInfo.value.source_subtitle_txt_url)
+  addSubtitleLink(links, '中文', 'srt', taskInfo.value.chinese_subtitle_srt_url || taskInfo.value.zh_hans_subtitle_srt_url)
+  addSubtitleLink(links, '中文', 'txt', taskInfo.value.chinese_subtitle_txt_url || taskInfo.value.zh_hans_subtitle_txt_url)
   for (const row of subtitleManifest.value) {
     const group = subtitleGroup(row)
     addSubtitleLink(links, group, 'srt', row.srt_url)
@@ -94,7 +94,7 @@ const subtitleRows = computed(() => {
 
 const tagList = computed(() => {
   try {
-    const tags = JSON.parse(videoInfo.value.source_tags_json || '[]')
+    const tags = JSON.parse(taskInfo.value.source_tags_json || '[]')
     return Array.isArray(tags) ? tags.filter(Boolean).map(String) : []
   } catch {
     return []
@@ -196,8 +196,8 @@ function assetText(asset) {
             <div class="downloader-inline-meta">
               <dd>
                 <span class="downloader-info-pills">
-                  <span>{{ videoInfo.source_uploader || '-' }}</span>
-                  <span>{{ formatDuration(videoInfo.source_duration_seconds) }}</span>
+                  <span>{{ taskInfo.source_uploader || '-' }}</span>
+                  <span>{{ formatDuration(taskInfo.source_duration_seconds) }}</span>
                 </span>
               </dd>
             </div>
@@ -217,7 +217,7 @@ function assetText(asset) {
             </div>
             <div class="downloader-description">
               <dt>简介</dt>
-              <dd>{{ videoInfo.source_description || '-' }}</dd>
+              <dd>{{ taskInfo.source_description || '-' }}</dd>
             </div>
             <div class="downloader-tags-field">
               <dt>Tags</dt>
