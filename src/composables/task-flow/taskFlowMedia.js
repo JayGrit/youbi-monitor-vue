@@ -53,8 +53,8 @@ export function createTaskFlowMedia({ selectedTaskFlow }) {
   function demucsAudioMedia(stage) {
     const candidates = stageMedia(stage).filter(item => item.kind === 'audio')
     const slots = [
-      { key: 'vocals', exactNames: ['audio_vocals_url', 'audio_vocals_path'], fallbackNames: ['audio_source_url', 'audio_source_path'], patterns: [/vocal/i, /voice/i, /人声/] },
-      { key: 'bgm', exactNames: ['audio_bgm_url', 'audio_bgm_path'], patterns: [/bgm/i, /background/i, /no[_-]?vocals/i, /accompaniment/i, /背景/] },
+      { key: 'vocals', exactNames: ['audio_vocals_url'], fallbackNames: ['audio_source_url'], patterns: [/vocal/i, /voice/i, /人声/] },
+      { key: 'bgm', exactNames: ['audio_bgm_url'], patterns: [/bgm/i, /background/i, /no[_-]?vocals/i, /accompaniment/i, /背景/] },
     ]
     return slots.map(slot => {
       const exactAsset = candidates.find(item => (item.names || [item.name]).some(name => slot.exactNames.includes(name || '')))
