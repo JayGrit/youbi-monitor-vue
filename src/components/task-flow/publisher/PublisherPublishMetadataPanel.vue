@@ -30,14 +30,14 @@ const images = computed(() => [
     label: '竖版封面',
     ratio: '3:4',
     prompt: jobPrompt(props.jobs, 'generate_narration_vertical_cover', '', '3:4'),
-    url: taskInfo.value.vertical_cover_url || '',
+    url: taskInfo.value.cover_3_4 || '',
   },
   {
     kind: 'horizontal',
     label: '横版封面',
     ratio: '4:3',
     prompt: jobPrompt(props.jobs, 'generate_narration_horizontal_cover', '', '4:3'),
-    url: taskInfo.value.horizontal_cover_url || '',
+    url: taskInfo.value.cover_4_3 || '',
   },
 ])
 const diagnosticItems = computed(() => [
