@@ -56,7 +56,36 @@ const layout = computed(() => {
     : (children.get(firstFork?.id) || []).map(id => nodeById.get(id)))
     .filter(Boolean)
     .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
-  const laneByOrigin = new Map(laneOrigins.map((node, index) => [node.id, index + 1]))
+  const downstreamLengthCache = new Map()
+
+  function downstreamLength(id, visiting = new Set()) {
+    if (downstreamLengthCache.has(id)) return downstreamLengthCache.get(id)
+    if (visiting.has(id)) return 1
+    const nextVisiting = new Set(visiting).add(id)
+    const value = 1 + Math.max(0, ...(children.get(id) || []).map(child => downstreamLength(child, nextVisiting)))
+    downstreamLengthCache.set(id, value)
+    return value
+  }
+
+  function centeredLaneSlots(count) {
+    const center = Math.ceil(count / 2)
+    const slots = [center]
+    for (let offset = 1; slots.length < count; offset += 1) {
+      if (center - offset >= 1) slots.push(center - offset)
+      if (center + offset <= count) slots.push(center + offset)
+    }
+    return slots
+  }
+
+  const laneSlots = centeredLaneSlots(laneOrigins.length)
+  const laneByOrigin = new Map(laneOrigins
+    .map(node => ({
+      node,
+      priority: rootLanePriority(node),
+      length: downstreamLength(node.id),
+    }))
+    .sort((left, right) => right.length - left.length || left.priority - right.priority)
+    .map((item, index) => [item.node.id, laneSlots[index] || index + 1]))
   const branchCache = new Map()
 
   function branches(id, visiting = new Set()) {
