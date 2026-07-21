@@ -579,11 +579,6 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   function nodeProgress(node) {
-    if (node?.key === 'downloader' && node.progressPercent !== null && node.progressPercent !== undefined && Number.isFinite(Number(node.progressPercent))) {
-      const value = Number(node.progressPercent)
-      const text = value.toFixed(1).replace(/\.0$/, '')
-      return `${text}%`
-    }
     if (!Number.isFinite(Number(node.totalCount)) || Number(node.totalCount) <= 0) {
       return ''
     }
