@@ -12,7 +12,6 @@ import {
 import {
   isWatchUrl,
   normalizeResourceUrl,
-  youtubeThumbnailUrl,
 } from '../utils/media'
 
 export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorApi) {
@@ -395,7 +394,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   function taskThumbnailUrl(task) {
     const primary = taskPrimaryThumbnailUrl(task)
     if (primary && !brokenImageUrls.value[primary]) return primary
-    return youtubeThumbnailUrl(taskSourceUrl(task))
+    return ''
   }
 
   function taskCachedThumbnailUrl(task) {

@@ -152,7 +152,7 @@ function platformTitle(platformStatus) {
 }
 
 function showTime(node) {
-  return Number(node.elapsedSeconds) > 0
+  return Number(node.elapsedSeconds) > 0 && !(Number.isFinite(Number(node.totalCount)) && Number(node.totalCount) > 0)
 }
 
 function updatePaths() {

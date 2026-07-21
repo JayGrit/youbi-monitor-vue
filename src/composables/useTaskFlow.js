@@ -6,7 +6,7 @@ import {
   uploadPlatformText,
 } from '../domain/constants'
 import { shortValue } from '../utils/jsonDisplay'
-import { normalizeResourceUrl, youtubeThumbnailUrl } from '../utils/media'
+import { normalizeResourceUrl } from '../utils/media'
 import { createTaskFlowMedia } from './task-flow/taskFlowMedia'
 import { useTaskFlowDiagnostics } from './task-flow/useTaskFlowDiagnostics'
 import { useSpeechRows } from './task-flow/useSpeechRows'
@@ -252,7 +252,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   }
 
   function flowPrimaryCoverUrl(flow) {
-    return normalizeResourceUrl(flow?.taskInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || '')
+    return normalizeResourceUrl(flow?.taskInfo?.cover_16_9 || flow?.taskInfo?.cover_4_3 || flow?.taskInfo?.source_thumbnail_url || flow?.task?.source_thumbnail_url || '')
   }
 
   function flowSourceUrl(flow) {
@@ -262,7 +262,7 @@ export function useTaskFlow(taskFlowApi, publisherApi, brokenImageUrls) {
   function flowCoverUrl(flow) {
     const primary = flowPrimaryCoverUrl(flow)
     if (primary && !brokenImageUrls.value[primary]) return primary
-    return youtubeThumbnailUrl(flowSourceUrl(flow))
+    return ''
   }
 
   function flowDurationSeconds(flow) {

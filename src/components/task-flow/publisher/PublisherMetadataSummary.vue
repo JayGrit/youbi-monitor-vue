@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { normalizeResourceUrl } from '../../../utils/media'
 import { formatTags } from './publisherUtils'
 
 const props = defineProps({
@@ -23,16 +22,6 @@ const completion = computed(() => {
   if (status === 'running') return { text: '进行中', className: 'status-running' }
   return { text: '未完成', className: 'status-pending' }
 })
-const coverImages = computed(() => [
-  normalizeResourceUrl(result.value.source_cover_url || taskInfo.value.source_thumbnail_url || ''),
-  normalizeResourceUrl(result.value.final_cover_url || ''),
-])
-const showCover = computed(() => {
-  const reset = taskInfo.value.reset_cover ?? result.value.reset_cover
-  return ![false, null, undefined, 0, '0', 'false', ''].includes(reset)
-    || Boolean(result.value.final_cover_url)
-})
-
 function isExpanded(key) {
   return expanded.value.has(key)
 }
@@ -77,17 +66,4 @@ function toggle(key) {
     </template>
   </section>
 
-  <section v-if="rows.length && showCover" class="flow-section publisher-cover-section">
-    <h4>封面</h4>
-    <p class="publisher-cover-text"><strong>封面文字</strong>{{ result.cover_text || '-' }}</p>
-    <div class="publisher-cover-flow">
-      <template v-for="(image, index) in coverImages" :key="index">
-        <article class="publisher-cover-card">
-          <a v-if="image" :href="image" target="_blank" rel="noreferrer"><img :src="image" alt="" loading="lazy" /></a>
-          <div v-else class="publisher-cover-empty">暂无封面</div>
-        </article>
-        <span v-if="index < coverImages.length - 1" class="publisher-cover-arrow" aria-hidden="true">→</span>
-      </template>
-    </div>
-  </section>
 </template>

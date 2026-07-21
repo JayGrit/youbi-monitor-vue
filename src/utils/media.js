@@ -1,5 +1,6 @@
 const MINIO_PROXY_BASE = `${import.meta.env.BASE_URL}minio`
 const MINIO_BUCKET = 'ydbi'
+const MINIO_CONSOLE_BASE = 'http://120.53.92.66:9001/'
 const API_BASE = `${import.meta.env.BASE_URL}api`
 
 function encodePath(path) {
@@ -40,6 +41,23 @@ export function normalizeResourceUrl(url) {
     return parsed.href
   } catch {
     return text
+  }
+}
+
+export function minioConsoleFolderUrl(url) {
+  const text = String(url || '').trim()
+  if (!text) return ''
+  try {
+    const parsed = new URL(text, window.location.origin)
+    const parts = parsed.pathname.replace(/^\/+/, '').split('/').filter(Boolean)
+    const bucketIndex = parts.indexOf(MINIO_BUCKET)
+    if (bucketIndex < 0 || bucketIndex >= parts.length - 1) return ''
+    const objectParts = parts.slice(bucketIndex + 1)
+    const folder = objectParts.slice(0, -1).join('/')
+    if (!folder) return ''
+    return `${MINIO_CONSOLE_BASE}browser/${MINIO_BUCKET}/${encodeURIComponent(`${folder}/`)}`
+  } catch {
+    return ''
   }
 }
 

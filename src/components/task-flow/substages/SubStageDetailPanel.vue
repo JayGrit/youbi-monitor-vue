@@ -12,6 +12,7 @@ import DownloaderMainDetail from './DownloaderMainDetail.vue'
 import DownloaderMetadataDetail from './DownloaderMetadataDetail.vue'
 import PublisherImageGenerationDetail from './PublisherImageGenerationDetail.vue'
 import PublisherMainDetail from './PublisherMainDetail.vue'
+import PublisherCoverGenerationDetail from './PublisherCoverGenerationDetail.vue'
 import PublisherPublishMetadataDetail from './PublisherPublishMetadataDetail.vue'
 import PublisherScriptGenerationDetail from './PublisherScriptGenerationDetail.vue'
 import PublisherSegmentPlanDetail from './PublisherSegmentPlanDetail.vue'
@@ -30,6 +31,7 @@ import NoDetailPage from './NoDetailPage.vue'
 const props = defineProps({
   selectedStageKey: { type: String, default: '' },
   selectedTaskFlow: { type: Object, default: null },
+  selectedTaskProgress: { type: Object, default: null },
   selectedStage: { type: Object, default: null },
   speechEditDraft: { type: String, default: '' },
   speechEditSaving: { type: Boolean, default: false },
@@ -84,6 +86,7 @@ const detailComponents = {
   'downloader:audio': DownloaderMainDetail,
   'publisher:image_generation': PublisherImageGenerationDetail,
   'publisher:main': PublisherMainDetail,
+  'publisher:cover_generation': PublisherCoverGenerationDetail,
   'publisher:publish_metadata': PublisherPublishMetadataDetail,
   'publisher:script_generation': PublisherScriptGenerationDetail,
   'publisher:segment_plan': PublisherSegmentPlanDetail,
@@ -115,10 +118,10 @@ const detailTitle = computed(() => {
   const [stage, ...subStageParts] = detailKey.value.split(':')
   const subStage = subStageParts.join(':') || 'main'
   const stageLabel = stageNameText[stage] || stage || '-'
-  const selectedLabel = String(props.selectedStage?.label || '').trim()
-  if (selectedLabel) return `${stageLabel} - ${selectedLabel}`
+  const routeLabel = routeNodeLabel(stage, subStage)
+  if (routeLabel) return `${stageLabel} - ${routeLabel} (${subStage})`
   const subStageLabel = subStageNameText[subStage] || subStage || '-'
-  return `${stageLabel} - ${subStageLabel}`
+  return `${stageLabel} - ${subStageLabel} (${subStage})`
 })
 const detailParts = computed(() => {
   if (detailKey.value === SPEECH_STAGE_KEY) {
@@ -137,6 +140,11 @@ function stageRowsBySubStage(stage, tableName, subStage = detailParts.value.subS
   const matched = rows.filter(row => String(row?.sub_stage || '') === subStage)
   if (matched.length) return matched
   return rows.filter(row => row?.sub_stage === undefined || row?.sub_stage === null || row?.sub_stage === '')
+}
+function routeNodeLabel(stage, subStage) {
+  const nodes = Array.isArray(props.selectedTaskProgress?.routeNodes) ? props.selectedTaskProgress.routeNodes : []
+  const node = nodes.find(item => item.stage === stage && (item.subStage || 'main') === subStage)
+  return String(node?.label || '').trim()
 }
 const context = computed(() => ({
   ...props,

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import PublisherDiagnosticsPanel from './PublisherDiagnosticsPanel.vue'
 import PublisherImageTable from './PublisherImageTable.vue'
-import { jobPrompt } from './publisherUtils'
+import { jobOperatorOpId as findJobOperatorOpId, jobPrompt } from './publisherUtils'
 
 const props = defineProps({
   narrations: { type: Array, default: () => [] },
@@ -53,8 +53,7 @@ const diagnosticItems = computed(() => [
 ])
 
 function jobOperatorOpId(jobName) {
-  const job = props.jobs.find(row => row.job_name === jobName || row.jobName === jobName)
-  return String(job?.operator_op_id || job?.operatorOpId || job?.operator_run_id || '').trim()
+  return findJobOperatorOpId(props.jobs, jobName)
 }
 </script>
 

@@ -83,6 +83,7 @@ const emit = defineEmits(['update:speechEditDraft'])
         <SubStageDetailPanel
           :selected-stage-key="selectedStageKey"
           :selected-task-flow="selectedTaskFlow"
+          :selected-task-progress="selectedTaskProgress"
           :selected-stage="selectedStage"
           :speech-edit-draft="speechEditDraft"
           :speech-edit-saving="speechEditSaving"

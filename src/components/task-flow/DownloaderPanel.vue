@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { formatDuration } from '../../utils/format'
-import { normalizeResourceUrl } from '../../utils/media'
+import { minioConsoleFolderUrl, normalizeResourceUrl } from '../../utils/media'
 
 const props = defineProps({
   flow: { type: Object, default: null },
@@ -50,7 +50,9 @@ const taskRows = computed(() => {
       rows.push({ kind, status: 'pending', progress_percent: 0 })
     }
   }
-  return rows.sort((left, right) => taskOrder(left.kind) - taskOrder(right.kind))
+  return rows
+    .map(row => ({ ...row, minioFolderUrl: taskMinioFolderUrl(row.kind) }))
+    .sort((left, right) => taskOrder(left.kind) - taskOrder(right.kind))
 })
 
 const videoAsset = computed(() => {
@@ -168,6 +170,13 @@ function taskTitle(kind) {
   }[kind] || kind || '子任务'
 }
 
+function taskMinioFolderUrl(kind) {
+  return minioConsoleFolderUrl({
+    audio: taskInfo.value.audio_source_url,
+    video: taskInfo.value.video_source_url,
+  }[kind])
+}
+
 function assetText(asset) {
   return [asset?.name, asset?.objectName, asset?.url, ...(asset?.names || [])].filter(Boolean).join(' ')
 }
@@ -237,7 +246,16 @@ function assetText(asset) {
       <div class="downloader-task-list">
         <article v-for="row in taskRows" :key="row.kind" :class="['downloader-task', `status-${row.status || 'pending'}`]">
           <div class="downloader-task-head">
-            <strong>{{ taskTitle(row.kind) }}</strong>
+            <strong>
+              <a
+                v-if="row.minioFolderUrl"
+                :href="row.minioFolderUrl"
+                target="_blank"
+                rel="noreferrer"
+                title="打开 MinIO 文件夹"
+              >{{ taskTitle(row.kind) }}</a>
+              <template v-else>{{ taskTitle(row.kind) }}</template>
+            </strong>
             <span>{{ row.status || 'pending' }}</span>
           </div>
           <div class="downloader-progress" aria-hidden="true">

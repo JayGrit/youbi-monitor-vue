@@ -469,6 +469,15 @@
   font-size: 13px;
 }
 
+.downloader-task-head a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.downloader-task-head a:hover {
+  color: #2563eb;
+}
+
 .downloader-task-head span {
   flex: 0 0 auto;
   color: #64748b;
@@ -905,7 +914,14 @@
 
 .publisher-image-row {
   display: grid;
+}
+
+.publisher-image-table.with-secondary-image .publisher-image-row {
   grid-template-columns: 72px minmax(0, 1fr) 190px 190px;
+}
+
+.publisher-image-table.single-image .publisher-image-row {
+  grid-template-columns: 72px minmax(0, 1fr) 210px;
 }
 
 .publisher-image-ratio {

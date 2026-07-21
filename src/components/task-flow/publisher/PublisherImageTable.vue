@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { normalizeResourceUrl } from '../../../utils/media'
 import { copyText } from './publisherUtils'
 
@@ -13,6 +13,7 @@ const busyByKind = ref({})
 const copied = ref('')
 const messages = ref({})
 const errors = ref({})
+const hasSecondaryColumn = computed(() => props.items.some(item => item.secondaryUrl))
 
 function isBusy(kind) {
   return Boolean(busyByKind.value[kind])
@@ -45,7 +46,7 @@ async function copyPrompt(item) {
 }
 
 function chooseImage(item) {
-  if (item.url || isBusy(item.kind)) return
+  if (item.url || item.uploadable === false || isBusy(item.kind)) return
   fileInputs.get(item.kind)?.click()
 }
 
@@ -69,12 +70,12 @@ async function upload(item, event) {
 </script>
 
 <template>
-  <div class="publisher-image-table">
+  <div :class="['publisher-image-table', hasSecondaryColumn ? 'with-secondary-image' : 'single-image']">
     <div class="publisher-image-row publisher-image-head">
       <strong>比例</strong>
       <strong>提示词（点击复制）</strong>
       <strong>图片 1</strong>
-      <strong>图片 2</strong>
+      <strong v-if="hasSecondaryColumn">图片 2</strong>
     </div>
     <div v-for="item in items" :key="item.kind" class="publisher-image-row">
       <strong class="publisher-image-ratio">{{ item.ratio }}</strong>
@@ -98,7 +99,7 @@ async function upload(item, event) {
           <img :src="normalizeResourceUrl(item.url)" :alt="item.label" loading="lazy" />
         </a>
         <button
-          v-else
+          v-else-if="item.uploadable !== false"
           type="button"
           class="publisher-image-upload"
           :disabled="isBusy(item.kind)"
@@ -106,6 +107,7 @@ async function upload(item, event) {
         >
           {{ isBusy(item.kind) ? '上传中…' : '点击上传' }}
         </button>
+        <span v-else class="publisher-image-empty">-</span>
         <input
           :ref="element => setFileInput(item.kind, element)"
           type="file"
@@ -114,7 +116,7 @@ async function upload(item, event) {
           @change="upload(item, $event)"
         />
       </div>
-      <div class="publisher-image-cell">
+      <div v-if="hasSecondaryColumn" class="publisher-image-cell">
         <a
           v-if="item.secondaryUrl"
           :href="normalizeResourceUrl(item.secondaryUrl)"

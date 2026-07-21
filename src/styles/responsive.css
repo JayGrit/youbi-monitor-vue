@@ -82,6 +82,10 @@
     min-width: 860px;
   }
 
+  .publisher-image-table.single-image .publisher-image-row {
+    min-width: 660px;
+  }
+
   .publisher-diagnostic-grid {
     grid-template-columns: minmax(0, 1fr);
   }

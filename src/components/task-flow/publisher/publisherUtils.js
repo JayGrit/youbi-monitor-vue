@@ -53,6 +53,16 @@ export function jobResult(jobs, jobName) {
   return parseJsonObject(job?.result_json)
 }
 
+export function jobOperatorOpId(jobs, jobName) {
+  const candidates = [jobName, `${jobName}_query`, `${jobName}_submit`]
+  for (const candidate of candidates) {
+    const job = jobs.find(row => row.job_name === candidate || row.jobName === candidate)
+    const opId = String(job?.operator_op_id || job?.operatorOpId || job?.operator_run_id || '').trim()
+    if (opId) return opId
+  }
+  return ''
+}
+
 export function jobsNamed(jobs, names) {
   const accepted = new Set(names)
   return jobs.filter(job => accepted.has(job.job_name))
