@@ -97,12 +97,12 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return postJson(`${submitterApiBase}/videos`, { url }, describe('手动创建候选视频'))
     },
 
-    intake(input) {
-      return postJson(`${submitterApiBase}/intake`, { input }, describe('提交视频或作者到Submitter'))
+    intake(input, options = {}) {
+      return postJson(`${submitterApiBase}/intake`, { input, ...options }, describe('提交视频或作者到Submitter'))
     },
 
-    importAuthor(author, platform) {
-      return postJson(`${submitterApiBase}/authors/import`, { author, platform }, describe('批量导入作者新视频'))
+    importAuthor(author, platform, options = {}) {
+      return postJson(`${submitterApiBase}/authors/import`, { author, platform, ...options }, describe('批量导入作者新视频'))
     },
 
     getImportStatus(batch) {
