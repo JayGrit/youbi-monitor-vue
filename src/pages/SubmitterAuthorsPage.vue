@@ -14,7 +14,6 @@ const props = defineProps({
 })
 
 const editMode = ref(false)
-const typeAutosaveTimers = new Map()
 
 const authorTypeGroups = computed(() => {
   const groups = new Map()
@@ -26,20 +25,7 @@ const authorTypeGroups = computed(() => {
   return [...groups.entries()].map(([topic, rows]) => ({ topic, rows }))
 })
 
-function scheduleTypeAutosave(row, autosave) {
-  const author = String(row?.author || '')
-  if (!author) return
-  window.clearTimeout(typeAutosaveTimers.get(author))
-  typeAutosaveTimers.set(author, window.setTimeout(() => {
-    typeAutosaveTimers.delete(author)
-    autosave(row)
-  }, 500))
-}
-
 function flushTypeAutosave(row, autosave) {
-  const author = String(row?.author || '')
-  window.clearTimeout(typeAutosaveTimers.get(author))
-  typeAutosaveTimers.delete(author)
   autosave(row)
 }
 
@@ -164,8 +150,8 @@ function settingRows(row) {
                   type="text"
                   placeholder="投稿 topic"
                   :disabled="submitterAuthorTypeSaving === row.author"
-                  @input="scheduleTypeAutosave(row, autosaveSubmitterAuthorType)"
                   @change="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
+                  @keydown.enter.prevent="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
                 />
               </div>
             </div>
