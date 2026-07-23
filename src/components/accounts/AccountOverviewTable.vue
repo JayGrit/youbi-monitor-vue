@@ -1,7 +1,7 @@
 <script setup>
 import PlatformIcon from '../PlatformIcon.vue'
 
-defineProps([
+const props = defineProps([
   'accountEditMode',
   'visibleAccountGroups',
   'accountRowUnavailable',
@@ -32,7 +32,7 @@ function sharedMetricItem(group) {
 
 function sharedMetricText(group, field) {
   const item = sharedMetricItem(group)
-  return item?.configured ? accountMetricText(item.row, field) : '-'
+  return item?.configured ? props.accountMetricText(item.row, field) : '-'
 }
 
 function accountCellStyle(index) {
