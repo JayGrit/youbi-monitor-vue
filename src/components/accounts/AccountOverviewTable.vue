@@ -13,6 +13,7 @@ const props = defineProps([
   'stagedFailedCount',
   'failedUploadCount',
   'lastUploadText',
+  'latestVideoText',
   'nextSendReady',
   'nextSendStale',
   'nextSendRunning',
@@ -82,7 +83,7 @@ function formatFollowerGrowth(value) {
             <span v-if="!accountEditMode">上传中</span>
             <span v-if="!accountEditMode">失败任务</span>
             <span v-if="!accountEditMode">上次上传</span>
-            <span v-if="!accountEditMode">下次可发送</span>
+            <span v-if="!accountEditMode">最新视频</span>
             <span v-if="!accountEditMode">粉丝量</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
@@ -160,21 +161,9 @@ function formatFollowerGrowth(value) {
               <span
                 v-if="!accountEditMode"
                 class="account-cell account-col-next-send"
-                :class="{
-                  'next-send-ready': item.configured && nextSendReady(item.row),
-                  'next-send-stale': item.configured && nextSendStale(item.row),
-                }"
-                data-label="下次可发送"
+                data-label="最新视频"
               >
-                <button
-                  v-if="item.configured && nextSendRunning(item.row)"
-                  type="button"
-                  class="next-send-link"
-                  @click="openRunningTask(item.row)"
-                >
-                  {{ nextSendDisplay(item.row) }}
-                </button>
-                <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
+                {{ item.configured ? latestVideoText(item.row.latestVideoPublishAt) : '-' }}
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
               <span v-if="accountEditMode" class="account-cell" data-label="Key">

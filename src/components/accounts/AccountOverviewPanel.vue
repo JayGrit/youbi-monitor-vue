@@ -30,6 +30,7 @@ defineProps([
   'stagedFailedCount',
   'failedUploadCount',
   'lastUploadText',
+  'latestVideoText',
   'nextSendReady',
   'nextSendStale',
   'nextSendRunning',
@@ -75,6 +76,7 @@ defineProps([
         :staged-failed-count="stagedFailedCount"
         :failed-upload-count="failedUploadCount"
         :last-upload-text="lastUploadText"
+        :latest-video-text="latestVideoText"
         :next-send-ready="nextSendReady"
         :next-send-stale="nextSendStale"
         :next-send-running="nextSendRunning"

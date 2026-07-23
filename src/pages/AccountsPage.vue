@@ -303,6 +303,31 @@ function lastUploadText(value) {
   return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
 }
 
+function latestVideoText(value) {
+  const date = parseLocalDateTime(value)
+  if (!date) return '-'
+  const now = new Date()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(now.getDate() + 1)
+  const dayAfterTomorrow = new Date(now)
+  dayAfterTomorrow.setDate(now.getDate() + 2)
+  const threeDaysLater = new Date(now)
+  threeDaysLater.setDate(now.getDate() + 3)
+  if (isSameDate(date, now)) {
+    return formatTime(date)
+  }
+  if (isSameDate(date, tomorrow)) {
+    return `明天${formatTime(date)}`
+  }
+  if (isSameDate(date, dayAfterTomorrow)) {
+    return `后天${formatTime(date)}`
+  }
+  if (isSameDate(date, threeDaysLater)) {
+    return `大后天${formatTime(date)}`
+  }
+  return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`
+}
+
 function nextSendDisplay(row) {
   if (accountStatsLoading(row)) return '加载中'
   const text = props.nextSendText(row)
@@ -573,6 +598,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       :staged-failed-count="stagedFailedCount"
       :failed-upload-count="failedUploadCount"
       :last-upload-text="lastUploadText"
+      :latest-video-text="latestVideoText"
       :next-send-ready="nextSendReady"
       :next-send-stale="nextSendStale"
       :next-send-running="nextSendRunning"
