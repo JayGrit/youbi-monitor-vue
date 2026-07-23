@@ -369,11 +369,11 @@
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 78px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 106px;
 }
 
 .account-table:not(.editing) {
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 78px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 106px;
   align-items: stretch;
   gap: 6px 10px;
 }

@@ -44,9 +44,25 @@ function followerText(row) {
   if (text) return text
   const value = row?.subscribers ?? row?.subscriberCount ?? row?.followerCount ?? row?.follower_count
   if (value === null || value === undefined || value === '') return ''
+  const countText = formatFollowerNumber(value)
+  const growth = row?.newSubscribers ?? row?.new_subscribers ?? row?.subscriberGrowth ?? row?.followerGrowth
+  const growthText = formatFollowerGrowth(growth)
+  return growthText ? `${countText}${growthText}` : countText
+}
+
+function formatFollowerNumber(value) {
   const count = Number(value)
   if (!Number.isFinite(count)) return String(value)
   return String(Math.trunc(count)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function formatFollowerGrowth(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const count = Number(value)
+  if (!Number.isFinite(count)) return ''
+  const rounded = Math.trunc(count)
+  const sign = rounded >= 0 ? '+' : ''
+  return `(${sign}${formatFollowerNumber(rounded)})`
 }
 </script>
 
@@ -67,7 +83,7 @@ function followerText(row) {
             <span v-if="!accountEditMode">失败任务</span>
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">下次可发送</span>
-            <span v-if="!accountEditMode">粉丝量</span>
+            <span v-if="!accountEditMode">粉丝量(涨粉量)</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
@@ -160,7 +176,7 @@ function followerText(row) {
                 </button>
                 <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
-              <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
+              <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量(涨粉量)">{{ item.configured ? followerText(item.row) : '' }}</span>
               <span v-if="accountEditMode" class="account-cell" data-label="Key">
                 <input
                   v-if="item.configured"
