@@ -83,7 +83,7 @@ function formatFollowerGrowth(value) {
             <span v-if="!accountEditMode">失败任务</span>
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">下次可发送</span>
-            <span v-if="!accountEditMode">粉丝量(涨粉量)</span>
+            <span v-if="!accountEditMode">粉丝量</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
@@ -176,7 +176,7 @@ function formatFollowerGrowth(value) {
                 </button>
                 <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
-              <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量(涨粉量)">{{ item.configured ? followerText(item.row) : '' }}</span>
+              <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
               <span v-if="accountEditMode" class="account-cell" data-label="Key">
                 <input
                   v-if="item.configured"

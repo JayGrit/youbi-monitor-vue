@@ -36,7 +36,7 @@
 
   .account-group-grid {
     min-width: 0;
-    grid-template-columns: 96px 68px 68px 68px minmax(0, 1fr);
+    grid-template-columns: minmax(96px, 20%) 50px 50px 50px minmax(0, 1fr);
   }
 
   .account-group-grid.editing {
@@ -46,16 +46,16 @@
 
   .account-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 78px 120px 96px;
+    grid-template-columns: 58px 54px minmax(90px, 1fr) 68px 68px 68px 68px 78px 120px 96px;
   }
 
   .account-row.account-platform-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 78px 120px 96px;
+    grid-template-columns: 58px 54px minmax(90px, 1fr) 68px 68px 68px 68px 78px 120px 96px;
   }
 
   .account-table:not(.editing) {
-    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 78px 120px 96px;
+    grid-template-columns: 58px 54px minmax(90px, 1fr) 68px 68px 68px 68px 78px 120px 96px;
   }
 
   .account-table.editing .account-row,

@@ -281,10 +281,10 @@
 }
 
 .account-topic-list {
-  width: min(95vw, 100%);
+  width: 100%;
   display: grid;
   gap: 0;
-  margin: 14px auto 0;
+  margin: 14px 0 0;
   overflow-x: hidden;
 }
 
@@ -301,7 +301,7 @@
 .account-group-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: 112px minmax(72px, 74px) minmax(72px, 74px) minmax(72px, 74px) minmax(0, 1fr);
+  grid-template-columns: minmax(120px, 20%) 56px 56px 56px minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
   padding: 12px 0;
@@ -369,11 +369,11 @@
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 106px;
+  grid-template-columns: 64px 58px minmax(96px, 1fr) 74px 74px 74px 74px 86px 132px 106px;
 }
 
 .account-table:not(.editing) {
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 106px;
+  grid-template-columns: 64px 58px minmax(96px, 1fr) 74px 74px 74px 74px 86px 132px 106px;
   align-items: stretch;
   gap: 6px 10px;
 }
