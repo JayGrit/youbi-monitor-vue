@@ -36,7 +36,7 @@
 
   .account-group-grid {
     min-width: 0;
-    grid-template-columns: minmax(96px, 20%) 50px 50px 50px minmax(0, 1fr);
+    grid-template-columns: 124px 50px 50px 50px minmax(0, 1fr);
   }
 
   .account-group-grid.editing {

@@ -301,7 +301,7 @@
 .account-group-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(120px, 20%) 56px 56px 56px minmax(0, 1fr);
+  grid-template-columns: 148px 56px 56px 56px minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
   padding: 12px 0;
