@@ -45,12 +45,16 @@
 
   .account-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
+    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
   }
 
   .account-row.account-platform-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(110px, 0.8fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
+    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
+  }
+
+  .account-table:not(.editing) {
+    grid-template-columns: 58px 54px minmax(90px, 0.6fr) 68px 68px 68px 68px 68px 68px 68px 78px 120px;
   }
 
   .account-table.editing .account-row,
@@ -331,6 +335,23 @@
   .account-row.account-platform-row {
     min-width: 0;
     grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .account-table:not(.editing) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .account-table:not(.editing) .account-row.account-platform-row {
+    display: grid;
+  }
+
+  .account-table:not(.editing) .account-cell {
+    grid-column: auto;
+    grid-row: auto !important;
+    min-height: 28px;
+    display: grid;
+    justify-content: stretch;
   }
 
   .account-row > span {

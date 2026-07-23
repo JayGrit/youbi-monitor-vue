@@ -272,7 +272,7 @@
 .account-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 78px 78px 78px 86px 132px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 78px 78px 78px 86px 132px;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -348,7 +348,88 @@
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(120px, 0.8fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
+}
+
+.account-table:not(.editing) {
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
+  align-items: stretch;
+  gap: 6px 10px;
+}
+
+.account-table:not(.editing) .account-row.account-platform-row {
+  display: contents;
+}
+
+.account-table:not(.editing) .account-cell {
+  grid-row: var(--account-row-index);
+  min-width: 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-table:not(.editing) .account-row.unavailable > .account-cell:not(.account-topic-shared-cell),
+.account-table:not(.editing) .account-row.saving > .account-cell:not(.account-topic-shared-cell) {
+  background: #fff1f2;
+}
+
+.account-table:not(.editing) .account-topic-shared-cell {
+  align-self: stretch;
+  color: #344156;
+}
+
+.account-col-platform {
+  grid-column: 1;
+}
+
+.account-col-avatar {
+  grid-column: 2;
+}
+
+.account-col-name {
+  grid-column: 3;
+}
+
+.account-col-today {
+  grid-column: 4;
+}
+
+.account-col-cooldown {
+  grid-column: 5;
+}
+
+.account-col-staged-running {
+  grid-column: 6;
+}
+
+.account-col-upload-running {
+  grid-column: 7;
+}
+
+.account-col-staged-failed {
+  grid-column: 8;
+}
+
+.account-col-downloader-pending {
+  grid-column: 9;
+}
+
+.account-col-failed-upload {
+  grid-column: 10;
+}
+
+.account-col-last-upload {
+  grid-column: 11;
+}
+
+.account-col-next-send {
+  grid-column: 12;
 }
 
 .account-table.editing .account-row,

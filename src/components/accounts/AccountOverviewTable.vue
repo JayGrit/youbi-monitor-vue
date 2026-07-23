@@ -25,10 +25,24 @@ defineProps([
   'saveAccountDownloaderMaxStagedCountEdit',
   'saveAccountEnabledEdit',
 ])
+
+function sharedMetricItem(group) {
+  return group.visibleRows.find(item => item.configured) || group.visibleRows[0] || null
+}
+
+function accountCellStyle(index) {
+  return { '--account-row-index': index + 1 }
+}
+
+function sharedMetricStyle(group) {
+  return {
+    gridRow: `1 / span ${group.visibleRows.length}`,
+  }
+}
 </script>
 
 <template>
-      <div v-if="visibleAccountGroups.length" class="topic-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
+      <div v-if="visibleAccountGroups.length" class="account-topic-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
         <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
           <span class="account-type-header">Topic</span>
           <div class="account-row account-header account-platform-row">
@@ -57,14 +71,15 @@ defineProps([
             <strong class="account-type-cell">{{ group.key }}</strong>
             <div class="account-table" :class="{ editing: accountEditMode }">
             <div
-              v-for="item in group.visibleRows"
+              v-for="(item, index) in group.visibleRows"
               :key="`${group.key}-${item.type}`"
+              :style="accountCellStyle(index)"
               :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item), saving: accountRowSaving(item) }]"
             >
-              <span class="platform-mark" :class="{ saving: accountRowSaving(item) }">
+              <span class="account-cell account-col-platform platform-mark" :class="{ saving: accountRowSaving(item) }">
                 <PlatformIcon :src="item.iconUrl" :label="item.label" :platform="item.type" />
               </span>
-              <span data-label="头像">
+              <span class="account-cell account-col-avatar" data-label="头像">
                 <label
                   v-if="item.configured"
                   class="account-avatar-cell"
@@ -80,26 +95,47 @@ defineProps([
                 </label>
                 <template v-else>-</template>
               </span>
-              <span data-label="账号">
+              <span class="account-cell account-col-name" data-label="账号">
                 <span v-if="item.configured" class="account-profile-text">
                   <strong>{{ accountName(item.type, item.row) }}</strong>
                 </span>
                 <template v-else>-</template>
               </span>
-              <span v-if="!accountEditMode" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="生产中">{{ item.configured ? accountMetricText(item.row, 'stagedRunningCount') : '-' }}</span>
-              <span v-if="!accountEditMode" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
-              <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && stagedFailedCount(item.row) > 0 }" data-label="生产失败">
-                {{ item.configured ? accountMetricText(item.row, 'stagedFailedCount') : '-' }}
+              <span v-if="!accountEditMode" class="account-cell account-col-today" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
+              <span v-if="!accountEditMode" class="account-cell account-col-cooldown" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
+              <span
+                v-if="!accountEditMode && index === 0"
+                class="account-cell account-topic-shared-cell account-col-staged-running"
+                :style="sharedMetricStyle(group)"
+                data-label="生产中"
+              >
+                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'stagedRunningCount') : '-' }}
               </span>
-              <span v-if="!accountEditMode" data-label="待拉取">{{ item.configured ? accountMetricText(item.row, 'downloaderPendingCount') : '-' }}</span>
-              <span v-if="!accountEditMode" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
+              <span v-if="!accountEditMode" class="account-cell account-col-upload-running" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
+              <span
+                v-if="!accountEditMode && index === 0"
+                class="account-cell account-topic-shared-cell account-col-staged-failed"
+                :class="{ 'failed-task-count': sharedMetricItem(group)?.configured && stagedFailedCount(sharedMetricItem(group).row) > 0 }"
+                :style="sharedMetricStyle(group)"
+                data-label="生产失败"
+              >
+                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'stagedFailedCount') : '-' }}
+              </span>
+              <span
+                v-if="!accountEditMode && index === 0"
+                class="account-cell account-topic-shared-cell account-col-downloader-pending"
+                :style="sharedMetricStyle(group)"
+                data-label="待拉取"
+              >
+                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'downloaderPendingCount') : '-' }}
+              </span>
+              <span v-if="!accountEditMode" class="account-cell account-col-failed-upload" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
                 {{ item.configured ? accountMetricText(item.row, 'failedUploadCount') : '-' }}
               </span>
-              <span v-if="!accountEditMode" class="last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
+              <span v-if="!accountEditMode" class="account-cell account-col-last-upload last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span
                 v-if="!accountEditMode"
+                class="account-cell account-col-next-send"
                 :class="{
                   'next-send-ready': item.configured && nextSendReady(item.row),
                   'next-send-stale': item.configured && nextSendStale(item.row),
@@ -116,7 +152,7 @@ defineProps([
                 </button>
                 <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
-              <span v-if="accountEditMode" data-label="Key">
+              <span v-if="accountEditMode" class="account-cell" data-label="Key">
                 <input
                   v-if="item.configured"
                   v-model="item.row.draftKey"
@@ -129,7 +165,7 @@ defineProps([
                 />
                 <template v-else>-</template>
               </span>
-              <span v-if="accountEditMode" data-label="操作">
+              <span v-if="accountEditMode" class="account-cell" data-label="操作">
                 <button
                   v-if="item.configured"
                   type="button"
@@ -141,7 +177,7 @@ defineProps([
                 </button>
                 <template v-else>-</template>
               </span>
-              <span v-if="accountEditMode" class="cooldown-editor" data-label="随机冷却">
+              <span v-if="accountEditMode" class="account-cell cooldown-editor" data-label="随机冷却">
                 <template v-if="item.configured">
                   <input
                     v-model="item.row.draftCooldownMinMinutes"
@@ -165,7 +201,7 @@ defineProps([
                 </template>
                 <template v-else>-</template>
               </span>
-              <span v-if="accountEditMode" class="cooldown-editor quiet-time-editor" data-label="禁发时间">
+              <span v-if="accountEditMode" class="account-cell cooldown-editor quiet-time-editor" data-label="禁发时间">
                 <template v-if="item.configured">
                   <input
                     v-model="item.row.draftUploadQuietStartTime"
@@ -185,7 +221,7 @@ defineProps([
                 </template>
                 <template v-else>-</template>
               </span>
-              <span v-if="accountEditMode" data-label="最大暂存">
+              <span v-if="accountEditMode" class="account-cell" data-label="最大暂存">
                 <input
                   v-if="item.configured"
                   v-model="item.row.draftDownloaderMaxStagedCount"
@@ -200,7 +236,7 @@ defineProps([
                 />
                 <template v-else>-</template>
               </span>
-              <span v-if="accountEditMode" data-label="启用">
+              <span v-if="accountEditMode" class="account-cell" data-label="启用">
                 <label v-if="item.configured" class="account-enabled-edit">
                   <input
                     v-model="item.row.draftEnabled"
