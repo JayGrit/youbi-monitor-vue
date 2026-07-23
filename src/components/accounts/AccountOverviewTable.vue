@@ -36,6 +36,23 @@ function sharedMetricText(group, field) {
   return item?.configured ? props.accountMetricText(item.row, field) : '-'
 }
 
+function metricNumber(row, field) {
+  const value = Number(row?.[field])
+  return Number.isFinite(value) ? value : null
+}
+
+function assetWarningThreshold(row) {
+  const value = Number(row?.assetWarningThreshold ?? row?.asset_warning_threshold)
+  return Number.isFinite(value) ? value : 100
+}
+
+function downloaderPendingBelowThreshold(group) {
+  const item = sharedMetricItem(group)
+  if (!item?.configured) return false
+  const pendingCount = metricNumber(item.row, 'downloaderPendingCount')
+  return pendingCount !== null && pendingCount < assetWarningThreshold(item.row)
+}
+
 function accountCellStyle(index) {
   return { '--account-row-index': index + 1 }
 }
@@ -114,6 +131,7 @@ function formatFollowerGrowth(value) {
             <span
               v-if="!accountEditMode"
               class="account-topic-metric-cell"
+              :class="{ 'failed-task-count': downloaderPendingBelowThreshold(group) }"
               data-label="待拉取"
             >
               {{ sharedMetricText(group, 'downloaderPendingCount') }}
