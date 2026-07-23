@@ -30,14 +30,23 @@ function sharedMetricItem(group) {
   return group.visibleRows.find(item => item.configured) || group.visibleRows[0] || null
 }
 
+function sharedMetricText(group, field) {
+  const item = sharedMetricItem(group)
+  return item?.configured ? accountMetricText(item.row, field) : '-'
+}
+
 function accountCellStyle(index) {
   return { '--account-row-index': index + 1 }
 }
 
-function sharedMetricStyle(group) {
-  return {
-    gridRow: `1 / span ${group.visibleRows.length}`,
-  }
+function followerText(row) {
+  const text = String(row?.followerText || row?.follower_text || '').trim()
+  if (text) return text
+  const value = row?.subscribers ?? row?.subscriberCount ?? row?.followerCount ?? row?.follower_count
+  if (value === null || value === undefined || value === '') return ''
+  const count = Number(value)
+  if (!Number.isFinite(count)) return String(value)
+  return String(Math.trunc(count)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 </script>
 
@@ -45,19 +54,20 @@ function sharedMetricStyle(group) {
       <div v-if="visibleAccountGroups.length" class="account-topic-list" :class="{ editing: accountEditMode }" aria-label="按 key 分组账号表">
         <div class="account-group-grid account-group-heading" :class="{ editing: accountEditMode }">
           <span class="account-type-header">Topic</span>
+          <span v-if="!accountEditMode" class="account-type-header account-topic-metric-header">生产中</span>
+          <span v-if="!accountEditMode" class="account-type-header account-topic-metric-header">生产失败</span>
+          <span v-if="!accountEditMode" class="account-type-header account-topic-metric-header">待拉取</span>
           <div class="account-row account-header account-platform-row">
             <span>Platform</span>
             <span>头像</span>
             <span>账号</span>
             <span v-if="!accountEditMode">今日已发</span>
             <span v-if="!accountEditMode">冷却等待</span>
-            <span v-if="!accountEditMode">生产中</span>
             <span v-if="!accountEditMode">上传中</span>
-            <span v-if="!accountEditMode">生产失败</span>
-            <span v-if="!accountEditMode">待拉取</span>
             <span v-if="!accountEditMode">失败任务</span>
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">下次可发送</span>
+            <span v-if="!accountEditMode">粉丝量</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
@@ -69,6 +79,28 @@ function sharedMetricStyle(group) {
         <section v-for="group in visibleAccountGroups" :key="group.key" class="topic-group">
           <div class="account-group-grid" :class="{ editing: accountEditMode }">
             <strong class="account-type-cell">{{ group.key }}</strong>
+            <span
+              v-if="!accountEditMode"
+              class="account-topic-metric-cell"
+              data-label="生产中"
+            >
+              {{ sharedMetricText(group, 'stagedRunningCount') }}
+            </span>
+            <span
+              v-if="!accountEditMode"
+              class="account-topic-metric-cell"
+              :class="{ 'failed-task-count': sharedMetricItem(group)?.configured && stagedFailedCount(sharedMetricItem(group).row) > 0 }"
+              data-label="生产失败"
+            >
+              {{ sharedMetricText(group, 'stagedFailedCount') }}
+            </span>
+            <span
+              v-if="!accountEditMode"
+              class="account-topic-metric-cell"
+              data-label="待拉取"
+            >
+              {{ sharedMetricText(group, 'downloaderPendingCount') }}
+            </span>
             <div class="account-table" :class="{ editing: accountEditMode }">
             <div
               v-for="(item, index) in group.visibleRows"
@@ -76,6 +108,7 @@ function sharedMetricStyle(group) {
               :style="accountCellStyle(index)"
               :class="['account-row account-platform-row', { unavailable: accountRowUnavailable(item), saving: accountRowSaving(item) }]"
             >
+              <span v-if="!accountEditMode && (accountRowUnavailable(item) || accountRowSaving(item))" class="account-row-background" aria-hidden="true"></span>
               <span class="account-cell account-col-platform platform-mark" :class="{ saving: accountRowSaving(item) }">
                 <PlatformIcon :src="item.iconUrl" :label="item.label" :platform="item.type" />
               </span>
@@ -103,32 +136,7 @@ function sharedMetricStyle(group) {
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-today" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
               <span v-if="!accountEditMode" class="account-cell account-col-cooldown" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
-              <span
-                v-if="!accountEditMode && index === 0"
-                class="account-cell account-topic-shared-cell account-col-staged-running"
-                :style="sharedMetricStyle(group)"
-                data-label="生产中"
-              >
-                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'stagedRunningCount') : '-' }}
-              </span>
               <span v-if="!accountEditMode" class="account-cell account-col-upload-running" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
-              <span
-                v-if="!accountEditMode && index === 0"
-                class="account-cell account-topic-shared-cell account-col-staged-failed"
-                :class="{ 'failed-task-count': sharedMetricItem(group)?.configured && stagedFailedCount(sharedMetricItem(group).row) > 0 }"
-                :style="sharedMetricStyle(group)"
-                data-label="生产失败"
-              >
-                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'stagedFailedCount') : '-' }}
-              </span>
-              <span
-                v-if="!accountEditMode && index === 0"
-                class="account-cell account-topic-shared-cell account-col-downloader-pending"
-                :style="sharedMetricStyle(group)"
-                data-label="待拉取"
-              >
-                {{ sharedMetricItem(group)?.configured ? accountMetricText(sharedMetricItem(group).row, 'downloaderPendingCount') : '-' }}
-              </span>
               <span v-if="!accountEditMode" class="account-cell account-col-failed-upload" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
                 {{ item.configured ? accountMetricText(item.row, 'failedUploadCount') : '-' }}
               </span>
@@ -152,6 +160,7 @@ function sharedMetricStyle(group) {
                 </button>
                 <template v-else>{{ item.configured ? nextSendDisplay(item.row) : '-' }}</template>
               </span>
+              <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
               <span v-if="accountEditMode" class="account-cell" data-label="Key">
                 <input
                   v-if="item.configured"

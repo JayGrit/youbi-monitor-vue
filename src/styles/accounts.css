@@ -301,7 +301,7 @@
 .account-group-grid {
   min-width: 0;
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(72px, 74px) minmax(72px, 74px) minmax(72px, 74px) minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
   padding: 12px 0;
@@ -309,6 +309,7 @@
 
 .account-group-grid.editing {
   min-width: 0;
+  grid-template-columns: 112px minmax(0, 1fr);
 }
 
 .account-group-heading {
@@ -342,17 +343,37 @@
   font-weight: 780;
 }
 
+.account-topic-metric-header,
+.account-topic-metric-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-topic-metric-cell {
+  align-self: stretch;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #344156;
+  font-size: 13px;
+  font-weight: 520;
+}
+
 .account-group-grid .account-table {
   margin-top: 0;
 }
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 78px;
 }
 
 .account-table:not(.editing) {
-  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 74px 74px 74px 86px 132px;
+  grid-template-columns: 64px 58px minmax(96px, 0.6fr) 74px 74px 74px 74px 86px 132px 78px;
   align-items: stretch;
   gap: 6px 10px;
 }
@@ -374,14 +395,17 @@
   white-space: nowrap;
 }
 
-.account-table:not(.editing) .account-row.unavailable > .account-cell:not(.account-topic-shared-cell),
-.account-table:not(.editing) .account-row.saving > .account-cell:not(.account-topic-shared-cell) {
+.account-table:not(.editing) .account-row-background {
+  z-index: 0;
+  grid-column: 1 / -1;
+  grid-row: var(--account-row-index);
+  min-height: 42px;
   background: #fff1f2;
 }
 
-.account-table:not(.editing) .account-topic-shared-cell {
-  align-self: stretch;
-  color: #344156;
+.account-table:not(.editing) .account-cell {
+  position: relative;
+  z-index: 1;
 }
 
 .account-col-platform {
@@ -404,32 +428,24 @@
   grid-column: 5;
 }
 
-.account-col-staged-running {
+.account-col-upload-running {
   grid-column: 6;
 }
 
-.account-col-upload-running {
+.account-col-failed-upload {
   grid-column: 7;
 }
 
-.account-col-staged-failed {
+.account-col-last-upload {
   grid-column: 8;
 }
 
-.account-col-downloader-pending {
+.account-col-next-send {
   grid-column: 9;
 }
 
-.account-col-failed-upload {
+.account-col-followers {
   grid-column: 10;
-}
-
-.account-col-last-upload {
-  grid-column: 11;
-}
-
-.account-col-next-send {
-  grid-column: 12;
 }
 
 .account-table.editing .account-row,
