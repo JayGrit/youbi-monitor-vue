@@ -1,7 +1,14 @@
 const MINIO_PROXY_BASE = `${import.meta.env.BASE_URL}minio`
-const MINIO_BUCKET = 'ydbi'
 const MINIO_CONSOLE_BASE = 'http://120.53.92.66:9001/'
 const API_BASE = `${import.meta.env.BASE_URL}api`
+
+function isKnownMinioEndpoint(parsed) {
+  return parsed.origin !== window.location.origin
+    && (
+      parsed.hostname === '120.53.92.66'
+      || parsed.port === '9000'
+    )
+}
 
 function encodePath(path) {
   return String(path || '')
@@ -29,13 +36,7 @@ export function normalizeResourceUrl(url) {
 
   try {
     const parsed = new URL(text, window.location.origin)
-    const isTargetMinioUrl = parsed.origin !== window.location.origin
-      && parsed.pathname.startsWith(`/${MINIO_BUCKET}/`)
-      && (
-        parsed.hostname === '120.53.92.66'
-        || parsed.port === '9000'
-      )
-    if (isTargetMinioUrl) {
+    if (isKnownMinioEndpoint(parsed)) {
       return proxiedMinioPath(parsed.pathname.replace(/^\/+/, ''), parsed.search)
     }
     return parsed.href
@@ -49,13 +50,14 @@ export function minioConsoleFolderUrl(url) {
   if (!text) return ''
   try {
     const parsed = new URL(text, window.location.origin)
+    if (!isKnownMinioEndpoint(parsed)) return ''
     const parts = parsed.pathname.replace(/^\/+/, '').split('/').filter(Boolean)
-    const bucketIndex = parts.indexOf(MINIO_BUCKET)
-    if (bucketIndex < 0 || bucketIndex >= parts.length - 1) return ''
-    const objectParts = parts.slice(bucketIndex + 1)
+    if (parts.length < 2) return ''
+    const bucket = parts[0]
+    const objectParts = parts.slice(1)
     const folder = objectParts.slice(0, -1).join('/')
     if (!folder) return ''
-    return `${MINIO_CONSOLE_BASE}browser/${MINIO_BUCKET}/${encodeURIComponent(`${folder}/`)}`
+    return `${MINIO_CONSOLE_BASE}browser/${bucket}/${encodeURIComponent(`${folder}/`)}`
   } catch {
     return ''
   }
