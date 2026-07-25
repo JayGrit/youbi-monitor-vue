@@ -7,19 +7,23 @@ const props = defineProps({
   submitterMonitorLoading: { type: Boolean, default: false },
   submitterMonitorError: { type: String, default: '' },
   submitterMonitorLoadedAt: { type: String, default: '' },
+  submitterMonitorContinueBusy: { type: String, default: '' },
   loadSubmitterMonitor: { type: Function, required: true },
+  continueSubmitterAuthorScan: { type: Function, required: true },
 })
 
 const summary = computed(() => props.submitterMonitorState?.summary || {})
 const authors = computed(() => props.submitterMonitorState?.authors || [])
 const batches = computed(() => props.submitterMonitorState?.batches || [])
 const activeVideos = computed(() => props.submitterMonitorState?.activeVideos || [])
+const recentVideos = computed(() => props.submitterMonitorState?.recentVideos || [])
+const videoRows = computed(() => [...activeVideos.value, ...recentVideos.value].slice(0, 60))
 
 const summaryCards = computed(() => [
   { key: 'authors', label: '作者', value: summary.value.totalAuthors, detail: `自动拉新 ${num(summary.value.autoFetchAuthors)}` },
   { key: 'scanning', label: '扫描中', value: summary.value.scanningAuthors, detail: `异常作者 ${num(summary.value.errorAuthors)}`, tone: Number(summary.value.scanningAuthors || 0) > 0 ? 'active' : '' },
   { key: 'imports', label: 'URL 加载', value: summary.value.pendingImports, detail: `运行 ${num(summary.value.runningImports)} · 失败 ${num(summary.value.failedImports)}`, tone: Number(summary.value.failedImports || 0) > 0 ? 'danger' : '' },
-  { key: 'videos', label: '候选视频', value: summary.value.totalVideos, detail: `未投稿 ${num(summary.value.unuploadedVideos)} · 已投稿 ${num(summary.value.uploadedVideos)}` },
+  { key: 'videos', label: '候选视频', value: summary.value.totalVideos, detail: `已加载 ${num(summary.value.doneImports)} · 未投稿 ${num(summary.value.unuploadedVideos)}` },
 ])
 
 function num(value) {
@@ -66,6 +70,18 @@ function progressText(batch) {
   if (!total && !saved && !failed && !skipped) return '-'
   return `${num(saved)}/${num(total)} · 跳过 ${num(skipped)} · 失败 ${num(failed)}`
 }
+
+function authorBatchText(author) {
+  const total = Number(author?.lastBatchTotal || author?.lastBatchDiscovered || 0)
+  const saved = Number(author?.lastBatchSaved || 0)
+  const failed = Number(author?.lastBatchFailed || 0)
+  if (!author?.lastBatchStatus) return '-'
+  return `${statusLabel(author.lastBatchStatus)} ${num(saved)}/${num(total)} · 失败 ${num(failed)}`
+}
+
+function continueMaxText(author) {
+  return `继续到 ${num(Number(author?.scanMaxCount || 100) + 100)}`
+}
 </script>
 
 <template>
@@ -102,7 +118,7 @@ function progressText(batch) {
       <section class="submitter-monitor-panel submitter-monitor-authors">
         <header>
           <h2>作者扫描</h2>
-          <span>{{ num(authors.length) }} 位最近活跃/异常作者</span>
+          <span>{{ num(authors.length) }} 位作者，成功完成也会显示</span>
         </header>
         <div class="submitter-monitor-table-wrap">
           <table class="submitter-monitor-table">
@@ -110,16 +126,18 @@ function progressText(batch) {
               <tr>
                 <th>作者</th>
                 <th>状态</th>
+                <th>上限</th>
                 <th>候选</th>
                 <th>URL 加载</th>
                 <th>投稿</th>
                 <th>最近动作</th>
                 <th>错误</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="authors.length === 0">
-                <td colspan="7" class="submitter-empty">暂无作者扫描数据</td>
+                <td colspan="9" class="submitter-empty">暂无作者扫描数据</td>
               </tr>
               <tr v-for="author in authors" :key="author.id || author.author">
                 <td>
@@ -132,6 +150,11 @@ function progressText(batch) {
                     {{ statusLabel(author.scanState) }}
                   </span>
                   <small v-if="author.fetchNewVideos">自动拉新</small>
+                  <small v-if="author.lastBatchStatus">{{ authorBatchText(author) }}</small>
+                </td>
+                <td>
+                  <span>{{ num(author.scanMaxCount) }}</span>
+                  <small v-if="author.scanLimitReached" class="submitter-monitor-limit">已拉满上限</small>
                 </td>
                 <td>{{ num(author.candidateCount) }}</td>
                 <td>
@@ -150,6 +173,16 @@ function progressText(batch) {
                 </td>
                 <td>
                   <span class="submitter-monitor-error">{{ author.scanError || '-' }}</span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="submitter-monitor-row-action"
+                    :disabled="!author.scanFinished || submitterMonitorContinueBusy === author.author"
+                    @click="continueSubmitterAuthorScan(author)"
+                  >
+                    {{ submitterMonitorContinueBusy === author.author ? '提交中' : continueMaxText(author) }}
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -182,11 +215,11 @@ function progressText(batch) {
 
       <section class="submitter-monitor-panel">
         <header>
-          <h2>活跃候选视频</h2>
-          <span>{{ num(activeVideos.length) }} 条待处理/失败</span>
+          <h2>最近加载视频</h2>
+          <span>{{ num(activeVideos.length) }} 条待处理/失败 · {{ num(recentVideos.length) }} 条成功</span>
         </header>
         <div class="submitter-monitor-list">
-          <article v-for="video in activeVideos" :key="video.id" class="submitter-monitor-list-row">
+          <article v-for="video in videoRows" :key="`${video.importStatus}-${video.id}`" class="submitter-monitor-list-row">
             <div>
               <a v-if="video.webpageUrl" :href="video.webpageUrl" target="_blank" rel="noreferrer">
                 {{ video.title }}
@@ -201,7 +234,7 @@ function progressText(batch) {
             <small>{{ formatDateTime(video.updatedAt) }} · 发布 {{ secondsDate(video.publishedAt) }}</small>
             <em v-if="video.importError" class="submitter-monitor-error">{{ video.importError }}</em>
           </article>
-          <p v-if="activeVideos.length === 0" class="submitter-empty">暂无等待、运行或失败的视频加载任务</p>
+          <p v-if="videoRows.length === 0" class="submitter-empty">暂无视频加载记录</p>
         </div>
       </section>
     </section>

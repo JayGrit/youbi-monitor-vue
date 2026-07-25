@@ -1137,6 +1137,34 @@ a.submitter-cell:hover {
   overflow-wrap: anywhere;
 }
 
+.submitter-monitor-limit {
+  color: #8a5d00;
+  font-weight: 760;
+}
+
+.submitter-monitor-row-action {
+  min-height: 30px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.submitter-monitor-row-action:hover:not(:disabled) {
+  background: #243044;
+}
+
+.submitter-monitor-row-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .submitter-monitor-list {
   display: grid;
   max-height: 390px;

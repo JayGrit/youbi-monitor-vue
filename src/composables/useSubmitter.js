@@ -48,6 +48,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterMonitorLoading = ref(false)
   const submitterMonitorError = ref('')
   const submitterMonitorLoadedAt = ref('')
+  const submitterMonitorContinueBusy = ref('')
 
   const submitterAuthorTopicFilters = computed(() => {
     const types = new Set(submitterTopics.value.map(item => String(item?.topic || '').trim()).filter(Boolean))
@@ -177,6 +178,32 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterMonitorError.value = err instanceof Error ? err.message : String(err)
     } finally {
       submitterMonitorLoading.value = false
+    }
+  }
+
+  async function continueSubmitterAuthorScan(authorRow) {
+    const author = String(authorRow?.author || '').trim()
+    if (!author || submitterMonitorContinueBusy.value) return
+    const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
+    const currentMax = Number(authorRow?.scanMaxCount || 100)
+    const maxCount = (Number.isFinite(currentMax) && currentMax > 0 ? currentMax : 100) + 100
+    submitterMonitorContinueBusy.value = author
+    submitterMonitorError.value = ''
+    submitterMessage.value = `已提交继续扫描：${author}，上限 ${maxCount}`
+    try {
+      await submitterApi.continueAuthorImport(author, platform, {
+        maxCount,
+        topic: authorRow?.topic || undefined,
+        taskType: authorRow?.taskType || undefined,
+      })
+      await Promise.all([
+        loadSubmitterMonitor(),
+        loadSubmitterAuthors(),
+      ])
+    } catch (err) {
+      submitterMonitorError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      submitterMonitorContinueBusy.value = ''
     }
   }
 
@@ -335,6 +362,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterMonitorLoading,
     submitterMonitorError,
     submitterMonitorLoadedAt,
+    submitterMonitorContinueBusy,
     submitterAuthorTypeSaving,
     submitterAuthorDeleting,
     submitterAuthorTypeError,
@@ -455,6 +483,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     applySubmitterFilters,
     loadSubmitterAuthors,
     loadSubmitterMonitor,
+    continueSubmitterAuthorScan,
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,

@@ -109,6 +109,10 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return postJson(`${submitterApiBase}/authors/import`, { author, platform, ...options }, describe('批量导入作者新视频'))
     },
 
+    continueAuthorImport(author, platform, options = {}) {
+      return postJson(`${submitterApiBase}/authors/import/continue`, { author, platform, ...options }, describe('继续导入作者视频'))
+    },
+
     getImportStatus(batch) {
       return requestJson(`${submitterApiBase}/authors/import/${encodeURIComponent(batch)}`, undefined, describe('查询作者导入批次进度'))
     },
