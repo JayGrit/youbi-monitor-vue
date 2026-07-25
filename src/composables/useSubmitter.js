@@ -44,6 +44,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   const submitterAuthorTypeSaving = ref('')
   const submitterAuthorDeleting = ref('')
   const submitterAuthorTypeError = ref('')
+  const submitterMonitorState = ref(null)
+  const submitterMonitorLoading = ref(false)
+  const submitterMonitorError = ref('')
+  const submitterMonitorLoadedAt = ref('')
 
   const submitterAuthorTopicFilters = computed(() => {
     const types = new Set(submitterTopics.value.map(item => String(item?.topic || '').trim()).filter(Boolean))
@@ -160,6 +164,19 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     } catch (err) {
       submitterTopics.value = []
       submitterError.value = err instanceof Error ? err.message : String(err)
+    }
+  }
+
+  async function loadSubmitterMonitor() {
+    submitterMonitorLoading.value = true
+    submitterMonitorError.value = ''
+    try {
+      submitterMonitorState.value = await submitterApi.getMonitorState()
+      submitterMonitorLoadedAt.value = new Date().toISOString()
+    } catch (err) {
+      submitterMonitorError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      submitterMonitorLoading.value = false
     }
   }
 
@@ -314,6 +331,10 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterAuthors,
     submitterAuthorTypeRows,
     submitterTaskTypes,
+    submitterMonitorState,
+    submitterMonitorLoading,
+    submitterMonitorError,
+    submitterMonitorLoadedAt,
     submitterAuthorTypeSaving,
     submitterAuthorDeleting,
     submitterAuthorTypeError,
@@ -433,6 +454,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
+    loadSubmitterMonitor,
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,

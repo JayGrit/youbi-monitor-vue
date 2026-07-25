@@ -76,6 +76,10 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return requestJson(`${submitterApiBase}/authors`, undefined, describe('查询Submitter作者列表'))
     },
 
+    getMonitorState() {
+      return requestJson(`${submitterApiBase}/monitor`, undefined, describe('查询Submitter采集监控'))
+    },
+
     submitVideo(rowId) {
       return postSubmitterJsonWithRetry(
         `${submitterApiBase}/videos/${encodeURIComponent(rowId)}/submit`,
