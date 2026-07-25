@@ -92,10 +92,10 @@ function hasTaskProgressGraph(task) {
 }
 
 function onlineDeviceNames(service) {
-  return (service?.devices || [])
+  return [...new Set((service?.devices || [])
     .filter(device => device.online)
     .map(device => String(device.deviceName || '').trim())
-    .filter(Boolean)
+    .filter(Boolean))]
 }
 </script>
 

@@ -517,10 +517,10 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   function onlineDeviceText(service) {
-    const names = (service?.devices || [])
+    const names = [...new Set((service?.devices || [])
       .filter(device => device.online)
       .map(device => String(device.deviceName || '').trim())
-      .filter(Boolean)
+      .filter(Boolean))]
     return names.length > 0 ? names.join(' & ') : '离线'
   }
 
@@ -530,7 +530,16 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
 
   function onlineDeviceTitle(service) {
     return (service?.devices || [])
-      .map(device => `${device.deviceName}: ${formatLastSeen(device)}${device.lastSeenAt ? ` ${formatDateTime(device.lastSeenAt)}` : ''}`)
+      .map(device => {
+        const parts = [
+          `${device.deviceName}: ${formatLastSeen(device)}${device.lastSeenAt ? ` ${formatDateTime(device.lastSeenAt)}` : ''}`,
+          device.hostName ? `host=${device.hostName}` : '',
+          device.processId ? `pid=${device.processId}` : '',
+          device.runtimeRole ? `role=${device.runtimeRole}` : '',
+          device.instanceId ? `instance=${device.instanceId}` : '',
+        ].filter(Boolean)
+        return parts.join(' ')
+      })
       .join('\n')
   }
 
