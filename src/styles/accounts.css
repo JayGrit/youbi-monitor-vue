@@ -369,11 +369,11 @@
 
 .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(96px, 1fr) 74px 74px 74px 74px 86px 132px 106px;
+  grid-template-columns: 64px 58px minmax(96px, 1fr) 70px 70px 70px 70px 82px 124px 98px 70px;
 }
 
 .account-table:not(.editing) {
-  grid-template-columns: 64px 58px minmax(96px, 1fr) 74px 74px 74px 74px 86px 132px 106px;
+  grid-template-columns: 64px 58px minmax(96px, 1fr) 70px 70px 70px 70px 82px 124px 98px 70px;
   align-items: stretch;
   gap: 6px 10px;
 }
@@ -446,6 +446,10 @@
 
 .account-col-followers {
   grid-column: 10;
+}
+
+.account-col-income {
+  grid-column: 11;
 }
 
 .account-table.editing .account-row,

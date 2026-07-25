@@ -27,6 +27,7 @@ defineProps([
   'accountName',
   'accountAvatarInitial',
   'accountMetricText',
+  'accountIncomeText',
   'stagedFailedCount',
   'failedUploadCount',
   'lastUploadText',
@@ -73,6 +74,7 @@ defineProps([
         :account-name="accountName"
         :account-avatar-initial="accountAvatarInitial"
         :account-metric-text="accountMetricText"
+        :account-income-text="accountIncomeText"
         :staged-failed-count="stagedFailedCount"
         :failed-upload-count="failedUploadCount"
         :last-upload-text="lastUploadText"

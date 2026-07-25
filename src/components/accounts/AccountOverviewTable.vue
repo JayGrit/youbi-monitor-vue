@@ -10,6 +10,7 @@ const props = defineProps([
   'accountName',
   'accountAvatarInitial',
   'accountMetricText',
+  'accountIncomeText',
   'stagedFailedCount',
   'failedUploadCount',
   'lastUploadText',
@@ -102,6 +103,7 @@ function formatFollowerGrowth(value) {
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">最新视频</span>
             <span v-if="!accountEditMode">粉丝量</span>
+            <span v-if="!accountEditMode">收益</span>
             <span v-if="accountEditMode">Key</span>
             <span v-if="accountEditMode">操作</span>
             <span v-if="accountEditMode">随机冷却</span>
@@ -184,6 +186,7 @@ function formatFollowerGrowth(value) {
                 {{ item.configured ? latestVideoText(item.row.latestVideoPublishAt) : '-' }}
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
+              <span v-if="!accountEditMode" class="account-cell account-col-income" data-label="收益">{{ item.configured ? accountIncomeText(item.row) : '-' }}</span>
               <span v-if="accountEditMode" class="account-cell" data-label="Key">
                 <input
                   v-if="item.configured"

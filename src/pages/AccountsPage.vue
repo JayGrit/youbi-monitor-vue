@@ -382,6 +382,15 @@ function accountMetricText(row, field) {
   return accountStatsLoading(row) ? '加载中' : props.accountCountText(row?.[field])
 }
 
+function accountIncomeText(row) {
+  if (accountStatsLoading(row)) return '加载中'
+  const value = row?.currentIncome ?? row?.current_income
+  if (value === null || value === undefined || value === '') return '-'
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return String(value)
+  return amount.toFixed(2)
+}
+
 function phoneAccountField(platform) {
   return platform
 }
@@ -624,6 +633,7 @@ async function syncPhoneAccountProfile(phone, platform) {
       :account-name="accountName"
       :account-avatar-initial="accountAvatarInitial"
       :account-metric-text="accountMetricText"
+      :account-income-text="accountIncomeText"
       :staged-failed-count="stagedFailedCount"
       :failed-upload-count="failedUploadCount"
       :last-upload-text="lastUploadText"

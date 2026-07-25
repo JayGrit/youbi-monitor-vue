@@ -16,6 +16,8 @@ const ACCOUNT_STATS_FIELDS = [
   'uploadRunningTaskId',
   'uploadRunningCount',
   'failedUploadCount',
+  'currentIncome',
+  'currentIncomeUpdatedAt',
   'statsLoading',
 ]
 
