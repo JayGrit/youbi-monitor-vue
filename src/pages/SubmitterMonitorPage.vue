@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, unref } from 'vue'
 import { formatDateTime, formatNumber } from '../utils/format'
 
 const props = defineProps({
@@ -12,11 +12,15 @@ const props = defineProps({
   continueSubmitterAuthorScan: { type: Function, required: true },
 })
 
-const summary = computed(() => props.submitterMonitorState?.summary || {})
-const authors = computed(() => props.submitterMonitorState?.authors || [])
-const batches = computed(() => props.submitterMonitorState?.batches || [])
-const activeVideos = computed(() => props.submitterMonitorState?.activeVideos || [])
-const recentVideos = computed(() => props.submitterMonitorState?.recentVideos || [])
+const monitorState = computed(() => {
+  const raw = unref(props.submitterMonitorState)
+  return raw?.data || raw?.item || raw || {}
+})
+const summary = computed(() => monitorState.value?.summary || {})
+const authors = computed(() => monitorState.value?.authors || [])
+const batches = computed(() => monitorState.value?.batches || [])
+const activeVideos = computed(() => monitorState.value?.activeVideos || [])
+const recentVideos = computed(() => monitorState.value?.recentVideos || [])
 const videoRows = computed(() => [...activeVideos.value, ...recentVideos.value].slice(0, 60))
 
 const summaryCards = computed(() => [
