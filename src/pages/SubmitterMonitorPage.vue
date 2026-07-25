@@ -1,5 +1,6 @@
 <script setup>
-import { computed, unref } from 'vue'
+import { computed, onMounted, ref, unref } from 'vue'
+import { postJson, requestJson } from '../api/http'
 import { formatDateTime, formatNumber } from '../utils/format'
 
 const props = defineProps({
@@ -8,14 +9,25 @@ const props = defineProps({
   submitterMonitorError: { type: String, default: '' },
   submitterMonitorLoadedAt: { type: String, default: '' },
   submitterMonitorContinueBusy: { type: String, default: '' },
-  loadSubmitterMonitor: { type: Function, required: true },
-  continueSubmitterAuthorScan: { type: Function, required: true },
+  loadSubmitterMonitor: { type: Function, default: null },
+  continueSubmitterAuthorScan: { type: Function, default: null },
 })
 
+const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
+const localMonitorState = ref(null)
+const localMonitorLoading = ref(false)
+const localMonitorError = ref('')
+const localMonitorLoadedAt = ref('')
+const localContinueBusy = ref('')
+
 const monitorState = computed(() => {
-  const raw = unref(props.submitterMonitorState)
+  const raw = localMonitorState.value || unref(props.submitterMonitorState)
   return raw?.data || raw?.item || raw || {}
 })
+const monitorLoading = computed(() => localMonitorLoading.value || props.submitterMonitorLoading)
+const monitorError = computed(() => localMonitorError.value || props.submitterMonitorError)
+const monitorLoadedAt = computed(() => localMonitorLoadedAt.value || props.submitterMonitorLoadedAt)
+const monitorContinueBusy = computed(() => localContinueBusy.value || props.submitterMonitorContinueBusy)
 const summary = computed(() => monitorState.value?.summary || {})
 const authors = computed(() => monitorState.value?.authors || [])
 const batches = computed(() => monitorState.value?.batches || [])
@@ -86,6 +98,53 @@ function authorBatchText(author) {
 function continueMaxText(author) {
   return `继续到 ${num(Number(author?.scanMaxCount || 100) + 100)}`
 }
+
+async function refreshMonitor() {
+  localMonitorLoading.value = true
+  localMonitorError.value = ''
+  try {
+    localMonitorState.value = await requestJson(
+      `${submitterApiBase}/monitor`,
+      undefined,
+      { service: 'submitter', summary: '查询Submitter采集监控' },
+    )
+    localMonitorLoadedAt.value = new Date().toISOString()
+  } catch (err) {
+    localMonitorError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    localMonitorLoading.value = false
+  }
+}
+
+async function continueAuthorScan(authorRow) {
+  const author = String(authorRow?.author || '').trim()
+  if (!author || localContinueBusy.value) return
+  const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
+  const currentMax = Number(authorRow?.scanMaxCount || 100)
+  const maxCount = (Number.isFinite(currentMax) && currentMax > 0 ? currentMax : 100) + 100
+  localContinueBusy.value = author
+  localMonitorError.value = ''
+  try {
+    await postJson(
+      `${submitterApiBase}/authors/import/continue`,
+      {
+        author,
+        platform,
+        maxCount,
+        topic: authorRow?.topic || undefined,
+        taskType: authorRow?.taskType || undefined,
+      },
+      { service: 'submitter', summary: '继续导入作者视频' },
+    )
+    await refreshMonitor()
+  } catch (err) {
+    localMonitorError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    localContinueBusy.value = ''
+  }
+}
+
+onMounted(refreshMonitor)
 </script>
 
 <template>
@@ -96,14 +155,14 @@ function continueMaxText(author) {
         <span>作者扫描、URL 加载、候选视频入库状态</span>
       </div>
       <div class="submitter-monitor-actions">
-        <span v-if="submitterMonitorLoadedAt">更新 {{ formatDateTime(submitterMonitorLoadedAt) }}</span>
-        <button type="button" :disabled="submitterMonitorLoading" @click="loadSubmitterMonitor">
-          {{ submitterMonitorLoading ? '刷新中' : '刷新' }}
+        <span v-if="monitorLoadedAt">更新 {{ formatDateTime(monitorLoadedAt) }}</span>
+        <button type="button" :disabled="monitorLoading" @click="refreshMonitor">
+          {{ monitorLoading ? '刷新中' : '刷新' }}
         </button>
       </div>
     </header>
 
-    <p v-if="submitterMonitorError" class="inline-error">{{ submitterMonitorError }}</p>
+    <p v-if="monitorError" class="inline-error">{{ monitorError }}</p>
 
     <section class="submitter-monitor-summary">
       <article
@@ -182,10 +241,10 @@ function continueMaxText(author) {
                   <button
                     type="button"
                     class="submitter-monitor-row-action"
-                    :disabled="!author.scanFinished || submitterMonitorContinueBusy === author.author"
-                    @click="continueSubmitterAuthorScan(author)"
+                    :disabled="!author.scanFinished || monitorContinueBusy === author.author"
+                    @click="continueAuthorScan(author)"
                   >
-                    {{ submitterMonitorContinueBusy === author.author ? '提交中' : continueMaxText(author) }}
+                    {{ monitorContinueBusy === author.author ? '提交中' : continueMaxText(author) }}
                   </button>
                 </td>
               </tr>
