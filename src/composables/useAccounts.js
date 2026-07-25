@@ -112,6 +112,7 @@ export function useAccounts(accountsApi, agentApi, operatorApi, accountPlatforms
     loadUploaderPhones: uploaderPhones.loadUploaderPhones,
     saveUploaderPhoneAccount: uploaderPhones.saveUploaderPhoneAccount,
     runUploaderPhoneAccountScript: uploaderPhones.runUploaderPhoneAccountScript,
+    fetchFollowerProfile: uploaderPhones.fetchFollowerProfile,
     startBilibiliQrLogin: row => platformAccounts.startPlatformLogin('bilibili', row),
     renewBilibiliAccount: platformAccounts.renewBilibiliAccount,
     refreshBilibiliRow: row => platformAccounts.refreshPlatformRow('bilibili', row),
