@@ -135,6 +135,7 @@ export function useUploaderPhones(accountsApi, agentApi, operatorApi) {
         action: 'get_follower_count',
         topic,
         taskId: `monitor-follower-profile-${platform}-${topic}-${Date.now()}`,
+        payload: { topic },
       })
       const opId = accepted?.opId
       if (!opId) throw new Error('operator 未返回 opId')
