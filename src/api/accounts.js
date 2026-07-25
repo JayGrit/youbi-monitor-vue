@@ -38,6 +38,9 @@ function genericPlatformAccountApi(apiBase, platform, context) {
         body: form,
       }, describe('上传平台账号头像文件'))
     },
+    syncProfile(topic) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/profile/sync`, {}, describe('异步同步平台账号资料'))
+    },
   }
 }
 

@@ -13,7 +13,7 @@ const FOLLOWER_PROFILE_PLATFORMS = new Set([
   'youtube',
 ])
 
-export function useUploaderPhones(accountsApi, agentApi, operatorApi) {
+export function useUploaderPhones(accountsApi, agentApi) {
   const uploaderPhoneMatrix = ref({ phones: [], platforms: [] })
   const uploaderPhoneLoading = ref(false)
   const uploaderPhoneSavingKey = ref('')
@@ -126,28 +126,13 @@ export function useUploaderPhones(accountsApi, agentApi, operatorApi) {
   }
 
   async function fetchFollowerProfile(platform, topic) {
-    if (!operatorApi || !FOLLOWER_PROFILE_PLATFORMS.has(platform) || !topic) return null
+    if (!FOLLOWER_PROFILE_PLATFORMS.has(platform) || !topic || !accountsApi?.[platform]?.syncProfile) return null
     const busyKey = `${platform}:follower-profile:${topic}`
     uploaderPhoneAgentBusyKey.value = busyKey
     try {
-      const accepted = await operatorApi.submitTask({
-        platform,
-        action: 'get_follower_count',
-        topic,
-        taskId: `monitor-follower-profile-${platform}-${topic}-${Date.now()}`,
-        payload: { topic },
-      })
-      const opId = accepted?.opId
-      if (!opId) throw new Error('operator 未返回 opId')
-      const task = await waitOperatorTask(opId)
-      const result = task?.result || {}
-      const username = String(result.username || result.accountName || '').trim()
-      const avatarUrl = String(result.avatarMinioUrl || result.avatar_minio_url || '').trim()
-      if (!username && !avatarUrl) {
-        throw new Error('operator 结果没有账号名或头像')
-      }
+      const accepted = await accountsApi[platform].syncProfile(topic)
       uploaderPhoneError.value = ''
-      return { opId, username, avatarUrl, result }
+      return accepted
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       uploaderPhoneError.value = message
@@ -158,19 +143,6 @@ export function useUploaderPhones(accountsApi, agentApi, operatorApi) {
         uploaderPhoneAgentBusyKey.value = ''
       }
     }
-  }
-
-  async function waitOperatorTask(opId) {
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      if (attempt > 0) await sleep(10000)
-      const payload = await operatorApi.task(opId)
-      const status = String(payload?.status || '').toLowerCase()
-      if (status === 'success') return payload
-      if (status === 'failed') {
-        throw new Error(payload?.error?.message || 'operator 任务失败')
-      }
-    }
-    throw new Error('operator 任务超时，请稍后查看任务结果')
   }
 
   async function saveUploaderPhoneAccount(phone, platform, accountId, note = '', disabled = false) {

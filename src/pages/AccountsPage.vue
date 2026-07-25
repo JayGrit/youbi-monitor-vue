@@ -592,18 +592,7 @@ async function syncPhoneAccountProfile(phone, platform) {
   const row = phoneSelectedAccountRow(phone, platform)
   const account = selectedPhoneAccount(phone, platform)
   if (!row || !account?.topic || phoneFollowerProfileBusy(phone, platform)) return
-  const profile = await props.fetchFollowerProfile(platform, account.topic)
-  if (!profile) return
-  if (profile.username) {
-    row.draftDisplayName = profile.username
-  }
-  const saved = await props.savePlatformAccountProfile(platform, row, profile.avatarUrl || undefined)
-  syncPhoneAccountOption(platform, account.topic, saved)
-  if (saved?.avatarUrl) {
-    const avatarUrl = normalizeAccountAvatarUrl(saved.avatarUrl)
-    delete accountAvatarCache.value[avatarUrl]
-    cacheAccountAvatar(avatarUrl)
-  }
+  await props.fetchFollowerProfile(platform, account.topic)
 }
 </script>
 

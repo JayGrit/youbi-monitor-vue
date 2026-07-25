@@ -3,7 +3,6 @@ import { createAgentApi } from '../api/agent'
 import { createDistributorApi } from '../api/distributor'
 import { createFailureLogsApi } from '../api/failureLogs'
 import { createOperatorDiagnosticsApi } from '../api/operatorDiagnostics'
-import { createOperatorApi } from '../api/operator'
 import { createPublisherApi } from '../api/publisher'
 import { createQueueMonitorApi } from '../api/queueMonitor'
 import { createServerApi } from '../api/server'
@@ -20,7 +19,6 @@ export function useAppServices() {
   const distributorApiBase = `${import.meta.env.BASE_URL}distributor-api`
   const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
   const backupperApiBase = `${import.meta.env.BASE_URL}backupper-api`
-  const operatorApiBase = `${import.meta.env.BASE_URL}operator-api`
   const tasksApi = createTasksApi(apiBase, 'monitor')
   const taskFlowApi = createTaskFlowApi(apiBase, 'monitor')
   const publisherApi = createPublisherApi(apiBase, 'monitor')
@@ -28,7 +26,6 @@ export function useAppServices() {
   const failureLogsApi = createFailureLogsApi(apiBase, 'monitor')
   const distributorApi = createDistributorApi(distributorApiBase, 'distributor')
   const operatorDiagnosticsApi = createOperatorDiagnosticsApi(apiBase, 'monitor')
-  const operatorApi = createOperatorApi(operatorApiBase, 'operator')
   const speakerSegmentsApi = createSpeakerSegmentsApi(apiBase, 'monitor')
   const ffmpegerApi = createQueueMonitorApi(apiBase, 'ffmpeger', 'monitor')
   const airouterApi = createQueueMonitorApi(apiBase, 'airouter', 'monitor')
@@ -48,7 +45,6 @@ export function useAppServices() {
     failureLogsApi,
     distributorApi,
     operatorDiagnosticsApi,
-    operatorApi,
     speakerSegmentsApi,
     ffmpegerApi,
     airouterApi,
