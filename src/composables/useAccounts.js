@@ -16,11 +16,11 @@ import { useUploadBackfill } from './accounts/useUploadBackfill'
 import { useUploaderPhones } from './accounts/useUploaderPhones'
 import { ref } from 'vue'
 
-export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIconUrls) {
+export function useAccounts(accountsApi, agentApi, operatorApi, accountPlatforms, platformIconUrls) {
   let accountTimer = null
 
   const platformAccounts = usePlatformAccounts(accountsApi, accountPlatforms)
-  const uploaderPhones = useUploaderPhones(accountsApi, agentApi)
+  const uploaderPhones = useUploaderPhones(accountsApi, agentApi, operatorApi)
   const backupperDiskStatus = ref(null)
   const backupperDiskStatusText = ref('')
 

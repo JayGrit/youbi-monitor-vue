@@ -32,6 +32,7 @@ function inferServiceName(url) {
   if (text.includes('/monitor/distributor-api')) return 'distributor'
   if (text.includes('/monitor/submitter-api')) return 'submitter'
   if (text.includes('/monitor/backupper-api')) return 'backupper'
+  if (text.includes('/monitor/operator-api')) return 'operator'
   if (text.includes('/monitor/api')) return 'monitor'
   if (text.includes('127.0.0.1:8765') || text.includes('localhost:8765')) return 'agent'
   return 'backend'

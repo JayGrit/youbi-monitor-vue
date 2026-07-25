@@ -49,6 +49,7 @@ const props = defineProps({
   registerSelectedUploadBackfill: { type: Function, required: true },
   saveUploaderPhoneAccount: { type: Function, required: true },
   runUploaderPhoneAccountScript: { type: Function, required: true },
+  fetchFollowerProfile: { type: Function, required: true },
   updateYoutubeDownloaderCookies: { type: Function, required: true },
   runStandaloneAccount: { type: Function, required: true },
   accountDisplay: { type: Function, required: true },
@@ -64,6 +65,7 @@ const props = defineProps({
 
 const STALE_READY_MINUTES = 10
 const OVERVIEW_TOOL_ACCOUNT_TYPES = new Set(['chatgpt', 'doubao', 'notebooklm'])
+const FOLLOWER_PROFILE_PLATFORMS = new Set(['bilibili', 'douyin', 'jinritoutiao', 'kuaishou', 'shipinhao', 'youtube'])
 
 const accountEditMode = ref(false)
 const accountAvatarCache = ref({})
@@ -504,6 +506,15 @@ function phoneCellAgentBusy(phone, platform) {
     && (!topic || props.uploaderPhoneAgentBusyKey.endsWith(`:${topic}`))
 }
 
+function phoneFollowerProfileBusy(phone, platform) {
+  const topic = selectedPhoneAccount(phone, platform)?.topic || ''
+  return Boolean(topic) && props.uploaderPhoneAgentBusyKey === `${platform}:follower-profile:${topic}`
+}
+
+function phoneFollowerProfileSupported(platform) {
+  return FOLLOWER_PROFILE_PLATFORMS.has(platform)
+}
+
 function defaultNewTopic(phone, platform) {
   const phoneDigits = String(phone?.phone || '').replace(/\D/g, '')
   return `${platform}-${phoneDigits || phone?.id || 'new'}`
@@ -565,6 +576,24 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
     }
   } finally {
     if (event?.target) event.target.value = ''
+  }
+}
+
+async function syncPhoneAccountProfile(phone, platform) {
+  const row = phoneSelectedAccountRow(phone, platform)
+  const account = selectedPhoneAccount(phone, platform)
+  if (!row || !account?.topic || phoneFollowerProfileBusy(phone, platform)) return
+  const profile = await props.fetchFollowerProfile(platform, account.topic)
+  if (!profile) return
+  if (profile.username) {
+    row.draftDisplayName = profile.username
+  }
+  const saved = await props.savePlatformAccountProfile(platform, row, profile.avatarUrl || undefined)
+  syncPhoneAccountOption(platform, account.topic, saved)
+  if (saved?.avatarUrl) {
+    const avatarUrl = normalizeAccountAvatarUrl(saved.avatarUrl)
+    delete accountAvatarCache.value[avatarUrl]
+    cacheAccountAvatar(avatarUrl)
   }
 }
 </script>
@@ -630,6 +659,8 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       :phone-cell-unavailable="phoneCellUnavailable"
       :selected-phone-account="selectedPhoneAccount"
       :phone-cell-agent-busy="phoneCellAgentBusy"
+      :phone-follower-profile-busy="phoneFollowerProfileBusy"
+      :phone-follower-profile-supported="phoneFollowerProfileSupported"
       :run-phone-cell-action="runPhoneCellAction"
       :phone-cell-input-value="phoneCellInputValue"
       :phone-cell-list-id="phoneCellListId"
@@ -645,6 +676,7 @@ async function uploadPhoneAccountAvatar(phone, platform, event) {
       :platform-busy-key="platformBusyKey"
       :upload-phone-account-avatar="uploadPhoneAccountAvatar"
       :save-phone-account-profile="savePhoneAccountProfile"
+      :sync-phone-account-profile="syncPhoneAccountProfile"
       :phone-account-name="phoneAccountName"
       :phone-account-avatar="phoneAccountAvatar"
       :phone-note-value="phoneNoteValue"

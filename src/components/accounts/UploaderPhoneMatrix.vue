@@ -11,6 +11,8 @@ defineProps([
   'phoneCellUnavailable',
   'selectedPhoneAccount',
   'phoneCellAgentBusy',
+  'phoneFollowerProfileBusy',
+  'phoneFollowerProfileSupported',
   'runPhoneCellAction',
   'phoneCellInputValue',
   'phoneCellListId',
@@ -26,6 +28,7 @@ defineProps([
   'platformBusyKey',
   'uploadPhoneAccountAvatar',
   'savePhoneAccountProfile',
+  'syncPhoneAccountProfile',
   'phoneAccountName',
   'phoneAccountAvatar',
   'phoneNoteValue',
@@ -142,6 +145,15 @@ defineEmits(['toggle-edit-mode'])
                   @change="savePhoneAccountProfile(phone, platform.type, $event)"
                   @keyup.enter="savePhoneAccountProfile(phone, platform.type, $event)"
                 />
+                <button
+                  v-if="phoneFollowerProfileSupported(platform.type)"
+                  type="button"
+                  class="uploader-phone-profile-sync-button"
+                  :disabled="phoneFollowerProfileBusy(phone, platform.type) || platformBusyKey(platform.type) === selectedPhoneAccount(phone, platform.type).topic"
+                  @click="syncPhoneAccountProfile(phone, platform.type)"
+                >
+                  {{ phoneFollowerProfileBusy(phone, platform.type) ? '同步中' : '同步' }}
+                </button>
               </div>
             </template>
             <template v-else>

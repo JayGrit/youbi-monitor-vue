@@ -25,8 +25,10 @@ function genericPlatformAccountApi(apiBase, platform, context) {
     setDownloaderMaxStagedCount(topic, maxStagedCount) {
       return postJson(`${base}/${encodeURIComponent(topic)}/downloader-max-staged-count`, { maxStagedCount }, describe('保存下载暂存任务上限'))
     },
-    updateProfile(topic, displayName) {
-      return postJson(`${base}/${encodeURIComponent(topic)}/profile`, { displayName }, describe('更新平台账号展示名'))
+    updateProfile(topic, displayName, avatarUrl = undefined) {
+      const body = { displayName }
+      if (avatarUrl !== undefined) body.avatarUrl = avatarUrl
+      return postJson(`${base}/${encodeURIComponent(topic)}/profile`, body, describe('更新平台账号展示名'))
     },
     uploadAvatar(topic, file) {
       const form = new FormData()

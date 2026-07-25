@@ -19,6 +19,7 @@ export function useMonitorApp() {
     failureLogsApi,
     distributorApi,
     operatorDiagnosticsApi,
+    operatorApi,
     speakerSegmentsApi,
     ffmpegerApi,
     airouterApi,
@@ -189,7 +190,7 @@ export function useMonitorApp() {
     platformErrorText,
     warmPlatformIcons,
     qrImageUrl,
-  } = useAccounts(accountsApi, agentApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
+  } = useAccounts(accountsApi, agentApi, operatorApi, ACCOUNT_PLATFORMS, PLATFORM_ICON_URLS)
 
   const {
     backupperDiskStatus: serverBackupperDiskStatus,

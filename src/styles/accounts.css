@@ -715,7 +715,7 @@
   min-width: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr) 52px;
   align-items: center;
   gap: 8px;
 }
@@ -752,6 +752,13 @@
 
 .uploader-phone-profile-name {
   min-width: 0;
+}
+
+.uploader-phone-profile-sync-button {
+  width: 52px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 12px;
 }
 
 .uploader-phone-disable-button {
@@ -850,6 +857,7 @@
 }
 
 .uploader-phone-disable-button:disabled,
+.uploader-phone-profile-sync-button:disabled,
 .uploader-phone-actions button:disabled {
   cursor: wait;
   opacity: 0.65;

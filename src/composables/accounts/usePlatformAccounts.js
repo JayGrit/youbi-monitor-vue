@@ -291,15 +291,20 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     return `${match[1]}:${match[2]}:${match[3] || '00'}`
   }
 
-  async function savePlatformAccountProfile(platform, row) {
+  async function savePlatformAccountProfile(platform, row, avatarUrl = undefined) {
     if (!row?.topic) return null
     const displayName = String(row.draftDisplayName || '').trim()
     setPlatformBusy(platform, rowKey(row), 'profile')
     try {
-      const profile = await accountsApi[platform].updateProfile(row.topic, displayName)
+      const profile = await accountsApi[platform].updateProfile(row.topic, displayName, avatarUrl)
       row.displayName = profile?.displayName || ''
       row.display_name = profile?.displayName || ''
       row.draftDisplayName = row.displayName || accountDisplay(row, platform)
+      if (profile?.avatarUrl) {
+        row.avatarUrl = profile.avatarUrl
+        row.avatar_url = profile.avatarUrl
+        row.draftAvatarUrl = profile.avatarUrl
+      }
       setPlatformError(platform, '')
       return profile
     } catch (err) {

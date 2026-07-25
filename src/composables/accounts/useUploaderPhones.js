@@ -4,7 +4,16 @@ function sleep(ms) {
   return new Promise(resolve => window.setTimeout(resolve, ms))
 }
 
-export function useUploaderPhones(accountsApi, agentApi) {
+const FOLLOWER_PROFILE_PLATFORMS = new Set([
+  'bilibili',
+  'douyin',
+  'jinritoutiao',
+  'kuaishou',
+  'shipinhao',
+  'youtube',
+])
+
+export function useUploaderPhones(accountsApi, agentApi, operatorApi) {
   const uploaderPhoneMatrix = ref({ phones: [], platforms: [] })
   const uploaderPhoneLoading = ref(false)
   const uploaderPhoneSavingKey = ref('')
@@ -116,6 +125,53 @@ export function useUploaderPhones(accountsApi, agentApi) {
     throw new Error('脚本执行超时，请查看本地 agent 日志')
   }
 
+  async function fetchFollowerProfile(platform, topic) {
+    if (!operatorApi || !FOLLOWER_PROFILE_PLATFORMS.has(platform) || !topic) return null
+    const busyKey = `${platform}:follower-profile:${topic}`
+    uploaderPhoneAgentBusyKey.value = busyKey
+    try {
+      const accepted = await operatorApi.submitTask({
+        platform,
+        action: 'get_follower_count',
+        topic,
+        taskId: `monitor-follower-profile-${platform}-${topic}-${Date.now()}`,
+      })
+      const opId = accepted?.opId
+      if (!opId) throw new Error('operator 未返回 opId')
+      const task = await waitOperatorTask(opId)
+      const result = task?.result || {}
+      const username = String(result.username || result.accountName || '').trim()
+      const avatarUrl = String(result.avatarMinioUrl || result.avatar_minio_url || '').trim()
+      if (!username && !avatarUrl) {
+        throw new Error('operator 结果没有账号名或头像')
+      }
+      uploaderPhoneError.value = ''
+      return { opId, username, avatarUrl, result }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      uploaderPhoneError.value = message
+      window.alert(message)
+      return null
+    } finally {
+      if (uploaderPhoneAgentBusyKey.value === busyKey) {
+        uploaderPhoneAgentBusyKey.value = ''
+      }
+    }
+  }
+
+  async function waitOperatorTask(opId) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      if (attempt > 0) await sleep(10000)
+      const payload = await operatorApi.task(opId)
+      const status = String(payload?.status || '').toLowerCase()
+      if (status === 'success') return payload
+      if (status === 'failed') {
+        throw new Error(payload?.error?.message || 'operator 任务失败')
+      }
+    }
+    throw new Error('operator 任务超时，请稍后查看任务结果')
+  }
+
   async function saveUploaderPhoneAccount(phone, platform, accountId, note = '', disabled = false) {
     if (!phone?.id || !platform) return
     const normalizedAccountId = Number(accountId || 0)
@@ -163,6 +219,7 @@ export function useUploaderPhones(accountsApi, agentApi) {
     loadUploaderPhones,
     saveUploaderPhoneAccount,
     runUploaderPhoneAccountScript,
+    fetchFollowerProfile,
     updateYoutubeDownloaderCookies,
     loadStandaloneAccounts,
     runStandaloneAccount,
