@@ -21,6 +21,7 @@ const previewIndex = ref(-1)
 const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
+const previewFitToWindow = ref(false)
 let requestToken = 0
 
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
@@ -172,6 +173,7 @@ async function downloadScreenshot(row) {
 function openPreview(row) {
   const index = sortedRows.value.findIndex(item => screenshotKey(item) === screenshotKey(row))
   previewIndex.value = Math.max(0, index)
+  previewFitToWindow.value = false
 }
 
 function closePreview() {
@@ -182,6 +184,10 @@ function movePreview(offset) {
   if (previewIndex.value < 0 || !sortedRows.value.length) return
   const length = sortedRows.value.length
   previewIndex.value = (previewIndex.value + offset + length) % length
+}
+
+function togglePreviewFit() {
+  previewFitToWindow.value = !previewFitToWindow.value
 }
 
 function handleKeydown(event) {
@@ -265,9 +271,14 @@ function relativeTime(value) {
               <strong>{{ diagnosticTitle(previewRow) }}</strong>
               <span>{{ previewIndex + 1 }} / {{ sortedRows.length }}</span>
             </figcaption>
-            <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
+            <div :class="['operator-screenshot-preview-body', { 'fit-window': previewFitToWindow }]">
+              <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
+            </div>
           </figure>
           <button type="button" class="operator-screenshot-nav operator-screenshot-next" @click="movePreview(1)">&rsaquo;</button>
+          <button type="button" class="operator-screenshot-preview-fit" @click="togglePreviewFit">
+            {{ previewFitToWindow ? '原始尺寸' : '适应窗口' }}
+          </button>
           <button type="button" class="operator-screenshot-preview-close" @click="closePreview">关闭</button>
         </div>
       </section>
@@ -330,6 +341,7 @@ function relativeTime(value) {
 }
 
 .operator-screenshot-head button,
+.operator-screenshot-preview-fit,
 .operator-screenshot-preview-close {
   flex: 0 0 auto;
   border: 1px solid #cbd5e1;
@@ -459,12 +471,29 @@ function relativeTime(value) {
   color: #f8fafc;
 }
 
-.operator-screenshot-preview img {
+.operator-screenshot-preview-body {
+  display: grid;
+  place-items: start start;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 58px 20px;
+}
+
+.operator-screenshot-preview-body img {
   display: block;
-  align-self: center;
-  justify-self: center;
-  max-width: calc(100% - 96px);
-  max-height: calc(100% - 18px);
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+}
+
+.operator-screenshot-preview-body.fit-window {
+  place-items: center;
+}
+
+.operator-screenshot-preview-body.fit-window img {
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -491,6 +520,13 @@ function relativeTime(value) {
 
 .operator-screenshot-next {
   right: 14px;
+}
+
+.operator-screenshot-preview-fit {
+  position: absolute;
+  top: 10px;
+  right: 74px;
+  background: rgb(248 250 252 / 0.96);
 }
 
 .operator-screenshot-preview-close {

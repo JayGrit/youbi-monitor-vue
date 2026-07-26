@@ -13,6 +13,7 @@ const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
 const previewRow = ref(null)
+const previewFitToWindow = ref(false)
 const previewIndex = computed(() => {
   if (!previewRow.value) return -1
   return visibleRows.value.findIndex(row => screenshotKey(row) === screenshotKey(previewRow.value))
@@ -128,6 +129,15 @@ function movePreview(offset) {
   previewRow.value = visibleRows.value[next]
 }
 
+function openPreview(row) {
+  previewRow.value = row
+  previewFitToWindow.value = false
+}
+
+function togglePreviewFit() {
+  previewFitToWindow.value = !previewFitToWindow.value
+}
+
 async function downloadScreenshot(row) {
   const url = screenshotUrl(row)
   const key = screenshotKey(row)
@@ -190,7 +200,7 @@ function relativeTime(value) {
         type="button"
         class="diagnostic-image-link"
         aria-label="查看诊断截图大图"
-        @click="previewRow = row"
+        @click="openPreview(row)"
       >
         <img :src="renderedScreenshotUrl(row)" loading="lazy" alt="" />
       </button>
@@ -205,9 +215,10 @@ function relativeTime(value) {
         <header>
           <strong>{{ diagnosticTitle(previewRow) }}</strong>
           <span>{{ previewIndex + 1 }} / {{ visibleRows.length }}</span>
+          <button type="button" @click="togglePreviewFit">{{ previewFitToWindow ? '原始尺寸' : '适应窗口' }}</button>
           <button type="button" @click="previewRow = null">关闭</button>
         </header>
-        <div class="diagnostic-preview-body">
+        <div :class="['diagnostic-preview-body', { 'fit-window': previewFitToWindow }]">
           <button type="button" class="diagnostic-preview-nav diagnostic-preview-prev" @click="movePreview(-1)">&lsaquo;</button>
           <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
           <button type="button" class="diagnostic-preview-nav diagnostic-preview-next" @click="movePreview(1)">&rsaquo;</button>
