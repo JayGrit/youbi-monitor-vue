@@ -32,6 +32,11 @@ export function useSubmitterAuthors({
         const coverOrientation = resetCover ? normalizeCoverOrientation(item?.coverOrientation || item?.cover_orientation) : ''
         return {
           author,
+          displayName: String(item?.displayName || item?.display_name || authorRow.displayName || author),
+          avatarUrl: String(item?.avatarUrl || item?.avatar_url || authorRow.avatarUrl || ''),
+          avatarObject: String(item?.avatarObject || item?.avatar_object || ''),
+          channelId: String(item?.channelId || item?.channel_id || ''),
+          authorHandle: String(item?.authorHandle || item?.author_handle || ''),
           source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || authorRow.source),
           authorUrl: String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || authorRow.authorUrl || ''),
           topic: String(item?.topic || ''),
@@ -71,6 +76,8 @@ export function useSubmitterAuthors({
     const authorUrl = String(item?.authorUrl || item?.author_url || item?.sourceUrl || item?.source_url || item?.url || '').trim()
     return {
       author,
+      displayName: String(item?.displayName || item?.display_name || item?.name || author).trim(),
+      avatarUrl: String(item?.avatarUrl || item?.avatar_url || '').trim(),
       source: normalizeSubmitterAuthorSource(item?.source || item?.platform || item?.source_platform || inferSubmitterAuthorSource(authorUrl || author)),
       authorUrl: authorUrl || inferSubmitterAuthorUrl(author),
     }

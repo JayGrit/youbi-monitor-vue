@@ -778,6 +778,49 @@ a.submitter-cell:hover {
   gap: 8px;
 }
 
+.submitter-author-profile {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.submitter-author-profile img,
+.submitter-author-avatar-fallback,
+.submitter-monitor-author-cell img,
+.submitter-monitor-avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #edf2f7;
+  flex: 0 0 auto;
+}
+
+.submitter-author-avatar-fallback,
+.submitter-monitor-avatar-fallback {
+  display: inline-grid;
+  place-items: center;
+  color: #344156;
+  font-size: 15px;
+  font-weight: 820;
+}
+
+.submitter-author-profile div {
+  min-width: 0;
+}
+
+.submitter-author-profile small {
+  display: block;
+  margin-top: 3px;
+  color: #7a8798;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .submitter-author-link,
 .submitter-author-name {
   min-width: 0;
@@ -1061,7 +1104,7 @@ a.submitter-cell:hover {
 }
 
 .submitter-monitor-table td:first-child {
-  min-width: 240px;
+  min-width: 260px;
 }
 
 .submitter-monitor-author-row {
@@ -1093,6 +1136,25 @@ a.submitter-cell:hover {
   color: #1f2a3a;
   font-weight: 760;
   overflow-wrap: anywhere;
+}
+
+.submitter-monitor-author-cell {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.submitter-monitor-author-cell div {
+  min-width: 0;
+}
+
+.submitter-monitor-author-cell .submitter-monitor-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 
 .submitter-monitor-table a,

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
+import { normalizeResourceUrl } from '../utils/media'
 
 const props = defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
@@ -83,6 +84,18 @@ function authorHref(row) {
   return /^https?:\/\//i.test(url) ? url : ''
 }
 
+function authorName(row) {
+  return String(row?.displayName || row?.authorHandle || row?.author || '').trim() || '-'
+}
+
+function authorAvatar(row) {
+  return normalizeResourceUrl(row?.avatarUrl || '')
+}
+
+function authorInitial(row) {
+  return authorName(row).slice(0, 1).toUpperCase()
+}
+
 function taskTypeLabel(value) {
   const option = props.submitterTaskTypes.find(item => item.taskType === value)
   return option?.name || value || '-'
@@ -134,16 +147,23 @@ function settingRows(row) {
               <span>{{ sourceLabel(row) }}</span>
             </div>
             <div class="submitter-author-main-cell">
-              <a
-                v-if="authorHref(row)"
-                class="submitter-author-link"
-                :href="authorHref(row)"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {{ row.author }}
-              </a>
-              <span v-else class="submitter-author-name">{{ row.author }}</span>
+              <div class="submitter-author-profile">
+                <img v-if="authorAvatar(row)" :src="authorAvatar(row)" :alt="authorName(row)" loading="lazy" />
+                <span v-else class="submitter-author-avatar-fallback">{{ authorInitial(row) }}</span>
+                <div>
+                  <a
+                    v-if="authorHref(row)"
+                    class="submitter-author-link"
+                    :href="authorHref(row)"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {{ authorName(row) }}
+                  </a>
+                  <span v-else class="submitter-author-name">{{ authorName(row) }}</span>
+                  <small v-if="row.authorHandle">{{ row.authorHandle }}</small>
+                </div>
+              </div>
               <div v-if="editMode" class="submitter-author-type-edit">
                 <input
                   v-model="row.draftTopic"

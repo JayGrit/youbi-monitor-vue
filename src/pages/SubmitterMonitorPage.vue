@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, unref } from 'vue'
 import { postJson, requestJson } from '../api/http'
 import { formatDateTime, formatNumber } from '../utils/format'
+import { normalizeResourceUrl } from '../utils/media'
 
 const props = defineProps({
   submitterMonitorState: { type: Object, default: null },
@@ -143,6 +144,18 @@ function authorBatchText(author) {
   return `${statusLabel(author.lastBatchStatus)} ${num(saved)}/${num(total)} · 失败 ${num(failed)}`
 }
 
+function authorName(author) {
+  return String(author?.displayName || author?.authorHandle || author?.author || '').trim() || '-'
+}
+
+function authorAvatar(author) {
+  return normalizeResourceUrl(author?.avatarUrl || '')
+}
+
+function authorInitial(author) {
+  return authorName(author).slice(0, 1).toUpperCase()
+}
+
 function continueMaxText(author) {
   return `继续到 ${num(Number(author?.scanMaxCount || 100) + 100)}`
 }
@@ -268,9 +281,14 @@ onMounted(refreshMonitor)
                 @keydown.space.prevent="openAuthorBatches(author)"
               >
                 <td>
-                  <strong class="submitter-monitor-title">{{ author.displayName || author.author }}</strong>
-                  <span>{{ author.platform }} · {{ author.topic || '未配置 topic' }}</span>
-                  <a v-if="author.sourceUrl" :href="author.sourceUrl" target="_blank" rel="noreferrer">{{ author.sourceUrl }}</a>
+                  <div class="submitter-monitor-author-cell">
+                    <img v-if="authorAvatar(author)" :src="authorAvatar(author)" :alt="authorName(author)" loading="lazy" />
+                    <span v-else class="submitter-monitor-avatar-fallback">{{ authorInitial(author) }}</span>
+                    <div>
+                      <strong class="submitter-monitor-title">{{ authorName(author) }}</strong>
+                      <span>{{ author.platform }} · {{ author.topic || '未配置 topic' }}</span>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <span class="submitter-monitor-badge" :class="statusClass(author.scanState)">
@@ -322,7 +340,7 @@ onMounted(refreshMonitor)
       <section class="submitter-monitor-modal" role="dialog" aria-modal="true" aria-labelledby="submitter-monitor-modal-title">
         <header>
           <div>
-            <h2 id="submitter-monitor-modal-title">{{ selectedAuthor.displayName || selectedAuthor.author }}</h2>
+            <h2 id="submitter-monitor-modal-title">{{ authorName(selectedAuthor) }}</h2>
             <span>{{ num(selectedAuthorBatches.length) }} 个批次 · 候选 {{ num(selectedAuthor.candidateCount) }} · 已加载 {{ num(selectedAuthor.doneImportCount) }}</span>
           </div>
           <button type="button" @click="closeAuthorBatches">关闭</button>
