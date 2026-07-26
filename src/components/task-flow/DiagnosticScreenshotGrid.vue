@@ -13,7 +13,7 @@ const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
 const previewRow = ref(null)
-const previewFitToWindow = ref(false)
+const previewFitToWindow = ref(true)
 const previewIndex = computed(() => {
   if (!previewRow.value) return -1
   return visibleRows.value.findIndex(row => screenshotKey(row) === screenshotKey(previewRow.value))
@@ -131,7 +131,7 @@ function movePreview(offset) {
 
 function openPreview(row) {
   previewRow.value = row
-  previewFitToWindow.value = false
+  previewFitToWindow.value = true
 }
 
 function togglePreviewFit() {

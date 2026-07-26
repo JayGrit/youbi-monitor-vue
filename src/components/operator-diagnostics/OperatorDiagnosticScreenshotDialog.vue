@@ -21,7 +21,7 @@ const previewIndex = ref(-1)
 const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
-const previewFitToWindow = ref(false)
+const previewFitToWindow = ref(true)
 let requestToken = 0
 
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
@@ -173,7 +173,7 @@ async function downloadScreenshot(row) {
 function openPreview(row) {
   const index = sortedRows.value.findIndex(item => screenshotKey(item) === screenshotKey(row))
   previewIndex.value = Math.max(0, index)
-  previewFitToWindow.value = false
+  previewFitToWindow.value = true
 }
 
 function closePreview() {
