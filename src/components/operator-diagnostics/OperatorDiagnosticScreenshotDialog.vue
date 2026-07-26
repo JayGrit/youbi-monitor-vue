@@ -21,7 +21,6 @@ const previewIndex = ref(-1)
 const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
-const previewFitToWindow = ref(true)
 let requestToken = 0
 
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
@@ -173,7 +172,6 @@ async function downloadScreenshot(row) {
 function openPreview(row) {
   const index = sortedRows.value.findIndex(item => screenshotKey(item) === screenshotKey(row))
   previewIndex.value = Math.max(0, index)
-  previewFitToWindow.value = true
 }
 
 function closePreview() {
@@ -184,10 +182,6 @@ function movePreview(offset) {
   if (previewIndex.value < 0 || !sortedRows.value.length) return
   const length = sortedRows.value.length
   previewIndex.value = (previewIndex.value + offset + length) % length
-}
-
-function togglePreviewFit() {
-  previewFitToWindow.value = !previewFitToWindow.value
 }
 
 function handleKeydown(event) {
@@ -271,14 +265,12 @@ function relativeTime(value) {
               <strong>{{ diagnosticTitle(previewRow) }}</strong>
               <span>{{ previewIndex + 1 }} / {{ sortedRows.length }}</span>
             </figcaption>
-            <div :class="['operator-screenshot-preview-body', { 'fit-window': previewFitToWindow }]">
+            <div class="operator-screenshot-preview-body">
               <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
             </div>
           </figure>
           <button type="button" class="operator-screenshot-nav operator-screenshot-next" @click="movePreview(1)">&rsaquo;</button>
-          <button type="button" class="operator-screenshot-preview-fit" @click="togglePreviewFit">
-            {{ previewFitToWindow ? '原始尺寸' : '适应窗口' }}
-          </button>
+          <a class="operator-screenshot-preview-fit" :href="screenshotUrl(previewRow)" target="_blank" rel="noreferrer">打开原图</a>
           <button type="button" class="operator-screenshot-preview-close" @click="closePreview">关闭</button>
         </div>
       </section>
@@ -343,6 +335,8 @@ function relativeTime(value) {
 .operator-screenshot-head button,
 .operator-screenshot-preview-fit,
 .operator-screenshot-preview-close {
+  display: inline-grid;
+  place-items: center;
   flex: 0 0 auto;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
@@ -351,6 +345,7 @@ function relativeTime(value) {
   min-height: 32px;
   padding: 0 11px;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .operator-screenshot-state,
@@ -473,27 +468,18 @@ function relativeTime(value) {
 
 .operator-screenshot-preview-body {
   display: grid;
-  place-items: start start;
+  place-items: center;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 14px 58px 20px;
 }
 
 .operator-screenshot-preview-body img {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: none;
-  max-height: none;
-}
-
-.operator-screenshot-preview-body.fit-window {
-  place-items: center;
-}
-
-.operator-screenshot-preview-body.fit-window img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   object-fit: contain;
 }
 

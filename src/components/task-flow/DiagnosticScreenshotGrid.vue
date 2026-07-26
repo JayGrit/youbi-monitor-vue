@@ -13,7 +13,6 @@ const screenshotObjectUrls = ref({})
 const screenshotLoadingUrls = ref({})
 const screenshotErrors = ref({})
 const previewRow = ref(null)
-const previewFitToWindow = ref(true)
 const previewIndex = computed(() => {
   if (!previewRow.value) return -1
   return visibleRows.value.findIndex(row => screenshotKey(row) === screenshotKey(previewRow.value))
@@ -131,11 +130,6 @@ function movePreview(offset) {
 
 function openPreview(row) {
   previewRow.value = row
-  previewFitToWindow.value = true
-}
-
-function togglePreviewFit() {
-  previewFitToWindow.value = !previewFitToWindow.value
 }
 
 async function downloadScreenshot(row) {
@@ -215,10 +209,10 @@ function relativeTime(value) {
         <header>
           <strong>{{ diagnosticTitle(previewRow) }}</strong>
           <span>{{ previewIndex + 1 }} / {{ visibleRows.length }}</span>
-          <button type="button" @click="togglePreviewFit">{{ previewFitToWindow ? '原始尺寸' : '适应窗口' }}</button>
+          <a :href="screenshotUrl(previewRow)" target="_blank" rel="noreferrer">打开原图</a>
           <button type="button" @click="previewRow = null">关闭</button>
         </header>
-        <div :class="['diagnostic-preview-body', { 'fit-window': previewFitToWindow }]">
+        <div class="diagnostic-preview-body">
           <button type="button" class="diagnostic-preview-nav diagnostic-preview-prev" @click="movePreview(-1)">&lsaquo;</button>
           <img :src="renderedScreenshotUrl(previewRow)" :alt="diagnosticTitle(previewRow)" />
           <button type="button" class="diagnostic-preview-nav diagnostic-preview-next" @click="movePreview(1)">&rsaquo;</button>
