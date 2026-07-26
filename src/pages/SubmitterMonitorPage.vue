@@ -31,9 +31,6 @@ const monitorContinueBusy = computed(() => localContinueBusy.value || props.subm
 const summary = computed(() => monitorState.value?.summary || {})
 const authors = computed(() => monitorState.value?.authors || [])
 const batches = computed(() => monitorState.value?.batches || [])
-const activeVideos = computed(() => monitorState.value?.activeVideos || [])
-const recentVideos = computed(() => monitorState.value?.recentVideos || [])
-const videoRows = computed(() => [...activeVideos.value, ...recentVideos.value].slice(0, 60))
 
 const summaryCards = computed(() => [
   { key: 'authors', label: '作者', value: summary.value.totalAuthors, detail: `自动拉新 ${num(summary.value.autoFetchAuthors)}` },
@@ -70,12 +67,6 @@ function statusClass(status) {
     pending: text === 'pending',
     done: ['done', 'idle', 'uploaded'].includes(text),
   }
-}
-
-function secondsDate(value) {
-  const number = Number(value || 0)
-  if (!Number.isFinite(number) || number <= 0) return '-'
-  return formatDateTime(new Date(number * 1000).toISOString())
 }
 
 function progressText(batch) {
@@ -273,31 +264,6 @@ onMounted(refreshMonitor)
             <em v-if="batch.error" class="submitter-monitor-error">{{ batch.error }}</em>
           </article>
           <p v-if="batches.length === 0" class="submitter-empty">暂无导入批次</p>
-        </div>
-      </section>
-
-      <section class="submitter-monitor-panel">
-        <header>
-          <h2>最近加载视频</h2>
-          <span>{{ num(activeVideos.length) }} 条待处理/失败 · {{ num(recentVideos.length) }} 条成功</span>
-        </header>
-        <div class="submitter-monitor-list">
-          <article v-for="video in videoRows" :key="`${video.importStatus}-${video.id}`" class="submitter-monitor-list-row">
-            <div>
-              <a v-if="video.webpageUrl" :href="video.webpageUrl" target="_blank" rel="noreferrer">
-                {{ video.title }}
-              </a>
-              <strong v-else>{{ video.title }}</strong>
-              <span>{{ video.author || '-' }}</span>
-            </div>
-            <span class="submitter-monitor-badge" :class="statusClass(video.importStatus)">
-              {{ statusLabel(video.importStatus) }}
-            </span>
-            <p>{{ video.importBatch || '-' }} · #{{ video.importIndex || '-' }}</p>
-            <small>{{ formatDateTime(video.updatedAt) }} · 发布 {{ secondsDate(video.publishedAt) }}</small>
-            <em v-if="video.importError" class="submitter-monitor-error">{{ video.importError }}</em>
-          </article>
-          <p v-if="videoRows.length === 0" class="submitter-empty">暂无视频加载记录</p>
         </div>
       </section>
     </section>
