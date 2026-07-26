@@ -1,0 +1,302 @@
+.speech-gap-count {
+  color: #172033;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.speech-text-cell {
+  position: relative;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  color: #243044;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.speech-combined-text {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 18px;
+}
+
+.speech-split-badges {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+  max-width: min(360px, calc(100% - 12px));
+}
+
+.speech-split-badge {
+  border: 1px solid rgb(15 23 42 / 0.16);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.86);
+  color: #334155;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.25;
+  overflow: hidden;
+  padding: 2px 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.speech-block-summary {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  z-index: 1;
+  border: 1px solid rgb(15 23 42 / 0.14);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.9);
+  color: #475569;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.25;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+
+.speech-text-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.speech-audio-placeholder {
+  width: 34px;
+  height: 34px;
+}
+
+.speech-source-text,
+.speech-translation-text p {
+  margin: 0;
+}
+
+.speech-source-text {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #172033;
+  cursor: default;
+  font: inherit;
+  font-weight: 620;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.speech-source-text.clickable {
+  cursor: pointer;
+}
+
+.speech-source-text.clickable:hover {
+  color: #1d4ed8;
+}
+
+.speech-source-text:disabled {
+  color: #172033;
+}
+
+.speech-source-word {
+  display: inline;
+  border-radius: 3px;
+  margin-right: 0.25em;
+  padding: 1px 2px;
+}
+
+.speech-source-word.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.speech-split-row.tone-blue td {
+  background: #eff8ff;
+}
+
+.speech-split-row.tone-red td {
+  background: #fff1f0;
+}
+
+.speech-split-row.tone-blue + .speech-split-row.tone-blue td,
+.speech-split-row.tone-red + .speech-split-row.tone-red td {
+  border-top-color: rgba(255, 255, 255, 0.7);
+}
+
+.speech-table tr.speech-gap-row td {
+  border-top: 4px solid #000000;
+}
+
+.speech-table tr.speech-reference-row td {
+  position: relative;
+  color: #5f2f12;
+}
+
+.speech-table tr.speech-reference-row td::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: min(10%, 8px);
+  pointer-events: none;
+}
+
+.speech-table tr.speech-reference-before td::before {
+  bottom: 0;
+}
+
+.speech-table tr.speech-reference-after td::before {
+  top: 0;
+}
+
+.speech-table tr.speech-reference-row .speech-source-text,
+.speech-table tr.speech-reference-row .speech-source-text:disabled {
+  color: #5f2f12;
+  font-style: italic;
+}
+
+.speech-table tr.speech-reference-row.tone-blue td {
+  background: #eff8ff;
+}
+
+.speech-table tr.speech-reference-edge-blue td::before {
+  background: #bfdbfe;
+}
+
+.speech-table tr.speech-reference-row.tone-red td {
+  background: #fff1f0;
+}
+
+.speech-table tr.speech-reference-edge-red td::before {
+  background: #fecdd3;
+}
+
+.speech-table tr.speech-reference-row .speech-split-badge,
+.speech-table tr.speech-reference-row .speech-block-summary {
+  border-color: rgb(95 47 18 / 0.18);
+  background: rgb(255 255 255 / 0.9);
+  color: #5f2f12;
+}
+
+.speech-translation-text {
+  color: #334155;
+  min-width: 0;
+}
+
+.speech-edit-cell p {
+  margin: 0;
+}
+
+.speech-edit-actions button {
+  min-height: 28px;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #243044;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  padding: 0 10px;
+}
+
+.speech-edit-trigger {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: text;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.speech-edit-trigger:hover {
+  color: #111827;
+}
+
+.speech-edit-actions button:hover:not(:disabled) {
+  background: #eef3f8;
+}
+
+.speech-edit-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.speech-edit-input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  color: #243044;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+  padding: 0 10px;
+}
+
+.speech-audio-button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cfd8e3;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #243044;
+  cursor: pointer;
+}
+
+.speech-audio-button:hover {
+  background: #eef3f8;
+}
+
+.speech-audio-button span {
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 10px solid currentColor;
+}
+
+.speech-audio-button.playing span {
+  width: 10px;
+  height: 12px;
+  margin-left: 0;
+  border: 0;
+  border-left: 3px solid currentColor;
+  border-right: 3px solid currentColor;
+}
+
+
+.speech-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.speech-edit-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-size: 12px;
+}
+

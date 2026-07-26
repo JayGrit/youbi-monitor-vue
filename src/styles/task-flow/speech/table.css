@@ -1,0 +1,241 @@
+.field-table {
+  display: grid;
+  gap: 6px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 72px minmax(140px, 210px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: #344156;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.field-header {
+  color: #65758a;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.field-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.field-row strong {
+  color: #172033;
+}
+
+.field-long {
+  grid-column: 3;
+  max-height: 260px;
+  margin: 2px 0 8px;
+  padding: 10px;
+}
+
+.table-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.raw-table {
+  min-width: 0;
+}
+
+.raw-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #243044;
+  font-size: 13px;
+}
+
+.raw-table-head span {
+  color: #65758a;
+  font-size: 12px;
+}
+
+.raw-table-scroll {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.raw-table table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.speech-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.speech-table th,
+.speech-table td {
+  max-width: none;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+  color: #344156;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.speech-table th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  color: #536277;
+  font-weight: 720;
+}
+
+.speech-table .speech-col-text {
+  width: 100%;
+  min-width: 680px;
+}
+
+.speech-table .speech-col-more_info {
+  width: 220px;
+  min-width: 220px;
+}
+
+.raw-table th,
+.raw-table td {
+  max-width: 320px;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  color: #344156;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.raw-table th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  color: #536277;
+  font-weight: 720;
+}
+
+.raw-table td {
+  overflow-wrap: anywhere;
+}
+
+.raw-table details summary {
+  cursor: pointer;
+  color: #1d4ed8;
+}
+
+.raw-table pre {
+  max-height: 320px;
+  margin: 8px 0 0;
+  padding: 10px;
+}
+
+.raw-table audio,
+.speech-table audio {
+  width: 220px;
+  height: 34px;
+}
+
+.speech-more summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-weight: 720;
+}
+
+.speech-more dl {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 8px 0 0;
+  min-width: 260px;
+}
+
+.speech-more dt {
+  color: #65758a;
+  font-weight: 720;
+}
+
+.speech-more dd {
+  margin: 0;
+  color: #344156;
+  overflow-wrap: anywhere;
+}
+
+.speech-gap-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -4px 0 10px;
+}
+
+.speech-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #cfd8e3;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.speech-view-toggle button {
+  min-height: 30px;
+  border: 0;
+  border-right: 1px solid #cfd8e3;
+  background: transparent;
+  color: #526174;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 720;
+  padding: 0 10px;
+}
+
+.speech-view-toggle button:last-child {
+  border-right: 0;
+}
+
+.speech-view-toggle button.active {
+  background: #172033;
+  color: #ffffff;
+}
+
+.speech-view-toggle button:hover:not(.active) {
+  background: #eef3f8;
+}
+
+.speech-gap-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #526174;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.speech-gap-toolbar input {
+  width: 88px;
+  height: 30px;
+  border: 1px solid #cfd8e3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  padding: 0 9px;
+}
+
