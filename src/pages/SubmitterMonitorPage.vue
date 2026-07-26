@@ -90,6 +90,13 @@ function statusClass(status) {
   }
 }
 
+function rowToneClass(author) {
+  const state = String(author?.scanState || '').toLowerCase()
+  return {
+    scanning: ['scanning', 'processing', 'running'].includes(state),
+  }
+}
+
 function progressText(batch) {
   const total = batchTotal(batch)
   const saved = batchSaved(batch)
@@ -138,14 +145,6 @@ function elapsedText(batch) {
   return restMinutes ? `${hours}h ${restMinutes}m` : `${hours}h`
 }
 
-function authorBatchText(author) {
-  const total = Number(author?.lastBatchTotal || author?.lastBatchDiscovered || 0)
-  const saved = Number(author?.lastBatchSaved || 0)
-  const failed = Number(author?.lastBatchFailed || 0)
-  if (!author?.lastBatchStatus) return '-'
-  return `${statusLabel(author.lastBatchStatus)} ${num(saved)}/${num(total)} · 失败 ${num(failed)}`
-}
-
 function authorPlatform(author) {
   const value = String(author?.platform || author?.source || '').trim().toLowerCase()
   if (value.includes('youtube') || value === 'yt') return 'youtube'
@@ -184,42 +183,55 @@ function authorInitial(author) {
   return authorName(author).slice(0, 1).toUpperCase()
 }
 
-function scanMaxCount(author) {
+function configuredScanMaxCount(author) {
   const value = Number(author?.scanMaxCount)
-  return Number.isFinite(value) && value > 0 ? value : 100
+  return Number.isFinite(value) && value > 0 ? value : null
 }
 
-function authorDiscoveredCount(author) {
-  return Math.max(
-    Number(author?.candidateCount || 0),
-    Number(author?.doneImportCount || 0)
-      + Number(author?.pendingImportCount || 0)
-      + Number(author?.runningImportCount || 0)
-      + Number(author?.failedImportCount || 0),
-    Number(author?.lastBatchDiscovered || 0),
-    Number(author?.lastBatchTotal || 0),
-  )
+function hasScanLimit(author) {
+  return configuredScanMaxCount(author) !== null
 }
 
-function isLegacyFullScan(author) {
-  return authorDiscoveredCount(author) > scanMaxCount(author)
-}
-
-function scanCountLabel(author) {
-  return isLegacyFullScan(author) ? num(authorDiscoveredCount(author)) : num(scanMaxCount(author))
-}
-
-function scanCountHint(author) {
-  return isLegacyFullScan(author) ? `配置上限 ${num(scanMaxCount(author))}` : ''
+function scanLimitText(author) {
+  const value = configuredScanMaxCount(author)
+  return value === null ? '' : num(value)
 }
 
 function nextScanMaxCount(author) {
-  const base = Math.max(scanMaxCount(author), authorDiscoveredCount(author))
-  return Math.ceil((base + 100) / 100) * 100
+  const value = configuredScanMaxCount(author)
+  return value === null ? null : value + 100
 }
 
 function continueMaxText(author) {
-  return `继续到 ${num(nextScanMaxCount(author))}`
+  const value = nextScanMaxCount(author)
+  return value === null ? '' : `继续到 ${num(value)}`
+}
+
+function urlWaitingCount(author) {
+  return Number(author?.pendingImportCount || 0) + Number(author?.runningImportCount || 0)
+}
+
+function urlStatusTotal(author) {
+  return Number(author?.doneImportCount || 0) + urlWaitingCount(author) + Number(author?.failedImportCount || 0)
+}
+
+function urlStatusPercent(author, key) {
+  const total = urlStatusTotal(author)
+  if (!Number.isFinite(total) || total <= 0) return 0
+  const values = {
+    done: Number(author?.doneImportCount || 0),
+    waiting: urlWaitingCount(author),
+    failed: Number(author?.failedImportCount || 0),
+  }
+  return Math.max(0, Math.min(100, (values[key] || 0) / total * 100))
+}
+
+function urlSegmentStyle(author, key) {
+  return { width: `${urlStatusPercent(author, key)}%` }
+}
+
+function urlStatusText(author) {
+  return `成功 ${num(author?.doneImportCount)} · 等待 ${num(urlWaitingCount(author))} · 失败 ${num(author?.failedImportCount)}`
 }
 
 function openAuthorBatches(author) {
@@ -252,6 +264,7 @@ async function continueAuthorScan(authorRow) {
   if (!author || localContinueBusy.value) return
   const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
   const maxCount = nextScanMaxCount(authorRow)
+  if (!maxCount) return
   localContinueBusy.value = author
   localMonitorError.value = ''
   try {
@@ -319,25 +332,22 @@ onMounted(refreshMonitor)
               <tr>
                 <th>作者</th>
                 <th>Topic</th>
-                <th>状态</th>
-                <th>扫描量</th>
-                <th>最近批次</th>
-                <th>候选</th>
+                <th>扫描上限</th>
+                <th>URL 总数</th>
                 <th>URL 加载</th>
                 <th>投稿</th>
-                <th>最近动作</th>
-                <th>错误</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="authors.length === 0">
-                <td colspan="11" class="submitter-empty">暂无作者扫描数据</td>
+                <td colspan="7" class="submitter-empty">暂无作者扫描数据</td>
               </tr>
               <tr
                 v-for="author in authors"
                 :key="author.id || author.author"
                 class="submitter-monitor-author-row"
+                :class="rowToneClass(author)"
                 tabindex="0"
                 @click="openAuthorBatches(author)"
                 @keydown.enter.prevent="openAuthorBatches(author)"
@@ -363,30 +373,26 @@ onMounted(refreshMonitor)
                   <strong class="submitter-monitor-topic">{{ author.topic || '未配置' }}</strong>
                 </td>
                 <td>
-                  <span class="submitter-monitor-badge" :class="statusClass(author.scanState)">
-                    {{ statusLabel(author.scanState) }}
-                  </span>
-                </td>
-                <td>
-                  <strong class="submitter-monitor-number">{{ scanCountLabel(author) }}</strong>
-                  <small v-if="scanCountHint(author)">{{ scanCountHint(author) }}</small>
+                  <strong v-if="hasScanLimit(author)" class="submitter-monitor-number">{{ scanLimitText(author) }}</strong>
+                  <span v-else>-</span>
                   <small v-if="author.scanLimitReached" class="submitter-monitor-limit">已拉满上限</small>
-                </td>
-                <td>
-                  <span class="submitter-monitor-inline-metrics">
-                    <span v-if="author.lastBatchStatus">{{ authorBatchText(author) }}</span>
-                    <span v-else>-</span>
-                  </span>
                 </td>
                 <td>
                   <strong class="submitter-monitor-number">{{ num(author.candidateCount) }}</strong>
                 </td>
                 <td>
-                  <span class="submitter-monitor-inline-metrics">
-                    <span>待 {{ num(author.pendingImportCount) }}</span>
-                    <span>跑 {{ num(author.runningImportCount) }}</span>
-                    <span>错 {{ num(author.failedImportCount) }}</span>
-                  </span>
+                  <div class="submitter-monitor-url-status" :aria-label="urlStatusText(author)">
+                    <div class="submitter-monitor-url-bar">
+                      <span class="done" :style="urlSegmentStyle(author, 'done')"></span>
+                      <span class="waiting" :style="urlSegmentStyle(author, 'waiting')"></span>
+                      <span class="failed" :style="urlSegmentStyle(author, 'failed')"></span>
+                    </div>
+                    <span class="submitter-monitor-inline-metrics">
+                      <span>成功 {{ num(author.doneImportCount) }}</span>
+                      <span>等待 {{ num(urlWaitingCount(author)) }}</span>
+                      <span>失败 {{ num(author.failedImportCount) }}</span>
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <span class="submitter-monitor-inline-metrics">
@@ -396,14 +402,8 @@ onMounted(refreshMonitor)
                   </span>
                 </td>
                 <td>
-                  <span>{{ formatDateTime(author.scanStartedAt || author.lastFetchNewVideosAt || author.latestVideoUpdatedAt || author.updatedAt) }}</span>
-                  <small>{{ num(author.doneImportCount) }} 条已加载</small>
-                </td>
-                <td>
-                  <span class="submitter-monitor-error">{{ author.scanError || '-' }}</span>
-                </td>
-                <td>
                   <button
+                    v-if="hasScanLimit(author)"
                     type="button"
                     class="submitter-monitor-row-action"
                     :disabled="!author.scanFinished || monitorContinueBusy === author.author"
