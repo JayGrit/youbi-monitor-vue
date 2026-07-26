@@ -1073,7 +1073,7 @@ a.submitter-cell:hover {
 
 .submitter-monitor-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1240px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -1084,7 +1084,7 @@ a.submitter-cell:hover {
   background: #ffffff;
   color: #344156;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
   padding: 10px 11px;
   font-size: 13px;
 }
@@ -1100,11 +1100,11 @@ a.submitter-cell:hover {
 }
 
 .submitter-monitor-table td {
-  min-width: 92px;
+  min-width: 86px;
 }
 
 .submitter-monitor-table td:first-child {
-  min-width: 260px;
+  min-width: 300px;
 }
 
 .submitter-monitor-author-row {
@@ -1129,6 +1129,7 @@ a.submitter-cell:hover {
 }
 
 .submitter-monitor-title,
+.submitter-monitor-topic,
 .submitter-monitor-list-row strong,
 .submitter-monitor-list-row a {
   display: block;
@@ -1140,9 +1141,9 @@ a.submitter-cell:hover {
 
 .submitter-monitor-author-cell {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-columns: 26px 40px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -1155,6 +1156,38 @@ a.submitter-cell:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow-wrap: normal;
+}
+
+.submitter-monitor-topic {
+  max-width: 150px;
+  overflow: hidden;
+  color: #344156;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.submitter-monitor-number {
+  display: block;
+  color: #344156;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.submitter-monitor-inline-metrics {
+  display: flex !important;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin-top: 0 !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.submitter-monitor-inline-metrics span {
+  display: inline-flex;
+  margin-top: 0;
 }
 
 .submitter-monitor-table a,

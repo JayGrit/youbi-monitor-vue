@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, unref } from 'vue'
 import { postJson, requestJson } from '../api/http'
+import PlatformIcon from '../components/PlatformIcon.vue'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { normalizeResourceUrl } from '../utils/media'
 
@@ -10,6 +11,7 @@ const props = defineProps({
   submitterMonitorError: { type: String, default: '' },
   submitterMonitorLoadedAt: { type: String, default: '' },
   submitterMonitorContinueBusy: { type: String, default: '' },
+  platformIconUrls: { type: Object, default: () => ({}) },
   loadSubmitterMonitor: { type: Function, default: null },
   continueSubmitterAuthorScan: { type: Function, default: null },
 })
@@ -144,6 +146,32 @@ function authorBatchText(author) {
   return `${statusLabel(author.lastBatchStatus)} ${num(saved)}/${num(total)} · 失败 ${num(failed)}`
 }
 
+function authorPlatform(author) {
+  const value = String(author?.platform || author?.source || '').trim().toLowerCase()
+  if (value.includes('youtube') || value === 'yt') return 'youtube'
+  if (value.includes('tiktok')) return 'tiktok'
+  if (value.includes('douyin') || value.includes('iesdouyin')) return 'douyin'
+  const text = `${author?.sourceUrl || ''} ${author?.author || ''}`.toLowerCase()
+  if (/youtu\.?be|youtube\.com/.test(text)) return 'youtube'
+  if (/tiktok\.com/.test(text)) return 'tiktok'
+  if (/douyin\.com|iesdouyin\.com/.test(text)) return 'douyin'
+  return value || 'youtube'
+}
+
+function platformIconUrl(author) {
+  const platform = authorPlatform(author)
+  if (platform === 'tiktok' || platform === 'douyin') return props.platformIconUrls.douyin || ''
+  return props.platformIconUrls[platform] || ''
+}
+
+function platformLabel(author) {
+  const platform = authorPlatform(author)
+  if (platform === 'youtube') return 'YouTube'
+  if (platform === 'douyin') return '抖音'
+  if (platform === 'tiktok') return 'TikTok'
+  return platform || '来源'
+}
+
 function authorName(author) {
   return String(author?.displayName || author?.authorHandle || author?.author || '').trim() || '-'
 }
@@ -156,8 +184,42 @@ function authorInitial(author) {
   return authorName(author).slice(0, 1).toUpperCase()
 }
 
+function scanMaxCount(author) {
+  const value = Number(author?.scanMaxCount)
+  return Number.isFinite(value) && value > 0 ? value : 100
+}
+
+function authorDiscoveredCount(author) {
+  return Math.max(
+    Number(author?.candidateCount || 0),
+    Number(author?.doneImportCount || 0)
+      + Number(author?.pendingImportCount || 0)
+      + Number(author?.runningImportCount || 0)
+      + Number(author?.failedImportCount || 0),
+    Number(author?.lastBatchDiscovered || 0),
+    Number(author?.lastBatchTotal || 0),
+  )
+}
+
+function isLegacyFullScan(author) {
+  return authorDiscoveredCount(author) > scanMaxCount(author)
+}
+
+function scanCountLabel(author) {
+  return isLegacyFullScan(author) ? num(authorDiscoveredCount(author)) : num(scanMaxCount(author))
+}
+
+function scanCountHint(author) {
+  return isLegacyFullScan(author) ? `配置上限 ${num(scanMaxCount(author))}` : ''
+}
+
+function nextScanMaxCount(author) {
+  const base = Math.max(scanMaxCount(author), authorDiscoveredCount(author))
+  return Math.ceil((base + 100) / 100) * 100
+}
+
 function continueMaxText(author) {
-  return `继续到 ${num(Number(author?.scanMaxCount || 100) + 100)}`
+  return `继续到 ${num(nextScanMaxCount(author))}`
 }
 
 function openAuthorBatches(author) {
@@ -189,8 +251,7 @@ async function continueAuthorScan(authorRow) {
   const author = String(authorRow?.author || '').trim()
   if (!author || localContinueBusy.value) return
   const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
-  const currentMax = Number(authorRow?.scanMaxCount || 100)
-  const maxCount = (Number.isFinite(currentMax) && currentMax > 0 ? currentMax : 100) + 100
+  const maxCount = nextScanMaxCount(authorRow)
   localContinueBusy.value = author
   localMonitorError.value = ''
   try {
@@ -257,8 +318,10 @@ onMounted(refreshMonitor)
             <thead>
               <tr>
                 <th>作者</th>
+                <th>Topic</th>
                 <th>状态</th>
-                <th>上限</th>
+                <th>扫描量</th>
+                <th>最近批次</th>
                 <th>候选</th>
                 <th>URL 加载</th>
                 <th>投稿</th>
@@ -269,7 +332,7 @@ onMounted(refreshMonitor)
             </thead>
             <tbody>
               <tr v-if="authors.length === 0">
-                <td colspan="9" class="submitter-empty">暂无作者扫描数据</td>
+                <td colspan="11" class="submitter-empty">暂无作者扫描数据</td>
               </tr>
               <tr
                 v-for="author in authors"
@@ -282,35 +345,55 @@ onMounted(refreshMonitor)
               >
                 <td>
                   <div class="submitter-monitor-author-cell">
+                    <PlatformIcon
+                      :src="platformIconUrl(author)"
+                      :label="platformLabel(author)"
+                      :platform="authorPlatform(author)"
+                      :size="26"
+                    />
                     <img v-if="authorAvatar(author)" :src="authorAvatar(author)" :alt="authorName(author)" loading="lazy" />
                     <span v-else class="submitter-monitor-avatar-fallback">{{ authorInitial(author) }}</span>
                     <div>
                       <strong class="submitter-monitor-title">{{ authorName(author) }}</strong>
-                      <span>{{ author.platform }} · {{ author.topic || '未配置 topic' }}</span>
+                      <span v-if="author.authorHandle">{{ author.authorHandle }}</span>
                     </div>
                   </div>
+                </td>
+                <td>
+                  <strong class="submitter-monitor-topic">{{ author.topic || '未配置' }}</strong>
                 </td>
                 <td>
                   <span class="submitter-monitor-badge" :class="statusClass(author.scanState)">
                     {{ statusLabel(author.scanState) }}
                   </span>
-                  <small v-if="author.fetchNewVideos">自动拉新</small>
-                  <small v-if="author.lastBatchStatus">{{ authorBatchText(author) }}</small>
                 </td>
                 <td>
-                  <span>{{ num(author.scanMaxCount) }}</span>
+                  <strong class="submitter-monitor-number">{{ scanCountLabel(author) }}</strong>
+                  <small v-if="scanCountHint(author)">{{ scanCountHint(author) }}</small>
                   <small v-if="author.scanLimitReached" class="submitter-monitor-limit">已拉满上限</small>
                 </td>
-                <td>{{ num(author.candidateCount) }}</td>
                 <td>
-                  <span>待 {{ num(author.pendingImportCount) }}</span>
-                  <span>跑 {{ num(author.runningImportCount) }}</span>
-                  <span>错 {{ num(author.failedImportCount) }}</span>
+                  <span class="submitter-monitor-inline-metrics">
+                    <span v-if="author.lastBatchStatus">{{ authorBatchText(author) }}</span>
+                    <span v-else>-</span>
+                  </span>
                 </td>
                 <td>
-                  <span>未 {{ num(author.unuploadedCount) }}</span>
-                  <span>待 {{ num(author.pendingSubmissionCount) }}</span>
-                  <span>成 {{ num(author.uploadedCount) }}</span>
+                  <strong class="submitter-monitor-number">{{ num(author.candidateCount) }}</strong>
+                </td>
+                <td>
+                  <span class="submitter-monitor-inline-metrics">
+                    <span>待 {{ num(author.pendingImportCount) }}</span>
+                    <span>跑 {{ num(author.runningImportCount) }}</span>
+                    <span>错 {{ num(author.failedImportCount) }}</span>
+                  </span>
+                </td>
+                <td>
+                  <span class="submitter-monitor-inline-metrics">
+                    <span>未 {{ num(author.unuploadedCount) }}</span>
+                    <span>待 {{ num(author.pendingSubmissionCount) }}</span>
+                    <span>成 {{ num(author.uploadedCount) }}</span>
+                  </span>
                 </td>
                 <td>
                   <span>{{ formatDateTime(author.scanStartedAt || author.lastFetchNewVideosAt || author.latestVideoUpdatedAt || author.updatedAt) }}</span>
