@@ -19,6 +19,7 @@ const localMonitorLoading = ref(false)
 const localMonitorError = ref('')
 const localMonitorLoadedAt = ref('')
 const localContinueBusy = ref('')
+const selectedAuthor = ref(null)
 
 const monitorState = computed(() => {
   const raw = localMonitorState.value || unref(props.submitterMonitorState)
@@ -31,6 +32,23 @@ const monitorContinueBusy = computed(() => localContinueBusy.value || props.subm
 const summary = computed(() => monitorState.value?.summary || {})
 const authors = computed(() => monitorState.value?.authors || [])
 const batches = computed(() => monitorState.value?.batches || [])
+const selectedAuthorBatches = computed(() => {
+  const author = selectedAuthor.value
+  if (!author) return []
+  const authorName = String(author.author || '').trim()
+  const sourceUrl = String(author.sourceUrl || '').trim()
+  const scanBatch = String(author.scanBatch || '').trim()
+  return batches.value.filter((batch) => {
+    const batchAuthor = String(batch?.author || '').trim()
+    const batchSourceUrl = String(batch?.sourceUrl || '').trim()
+    const batchId = String(batch?.batch || '').trim()
+    return (
+      (authorName && batchAuthor === authorName)
+      || (sourceUrl && batchSourceUrl === sourceUrl)
+      || (scanBatch && batchId === scanBatch)
+    )
+  })
+})
 
 const summaryCards = computed(() => [
   { key: 'authors', label: '作者', value: summary.value.totalAuthors, detail: `自动拉新 ${num(summary.value.autoFetchAuthors)}` },
@@ -70,12 +88,51 @@ function statusClass(status) {
 }
 
 function progressText(batch) {
-  const total = Number(batch?.total || batch?.discovered || 0)
-  const saved = Number(batch?.saved || 0)
+  const total = batchTotal(batch)
+  const saved = batchSaved(batch)
   const failed = Number(batch?.failed || 0)
   const skipped = Number(batch?.skipped || 0)
   if (!total && !saved && !failed && !skipped) return '-'
   return `${num(saved)}/${num(total)} · 跳过 ${num(skipped)} · 失败 ${num(failed)}`
+}
+
+function batchTotal(batch) {
+  return Number(batch?.total || batch?.discovered || 0)
+}
+
+function batchSaved(batch) {
+  return Number(batch?.saved || batch?.registered || 0)
+}
+
+function batchProgressRatio(batch) {
+  const total = batchTotal(batch)
+  if (!Number.isFinite(total) || total <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((batchSaved(batch) / total) * 100)))
+}
+
+function batchProgressStyle(batch) {
+  return { width: `${batchProgressRatio(batch)}%` }
+}
+
+function parseTime(value) {
+  const time = Date.parse(value || '')
+  return Number.isFinite(time) ? time : 0
+}
+
+function elapsedText(batch) {
+  const started = parseTime(batch?.createdAt)
+  if (!started) return '-'
+  const status = String(batch?.status || '').toLowerCase()
+  const finished = parseTime(batch?.updatedAt)
+  const ended = ['running', 'processing', 'scanning', 'pending'].includes(status) ? Date.now() : finished
+  const seconds = Math.max(0, Math.round(((ended || finished || Date.now()) - started) / 1000))
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const restSeconds = seconds % 60
+  if (minutes < 60) return restSeconds ? `${minutes}m ${restSeconds}s` : `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const restMinutes = minutes % 60
+  return restMinutes ? `${hours}h ${restMinutes}m` : `${hours}h`
 }
 
 function authorBatchText(author) {
@@ -88,6 +145,14 @@ function authorBatchText(author) {
 
 function continueMaxText(author) {
   return `继续到 ${num(Number(author?.scanMaxCount || 100) + 100)}`
+}
+
+function openAuthorBatches(author) {
+  selectedAuthor.value = author
+}
+
+function closeAuthorBatches() {
+  selectedAuthor.value = null
 }
 
 async function refreshMonitor() {
@@ -193,7 +258,15 @@ onMounted(refreshMonitor)
               <tr v-if="authors.length === 0">
                 <td colspan="9" class="submitter-empty">暂无作者扫描数据</td>
               </tr>
-              <tr v-for="author in authors" :key="author.id || author.author">
+              <tr
+                v-for="author in authors"
+                :key="author.id || author.author"
+                class="submitter-monitor-author-row"
+                tabindex="0"
+                @click="openAuthorBatches(author)"
+                @keydown.enter.prevent="openAuthorBatches(author)"
+                @keydown.space.prevent="openAuthorBatches(author)"
+              >
                 <td>
                   <strong class="submitter-monitor-title">{{ author.displayName || author.author }}</strong>
                   <span>{{ author.platform }} · {{ author.topic || '未配置 topic' }}</span>
@@ -223,7 +296,7 @@ onMounted(refreshMonitor)
                 </td>
                 <td>
                   <span>{{ formatDateTime(author.scanStartedAt || author.lastFetchNewVideosAt || author.latestVideoUpdatedAt || author.updatedAt) }}</span>
-                  <small v-if="author.scanBatch">{{ author.scanBatch }}</small>
+                  <small>{{ num(author.doneImportCount) }} 条已加载</small>
                 </td>
                 <td>
                   <span class="submitter-monitor-error">{{ author.scanError || '-' }}</span>
@@ -233,7 +306,7 @@ onMounted(refreshMonitor)
                     type="button"
                     class="submitter-monitor-row-action"
                     :disabled="!author.scanFinished || monitorContinueBusy === author.author"
-                    @click="continueAuthorScan(author)"
+                    @click.stop="continueAuthorScan(author)"
                   >
                     {{ monitorContinueBusy === author.author ? '提交中' : continueMaxText(author) }}
                   </button>
@@ -243,29 +316,41 @@ onMounted(refreshMonitor)
           </table>
         </div>
       </section>
+    </section>
 
-      <section class="submitter-monitor-panel">
+    <div v-if="selectedAuthor" class="submitter-monitor-modal-backdrop" @click.self="closeAuthorBatches">
+      <section class="submitter-monitor-modal" role="dialog" aria-modal="true" aria-labelledby="submitter-monitor-modal-title">
         <header>
-          <h2>最近批次</h2>
-          <span>{{ num(batches.length) }} 个批次</span>
+          <div>
+            <h2 id="submitter-monitor-modal-title">{{ selectedAuthor.displayName || selectedAuthor.author }}</h2>
+            <span>{{ num(selectedAuthorBatches.length) }} 个批次 · 候选 {{ num(selectedAuthor.candidateCount) }} · 已加载 {{ num(selectedAuthor.doneImportCount) }}</span>
+          </div>
+          <button type="button" @click="closeAuthorBatches">关闭</button>
         </header>
-        <div class="submitter-monitor-list">
-          <article v-for="batch in batches" :key="batch.batch" class="submitter-monitor-list-row">
-            <div>
-              <strong>{{ batch.author || batch.sourceUrl || batch.batch }}</strong>
-              <span>{{ batch.batch }}</span>
+
+        <div class="submitter-monitor-batch-list">
+          <article v-for="batch in selectedAuthorBatches" :key="batch.batch" class="submitter-monitor-batch-row">
+            <div class="submitter-monitor-batch-top">
+              <span class="submitter-monitor-badge" :class="statusClass(batch.status)">
+                {{ statusLabel(batch.status) }}
+              </span>
+              <strong>{{ num(batchSaved(batch)) }}/{{ num(batchTotal(batch)) }}</strong>
+              <small>耗时 {{ elapsedText(batch) }}</small>
             </div>
-            <span class="submitter-monitor-badge" :class="statusClass(batch.status)">
-              {{ statusLabel(batch.status) }}
-            </span>
-            <p>{{ progressText(batch) }}</p>
-            <small>{{ formatDateTime(batch.updatedAt || batch.createdAt) }}</small>
+            <div class="submitter-monitor-progress" :aria-label="progressText(batch)">
+              <span :style="batchProgressStyle(batch)"></span>
+            </div>
+            <p>
+              <span>跳过 {{ num(batch.skipped) }}</span>
+              <span>失败 {{ num(batch.failed) }}</span>
+              <span>{{ formatDateTime(batch.updatedAt || batch.createdAt) }}</span>
+            </p>
             <em v-if="batch.currentTitle">{{ batch.currentTitle }}</em>
             <em v-if="batch.error" class="submitter-monitor-error">{{ batch.error }}</em>
           </article>
-          <p v-if="batches.length === 0" class="submitter-empty">暂无导入批次</p>
+          <p v-if="selectedAuthorBatches.length === 0" class="submitter-empty">暂无导入批次</p>
         </div>
       </section>
-    </section>
+    </div>
   </section>
 </template>

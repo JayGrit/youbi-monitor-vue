@@ -996,13 +996,13 @@ a.submitter-cell:hover {
 
 .submitter-monitor-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
 
 .submitter-monitor-authors {
-  grid-row: span 2;
+  grid-row: auto;
 }
 
 .submitter-monitor-panel {
@@ -1050,7 +1050,7 @@ a.submitter-cell:hover {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #ffffff;
+  background: #f9fbfd;
   color: #516174;
   font-weight: 760;
   white-space: nowrap;
@@ -1062,6 +1062,20 @@ a.submitter-cell:hover {
 
 .submitter-monitor-table td:first-child {
   min-width: 240px;
+}
+
+.submitter-monitor-author-row {
+  cursor: pointer;
+  outline: none;
+}
+
+.submitter-monitor-author-row:hover td,
+.submitter-monitor-author-row:focus-visible td {
+  background: #f8fbff;
+}
+
+.submitter-monitor-author-row:focus-visible td:first-child {
+  box-shadow: inset 3px 0 0 #2563eb;
 }
 
 .submitter-monitor-table td > span,
@@ -1203,17 +1217,134 @@ a.submitter-cell:hover {
   overflow-wrap: anywhere;
 }
 
+.submitter-monitor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.submitter-monitor-modal {
+  width: min(780px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.22);
+}
+
+.submitter-monitor-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e7edf5;
+  background: #f8fafc;
+}
+
+.submitter-monitor-modal h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 18px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.submitter-monitor-modal header span {
+  display: block;
+  margin-top: 4px;
+  color: #66758a;
+  font-size: 12px;
+}
+
+.submitter-monitor-modal header button {
+  min-height: 32px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2a3a;
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.submitter-monitor-batch-list {
+  display: grid;
+  max-height: calc(min(720px, 100vh - 48px) - 74px);
+  overflow: auto;
+}
+
+.submitter-monitor-batch-row {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.submitter-monitor-batch-row:last-child {
+  border-bottom: 0;
+}
+
+.submitter-monitor-batch-top {
+  display: grid;
+  grid-template-columns: auto minmax(72px, auto) minmax(70px, auto);
+  align-items: center;
+  justify-content: start;
+  gap: 10px;
+}
+
+.submitter-monitor-batch-top strong {
+  color: #172033;
+  font-size: 18px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.submitter-monitor-batch-top small,
+.submitter-monitor-batch-row p,
+.submitter-monitor-batch-row em {
+  color: #66758a;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.submitter-monitor-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef6;
+}
+
+.submitter-monitor-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.submitter-monitor-batch-row p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.submitter-monitor-batch-row em {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1280px) {
   .submitter-filter-grid {
     grid-template-columns: repeat(4, minmax(150px, 1fr));
-  }
-
-  .submitter-monitor-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .submitter-monitor-authors {
-    grid-row: auto;
   }
 }
 
@@ -1255,5 +1386,27 @@ a.submitter-cell:hover {
 
   .submitter-monitor-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .submitter-monitor-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .submitter-monitor-modal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .submitter-monitor-modal header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .submitter-monitor-batch-top {
+    grid-template-columns: 1fr auto;
+  }
+
+  .submitter-monitor-batch-top small {
+    grid-column: 1 / -1;
   }
 }
