@@ -194,17 +194,17 @@ function hasScanLimit(author) {
 
 function scanLimitText(author) {
   const value = configuredScanMaxCount(author)
-  return value === null ? '' : num(value)
+  return value === null ? '未设限' : num(value)
 }
 
 function nextScanMaxCount(author) {
   const value = configuredScanMaxCount(author)
-  return value === null ? null : value + 100
+  return value === null ? 100 : value + 100
 }
 
 function continueMaxText(author) {
   const value = nextScanMaxCount(author)
-  return value === null ? '' : `继续到 ${num(value)}`
+  return hasScanLimit(author) ? `继续到 ${num(value)}` : `设为 ${num(value)}`
 }
 
 function urlWaitingCount(author) {
@@ -335,13 +335,12 @@ onMounted(refreshMonitor)
                 <th>扫描上限</th>
                 <th>URL 总数</th>
                 <th>URL 加载</th>
-                <th>投稿</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="authors.length === 0">
-                <td colspan="7" class="submitter-empty">暂无作者扫描数据</td>
+                <td colspan="6" class="submitter-empty">暂无作者扫描数据</td>
               </tr>
               <tr
                 v-for="author in authors"
@@ -373,8 +372,7 @@ onMounted(refreshMonitor)
                   <strong class="submitter-monitor-topic">{{ author.topic || '未配置' }}</strong>
                 </td>
                 <td>
-                  <strong v-if="hasScanLimit(author)" class="submitter-monitor-number">{{ scanLimitText(author) }}</strong>
-                  <span v-else>-</span>
+                  <strong class="submitter-monitor-number">{{ scanLimitText(author) }}</strong>
                   <small v-if="author.scanLimitReached" class="submitter-monitor-limit">已拉满上限</small>
                 </td>
                 <td>
@@ -395,15 +393,7 @@ onMounted(refreshMonitor)
                   </div>
                 </td>
                 <td>
-                  <span class="submitter-monitor-inline-metrics">
-                    <span>未 {{ num(author.unuploadedCount) }}</span>
-                    <span>待 {{ num(author.pendingSubmissionCount) }}</span>
-                    <span>成 {{ num(author.uploadedCount) }}</span>
-                  </span>
-                </td>
-                <td>
                   <button
-                    v-if="hasScanLimit(author)"
                     type="button"
                     class="submitter-monitor-row-action"
                     :disabled="!author.scanFinished || monitorContinueBusy === author.author"
