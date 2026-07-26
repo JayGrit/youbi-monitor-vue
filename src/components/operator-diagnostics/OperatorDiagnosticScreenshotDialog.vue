@@ -442,18 +442,18 @@ function relativeTime(value) {
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: grid;
-  place-items: center;
+  display: flex;
   background: rgb(15 23 42 / 0.92);
 }
 
 .operator-screenshot-preview figure {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   margin: 0;
   min-width: 0;
+  min-height: 0;
 }
 
 .operator-screenshot-preview figcaption {
@@ -467,8 +467,10 @@ function relativeTime(value) {
 }
 
 .operator-screenshot-preview-body {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   padding: 14px 58px 20px;
@@ -476,11 +478,12 @@ function relativeTime(value) {
 
 .operator-screenshot-preview-body img {
   display: block;
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   min-width: 0;
   min-height: 0;
-  object-fit: contain;
 }
 
 .operator-screenshot-nav {
