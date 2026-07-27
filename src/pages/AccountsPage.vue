@@ -322,6 +322,8 @@ function latestVideoText(value) {
   const date = parseLocalDateTime(value)
   if (!date) return '-'
   const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
   const tomorrow = new Date(now)
   tomorrow.setDate(now.getDate() + 1)
   const dayAfterTomorrow = new Date(now)
@@ -330,6 +332,9 @@ function latestVideoText(value) {
   threeDaysLater.setDate(now.getDate() + 3)
   if (isSameDate(date, now)) {
     return formatTime(date)
+  }
+  if (isSameDate(date, yesterday)) {
+    return `昨天${formatTime(date)}`
   }
   if (isSameDate(date, tomorrow)) {
     return `明天${formatTime(date)}`
