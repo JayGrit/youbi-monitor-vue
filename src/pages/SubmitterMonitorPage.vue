@@ -194,22 +194,11 @@ function hasScanLimit(author) {
 
 function scanLimitText(author) {
   const value = configuredScanMaxCount(author)
-  return value === null ? '未设限' : num(value)
-}
-
-function nextScanMaxCount(author) {
-  const baseline = Math.max(
-    configuredScanMaxCount(author) || 0,
-    Number(author?.candidateCount || 0),
-    urlStatusTotal(author),
-  )
-  return Math.floor(baseline / 100) * 100 + 100
+  return value === null ? '全量' : `前 ${num(value)} 条`
 }
 
 function continueMaxText(author) {
-  const value = nextScanMaxCount(author)
-  const hasExistingResults = Number(author?.candidateCount || 0) > 0 || urlStatusTotal(author) > 0
-  return hasScanLimit(author) || hasExistingResults ? `继续到 ${num(value)}` : `设为 ${num(value)}`
+  return hasScanLimit(author) ? '全量加载' : '已完成'
 }
 
 function urlWaitingCount(author) {
@@ -268,8 +257,7 @@ async function continueAuthorScan(authorRow) {
   const author = String(authorRow?.author || '').trim()
   if (!author || localContinueBusy.value) return
   const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
-  const maxCount = nextScanMaxCount(authorRow)
-  if (!maxCount) return
+  if (!hasScanLimit(authorRow)) return
   localContinueBusy.value = author
   localMonitorError.value = ''
   try {
@@ -278,7 +266,7 @@ async function continueAuthorScan(authorRow) {
       {
         author,
         platform,
-        maxCount,
+        fullScan: true,
         topic: authorRow?.topic || undefined,
         taskType: authorRow?.taskType || undefined,
       },
@@ -378,7 +366,7 @@ onMounted(refreshMonitor)
                 </td>
                 <td>
                   <strong class="submitter-monitor-number">{{ scanLimitText(author) }}</strong>
-                  <small v-if="author.scanLimitReached" class="submitter-monitor-limit">已拉满上限</small>
+                  <small v-if="author.scanLimitReached" class="submitter-monitor-limit">可继续全量加载</small>
                 </td>
                 <td>
                   <strong class="submitter-monitor-number">{{ num(author.candidateCount) }}</strong>
@@ -401,7 +389,7 @@ onMounted(refreshMonitor)
                   <button
                     type="button"
                     class="submitter-monitor-row-action"
-                    :disabled="!author.scanFinished || monitorContinueBusy === author.author"
+                    :disabled="!author.scanFinished || !hasScanLimit(author) || monitorContinueBusy === author.author"
                     @click.stop="continueAuthorScan(author)"
                   >
                     {{ monitorContinueBusy === author.author ? '提交中' : continueMaxText(author) }}
