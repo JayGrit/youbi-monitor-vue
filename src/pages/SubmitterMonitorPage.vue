@@ -198,13 +198,18 @@ function scanLimitText(author) {
 }
 
 function nextScanMaxCount(author) {
-  const value = configuredScanMaxCount(author)
-  return value === null ? 100 : value + 100
+  const baseline = Math.max(
+    configuredScanMaxCount(author) || 0,
+    Number(author?.candidateCount || 0),
+    urlStatusTotal(author),
+  )
+  return Math.floor(baseline / 100) * 100 + 100
 }
 
 function continueMaxText(author) {
   const value = nextScanMaxCount(author)
-  return hasScanLimit(author) ? `继续到 ${num(value)}` : `设为 ${num(value)}`
+  const hasExistingResults = Number(author?.candidateCount || 0) > 0 || urlStatusTotal(author) > 0
+  return hasScanLimit(author) || hasExistingResults ? `继续到 ${num(value)}` : `设为 ${num(value)}`
 }
 
 function urlWaitingCount(author) {

@@ -186,7 +186,16 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (!author || submitterMonitorContinueBusy.value) return
     const platform = String(authorRow?.platform || 'youtube').trim() || 'youtube'
     const configuredMax = Number(authorRow?.scanMaxCount)
-    const maxCount = Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax + 100 : 100
+    const urlTotal = Number(authorRow?.doneImportCount || 0)
+      + Number(authorRow?.pendingImportCount || 0)
+      + Number(authorRow?.runningImportCount || 0)
+      + Number(authorRow?.failedImportCount || 0)
+    const baseline = Math.max(
+      Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : 0,
+      Number(authorRow?.candidateCount || 0),
+      urlTotal,
+    )
+    const maxCount = Math.floor(baseline / 100) * 100 + 100
     submitterMonitorContinueBusy.value = author
     submitterMonitorError.value = ''
     submitterMessage.value = `已提交继续扫描：${author}，上限 ${maxCount}`
