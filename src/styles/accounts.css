@@ -309,17 +309,7 @@
 
 .account-group-grid.editing {
   min-width: 0;
-  grid-template-columns: 84px minmax(0, 1fr);
-}
-
-.account-table.editing .account-row.account-platform-row {
-  grid-template-columns: 52px 48px minmax(74px, 0.65fr) 76px minmax(126px, 1fr) minmax(166px, 1.2fr) 76px 88px 96px 70px;
-  gap: 8px;
-}
-
-.account-table.editing .topic-input {
-  min-width: 0;
-  padding: 0 6px;
+  grid-template-columns: 112px minmax(0, 1fr);
 }
 
 .account-group-heading {
@@ -465,7 +455,14 @@
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 64px 58px minmax(120px, 1fr) minmax(150px, 1fr) 92px 150px 174px 78px 74px;
+  grid-template-columns: 52px 48px minmax(92px, 150px) 84px 130px 170px 84px 90px 96px 70px;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.account-table.editing .topic-input {
+  min-width: 0;
+  padding: 0 6px;
 }
 
 .account-backfill-button {
