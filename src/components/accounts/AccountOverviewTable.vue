@@ -25,6 +25,7 @@ const props = defineProps([
   'saveAccountCooldownEdit',
   'saveAccountQuietTimeEdit',
   'saveAccountDownloaderMaxStagedCountEdit',
+  'saveAccountScheduledPublishEdit',
   'saveAccountEnabledEdit',
 ])
 
@@ -95,7 +96,7 @@ function formatFollowerGrowth(value) {
           <div class="account-row account-header account-platform-row">
             <span>Platform</span>
             <span>头像</span>
-            <span>账号</span>
+            <span v-if="!accountEditMode">账号</span>
             <span v-if="!accountEditMode">今日已发</span>
             <span v-if="!accountEditMode">冷却等待</span>
             <span v-if="!accountEditMode">上传中</span>
@@ -109,6 +110,8 @@ function formatFollowerGrowth(value) {
             <span v-if="accountEditMode">随机冷却</span>
             <span v-if="accountEditMode">禁发时间</span>
             <span v-if="accountEditMode">最大暂存</span>
+            <span v-if="accountEditMode">支持定时</span>
+            <span v-if="accountEditMode">最大定时天数</span>
             <span v-if="accountEditMode">启用</span>
           </div>
         </div>
@@ -165,7 +168,7 @@ function formatFollowerGrowth(value) {
                 </label>
                 <template v-else>-</template>
               </span>
-              <span class="account-cell account-col-name" data-label="账号">
+              <span v-if="!accountEditMode" class="account-cell account-col-name" data-label="账号">
                 <span v-if="item.configured" class="account-profile-text">
                   <strong>{{ accountName(item.type, item.row) }}</strong>
                 </span>
@@ -268,6 +271,33 @@ function formatFollowerGrowth(value) {
                   aria-label="最大暂存个数"
                   :disabled="accountRowSaving(item)"
                   @change="saveAccountDownloaderMaxStagedCountEdit(item)"
+                />
+                <template v-else>-</template>
+              </span>
+              <span v-if="accountEditMode" class="account-cell" data-label="支持定时">
+                <label v-if="item.configured" class="account-enabled-edit">
+                  <input
+                    v-model="item.row.draftSupportsScheduledPublish"
+                    type="checkbox"
+                    :disabled="accountRowSaving(item)"
+                    @change="saveAccountScheduledPublishEdit(item)"
+                  />
+                  {{ item.row.draftSupportsScheduledPublish ? '支持' : '不支持' }}
+                </label>
+                <template v-else>-</template>
+              </span>
+              <span v-if="accountEditMode" class="account-cell" data-label="最大定时天数">
+                <input
+                  v-if="item.configured"
+                  v-model="item.row.draftScheduledPublishMaxDays"
+                  type="number"
+                  min="0"
+                  max="365"
+                  step="1"
+                  class="account-small-number-input"
+                  aria-label="最大定时发送天数"
+                  :disabled="accountRowSaving(item) || !item.row.draftSupportsScheduledPublish"
+                  @change="saveAccountScheduledPublishEdit(item)"
                 />
                 <template v-else>-</template>
               </span>

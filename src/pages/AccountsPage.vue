@@ -36,6 +36,7 @@ const props = defineProps({
   savePlatformCooldown: { type: Function, required: true },
   savePlatformQuietTime: { type: Function, required: true },
   savePlatformDownloaderMaxStagedCount: { type: Function, required: true },
+  savePlatformScheduledPublish: { type: Function, required: true },
   savePlatformNextUploadAllowedAt: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
   savePlatformAccountProfile: { type: Function, required: true },
@@ -122,6 +123,8 @@ function accountDraft(row, type) {
     uploadQuietStartTime: timeInputValue(row.uploadQuietStartTime, '01:00'),
     uploadQuietEndTime: timeInputValue(row.uploadQuietEndTime, '07:00'),
     downloaderMaxStagedCount: String(Number.isFinite(Number(row.downloaderMaxStagedCount)) ? Number(row.downloaderMaxStagedCount) : 5),
+    supportsScheduledPublish: row.supportsScheduledPublish === true,
+    scheduledPublishMaxDays: String(Number.isFinite(Number(row.scheduledPublishMaxDays)) ? Number(row.scheduledPublishMaxDays) : 3),
     nextUploadAllowedAt: dateTimeLocalValue(row.nextUploadAllowedAt),
   }
 }
@@ -146,6 +149,8 @@ function resetAccountDraft(item) {
   item.row.draftUploadQuietStartTime = draft.uploadQuietStartTime
   item.row.draftUploadQuietEndTime = draft.uploadQuietEndTime
   item.row.draftDownloaderMaxStagedCount = draft.downloaderMaxStagedCount
+  item.row.draftSupportsScheduledPublish = draft.supportsScheduledPublish
+  item.row.draftScheduledPublishMaxDays = draft.scheduledPublishMaxDays
   item.row.draftNextUploadAllowedAt = draft.nextUploadAllowedAt
 }
 
@@ -157,6 +162,9 @@ function accountChanges(item) {
       String(row.draftCooldownMinMinutes ?? '').trim() !== draft.cooldownMinMinutes
       || String(row.draftCooldownMaxMinutes ?? '').trim() !== draft.cooldownMaxMinutes,
     downloaderMaxStagedCount: String(row.draftDownloaderMaxStagedCount ?? '').trim() !== draft.downloaderMaxStagedCount,
+    scheduledPublish:
+      (row.draftSupportsScheduledPublish === true) !== draft.supportsScheduledPublish
+      || String(row.draftScheduledPublishMaxDays ?? '').trim() !== draft.scheduledPublishMaxDays,
     quietTime:
       String(row.draftUploadQuietStartTime ?? '').trim() !== draft.uploadQuietStartTime
       || String(row.draftUploadQuietEndTime ?? '').trim() !== draft.uploadQuietEndTime,
@@ -199,6 +207,11 @@ async function saveAccountQuietTimeEdit(item) {
 async function saveAccountDownloaderMaxStagedCountEdit(item) {
   if (!item?.configured || !accountChanges(item).downloaderMaxStagedCount) return
   await props.savePlatformDownloaderMaxStagedCount(item.type, item.row)
+}
+
+async function saveAccountScheduledPublishEdit(item) {
+  if (!item?.configured || !accountChanges(item).scheduledPublish) return
+  await props.savePlatformScheduledPublish(item.type, item.row)
 }
 
 async function saveAccountNextSendEdit(item) {
@@ -637,6 +650,7 @@ async function syncPhoneAccountProfile(phone, platform) {
       :save-account-cooldown-edit="saveAccountCooldownEdit"
       :save-account-quiet-time-edit="saveAccountQuietTimeEdit"
       :save-account-downloader-max-staged-count-edit="saveAccountDownloaderMaxStagedCountEdit"
+      :save-account-scheduled-publish-edit="saveAccountScheduledPublishEdit"
       :save-account-enabled-edit="saveAccountEnabledEdit"
       :toggle-upload-backfill-all="toggleUploadBackfillAll"
       :load-upload-backfill-candidates="loadUploadBackfillCandidates"

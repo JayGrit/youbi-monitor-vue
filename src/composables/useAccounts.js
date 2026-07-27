@@ -130,6 +130,7 @@ export function useAccounts(accountsApi, agentApi, accountPlatforms, platformIco
     savePlatformCooldown: platformAccounts.savePlatformCooldown,
     savePlatformQuietTime: platformAccounts.savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount: platformAccounts.savePlatformDownloaderMaxStagedCount,
+    savePlatformScheduledPublish: platformAccounts.savePlatformScheduledPublish,
     savePlatformNextUploadAllowedAt: platformAccounts.savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile: platformAccounts.savePlatformAccountProfile,
     uploadPlatformAccountAvatar: platformAccounts.uploadPlatformAccountAvatar,

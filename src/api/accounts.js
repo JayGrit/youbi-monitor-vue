@@ -25,6 +25,9 @@ function genericPlatformAccountApi(apiBase, platform, context) {
     setDownloaderMaxStagedCount(topic, maxStagedCount) {
       return postJson(`${base}/${encodeURIComponent(topic)}/downloader-max-staged-count`, { maxStagedCount }, describe('保存下载暂存任务上限'))
     },
+    setScheduledPublish(topic, supported, maxDays) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/scheduled-publish`, { supported, maxDays }, describe('保存账号定时发布配置'))
+    },
     updateProfile(topic, displayName, avatarUrl = undefined) {
       const body = { displayName }
       if (avatarUrl !== undefined) body.avatarUrl = avatarUrl

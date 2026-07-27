@@ -309,7 +309,17 @@
 
 .account-group-grid.editing {
   min-width: 0;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+
+.account-table.editing .account-row.account-platform-row {
+  grid-template-columns: 52px 48px minmax(74px, 0.65fr) 76px minmax(126px, 1fr) minmax(166px, 1.2fr) 76px 88px 96px 70px;
+  gap: 8px;
+}
+
+.account-table.editing .topic-input {
+  min-width: 0;
+  padding: 0 6px;
 }
 
 .account-group-heading {

@@ -251,6 +251,26 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  async function savePlatformScheduledPublish(platform, row) {
+    if (!row?.topic) return
+    const supported = row.draftSupportsScheduledPublish === true
+    const maxDays = Number(row.draftScheduledPublishMaxDays)
+    if (!Number.isInteger(maxDays) || maxDays < 0 || maxDays > 365) {
+      setPlatformError(platform, '最大定时发送天数须为 0 到 365 的整数')
+      return
+    }
+    setPlatformBusy(platform, rowKey(row), 'scheduledPublish')
+    try {
+      const payload = await accountsApi[platform].setScheduledPublish(row.topic, supported, maxDays)
+      mergePlatformRow(platform, payload, row.slot)
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      clearPlatformBusy(platform)
+    }
+  }
+
   async function savePlatformNextUploadAllowedAt(platform, row) {
     if (!row?.topic) return
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
@@ -441,6 +461,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformCooldown,
     savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount,
+    savePlatformScheduledPublish,
     savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,
