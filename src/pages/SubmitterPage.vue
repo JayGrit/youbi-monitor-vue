@@ -130,7 +130,9 @@ const emit = defineEmits([
             @change="emit('update:submitterUploader', $event.target.value); applySubmitterFilters()"
           >
             <option value="">全部作者</option>
-            <option v-for="author in submitterAuthorOptions" :key="author" :value="author">{{ author }}</option>
+            <option v-for="author in submitterAuthorOptions" :key="author.value" :value="author.value">
+              {{ author.label }}
+            </option>
           </select>
         </label>
         <label>

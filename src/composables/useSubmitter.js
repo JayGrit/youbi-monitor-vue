@@ -61,10 +61,15 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
 
   const submitterAuthorOptions = computed(() => {
     const topicFilter = submitterTopicFilter.value.trim()
-    return submitterAuthorTypeRows.value
+    const options = submitterAuthorTypeRows.value
       .filter(row => !topicFilter || String(row?.topic || row?.draftTopic || '').trim() === topicFilter)
-      .map(row => String(row?.author || '').trim())
-      .filter(Boolean)
+      .map(row => {
+        const value = String(row?.author || '').trim()
+        const label = String(row?.displayName || row?.display_name || row?.authorHandle || value).trim()
+        return { value, label: label || value }
+      })
+      .filter(option => option.value)
+    return [...new Map(options.map(option => [option.value, option])).values()]
   })
 
   const submitterFilteredVideos = computed(() => {
