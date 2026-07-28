@@ -1,3 +1,5 @@
+import { normalizeResourceUrl } from '../../utils/media'
+
 export function useSubmitterThumbnails({ submitterVideos, submitterThumbUrls, cacheImageUrl, submitterFieldValue }) {
   function submitterVideoThumb(item) {
     return normalizeSubmitterThumbnailUrl(submitterFieldValue(item, 'thumbnail') || '')
@@ -7,19 +9,13 @@ export function useSubmitterThumbnails({ submitterVideos, submitterThumbUrls, ca
     const text = String(url || '').trim()
     if (!text) return ''
     try {
-      const parsed = new URL(text)
-      if (parsed.hostname === 'i.ytimg.com') {
-        const match = parsed.pathname.match(/^\/vi_lc\/([^/]+)\/([^/]+)$/)
-        if (match) {
-          const [, videoId, fileName] = match
-          parsed.pathname = `/vi/${videoId}/${fileName.replace(/_en(?=\.)/, '')}`
-          return parsed.toString()
-        }
-      }
+      const parsed = new URL(text, window.location.origin)
+      const isSubmitterMinioAsset = parsed.pathname.includes('/assets/submitter-thumbnails/')
+        && (parsed.hostname === '120.53.92.66' || parsed.port === '9000' || parsed.origin === window.location.origin)
+      return isSubmitterMinioAsset ? normalizeResourceUrl(text) : ''
     } catch {
-      return text
+      return ''
     }
-    return text
   }
 
   function submitterCachedThumb(item) {
