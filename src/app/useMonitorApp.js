@@ -379,7 +379,6 @@ export function useMonitorApp() {
     closeTaskFlow,
     loadSubmitterAuthors,
     loadSubmitterVideos,
-    loadSubmitterMonitor,
     warmPlatformIcons,
     startAccountPolling,
     loadTasks,

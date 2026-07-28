@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, unref } from 'vue'
+import { computed, onMounted, ref, unref } from 'vue'
+import { requestJson } from '../api/http'
 import PlatformIcon from '../components/PlatformIcon.vue'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { normalizeResourceUrl } from '../utils/media'
@@ -21,18 +22,25 @@ const props = defineProps({
   autosaveSubmitterAuthorType: { type: Function, required: true },
   deleteSubmitterAuthor: { type: Function, required: true },
   submitSubmitterInput: { type: Function, required: true },
-  loadSubmitterMonitor: { type: Function, required: true },
   continueSubmitterAuthorScan: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:submitterInput'])
+const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const editMode = ref(false)
 const selectedScan = ref(null)
+const localMonitorState = ref(null)
+const localMonitorLoading = ref(false)
+const localMonitorError = ref('')
+const localMonitorLoadedAt = ref('')
 
 const monitorState = computed(() => {
-  const raw = unref(props.submitterMonitorState)
+  const raw = localMonitorState.value || unref(props.submitterMonitorState)
   return raw?.data || raw?.item || raw || {}
 })
+const monitorLoading = computed(() => localMonitorLoading.value || props.submitterMonitorLoading)
+const monitorError = computed(() => localMonitorError.value || props.submitterMonitorError)
+const monitorLoadedAt = computed(() => localMonitorLoadedAt.value || props.submitterMonitorLoadedAt)
 const monitorAuthors = computed(() => monitorState.value?.authors || [])
 const monitorBatches = computed(() => monitorState.value?.batches || [])
 
@@ -245,6 +253,30 @@ function batchProgressStyle(batch) {
   const ratio = total > 0 ? Math.round((batchSaved(batch) / total) * 100) : 0
   return { width: `${Math.max(0, Math.min(100, ratio))}%` }
 }
+
+async function refreshMonitor() {
+  localMonitorLoading.value = true
+  localMonitorError.value = ''
+  try {
+    localMonitorState.value = await requestJson(
+      `${submitterApiBase}/monitor`,
+      undefined,
+      { service: 'submitter', summary: '查询Submitter采集监控' },
+    )
+    localMonitorLoadedAt.value = new Date().toISOString()
+  } catch (err) {
+    localMonitorError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    localMonitorLoading.value = false
+  }
+}
+
+async function continueAuthorScan(scan) {
+  await props.continueSubmitterAuthorScan(scan)
+  await refreshMonitor()
+}
+
+onMounted(refreshMonitor)
 </script>
 
 <template>
@@ -272,16 +304,16 @@ function batchProgressStyle(batch) {
           <span>共 {{ submitterAuthorTypeRows.length }} 位作者</span>
         </div>
         <div class="submitter-author-header-actions">
-          <span v-if="submitterMonitorLoadedAt">扫描更新 {{ formatDateTime(submitterMonitorLoadedAt) }}</span>
-          <button type="button" class="submitter-author-refresh" :disabled="submitterMonitorLoading" @click="loadSubmitterMonitor">
-            {{ submitterMonitorLoading ? '刷新中' : '刷新扫描' }}
+          <span v-if="monitorLoadedAt">扫描更新 {{ formatDateTime(monitorLoadedAt) }}</span>
+          <button type="button" class="submitter-author-refresh" :disabled="monitorLoading" @click="refreshMonitor">
+            {{ monitorLoading ? '刷新中' : '刷新扫描' }}
           </button>
           <button type="button" class="submitter-author-edit" @click="editMode = !editMode">
             {{ editMode ? '完成' : '编辑' }}
           </button>
         </div>
         <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
-        <p v-if="submitterMonitorError" class="inline-error">{{ submitterMonitorError }}</p>
+        <p v-if="monitorError" class="inline-error">{{ monitorError }}</p>
       </header>
       <div class="submitter-author-type-body" :class="{ editing: editMode }">
         <p v-if="submitterAuthorTypeRows.length === 0" class="submitter-empty">暂无作者</p>
@@ -477,7 +509,7 @@ function batchProgressStyle(batch) {
                 type="button"
                 class="submitter-monitor-row-action"
                 :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
-                @click="continueSubmitterAuthorScan(scanForAuthor(row))"
+                @click="continueAuthorScan(scanForAuthor(row))"
               >
                 {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
               </button>

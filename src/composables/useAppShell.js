@@ -5,7 +5,6 @@ export function useAppShell({
   closeTaskFlow,
   loadSubmitterAuthors,
   loadSubmitterVideos,
-  loadSubmitterMonitor,
   warmPlatformIcons,
   startAccountPolling,
   loadTasks,
@@ -95,9 +94,6 @@ export function useAppShell({
       if (page === 'submitter') {
         loadSubmitterVideos()
       }
-      if (page === 'submitter-authors') {
-        loadSubmitterMonitor()
-      }
     }
     if (page === 'monitor') ensureTaskTypesLoaded()
     if (page === 'accounts') warmPlatformIcons()
@@ -117,7 +113,6 @@ export function useAppShell({
     }
     if (activePage.value === 'submitter-authors') {
       loadSubmitterAuthors()
-      loadSubmitterMonitor()
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     syncPolling()
