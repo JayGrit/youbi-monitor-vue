@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, unref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { normalizeResourceUrl } from '../utils/media'
@@ -30,7 +30,7 @@ const editMode = ref(false)
 const selectedScan = ref(null)
 
 const monitorState = computed(() => {
-  const raw = props.submitterMonitorState
+  const raw = unref(props.submitterMonitorState)
   return raw?.data || raw?.item || raw || {}
 })
 const monitorAuthors = computed(() => monitorState.value?.authors || [])
@@ -139,7 +139,26 @@ function normalizedAuthorKeys(row) {
     row?.displayName,
     row?.authorUrl,
     row?.sourceUrl,
-  ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean)
+    row?.channelId,
+    row?.platformAuthorId,
+  ].flatMap(value => {
+    const text = String(value || '').trim().toLowerCase()
+    if (!text) return []
+    const keys = [text]
+    if (/^https?:\/\//.test(text)) {
+      try {
+        const url = new URL(text)
+        url.search = ''
+        url.hash = ''
+        url.pathname = url.pathname.replace(/\/(?:videos?|video)\/?$/, '').replace(/\/$/, '')
+        keys.push(url.toString().replace(/\/$/, ''))
+        keys.push(decodeURIComponent(url.toString()).replace(/\/$/, ''))
+      } catch {
+        // Keep the original value when an author URL cannot be parsed.
+      }
+    }
+    return keys
+  }).filter(Boolean)
 }
 
 function scanForAuthor(row) {
@@ -426,7 +445,11 @@ function batchProgressStyle(batch) {
                   {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
                 </button>
             </div>
-            <div v-if="scanForAuthor(row)" class="submitter-author-scan">
+            <div class="submitter-author-scan">
+              <span v-if="!scanForAuthor(row)" class="submitter-author-scan-empty">
+                暂无扫描数据
+              </span>
+              <template v-else>
               <button type="button" class="submitter-author-scan-summary" @click="openScanBatches(scanForAuthor(row))">
                 <span>
                   <small>扫描上限</small>
@@ -458,6 +481,7 @@ function batchProgressStyle(batch) {
               >
                 {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
               </button>
+              </template>
             </div>
           </article>
         </section>

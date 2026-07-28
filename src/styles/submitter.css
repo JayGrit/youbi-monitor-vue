@@ -971,6 +971,12 @@ a.submitter-cell:hover {
   border-top: 1px dashed #dbe3ed;
 }
 
+.submitter-author-scan-empty {
+  grid-column: 1 / -1;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .submitter-author-type-row .submitter-author-scan-summary {
   display: grid;
   grid-template-columns: minmax(100px, 0.5fr) minmax(100px, 0.5fr) minmax(280px, 2fr);
