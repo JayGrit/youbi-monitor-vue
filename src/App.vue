@@ -13,7 +13,6 @@ import SpeakerSegmentsContainer from './containers/SpeakerSegmentsContainer.vue'
 import StaticAssetsContainer from './containers/StaticAssetsContainer.vue'
 import SubmitterAuthorsContainer from './containers/SubmitterAuthorsContainer.vue'
 import SubmitterContainer from './containers/SubmitterContainer.vue'
-import SubmitterMonitorContainer from './containers/SubmitterMonitorContainer.vue'
 import TaskFlowContainer from './containers/TaskFlowContainer.vue'
 
 const app = useMonitorApp()
@@ -31,7 +30,6 @@ const pageShellClass = computed(() => ['page-shell', app.flowPageOpen ? 'flow-pa
     <template v-if="!app.flowPageOpen">
       <MonitorContainer v-if="app.activePage === 'monitor'" :app="app" />
       <SubmitterContainer v-else-if="app.activePage === 'submitter'" :app="app" />
-      <SubmitterMonitorContainer v-else-if="app.activePage === 'submitter-monitor'" :app="app" />
       <StaticAssetsContainer v-else-if="app.activePage === 'static-assets'" :app="app" />
       <SubmitterAuthorsContainer v-else-if="app.activePage === 'submitter-authors'" :app="app" />
       <AccountsContainer v-else-if="app.activePage === 'accounts'" :app="app" />

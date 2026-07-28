@@ -14,8 +14,6 @@ defineProps({
   submitterFocusedBatch: { type: String, default: '' },
   submitterMessage: { type: String, default: '' },
   submitterStatusCounts: { type: String, default: '' },
-  submitterInput: { type: String, default: '' },
-  submitterBusy: { type: Boolean, default: false },
   submitterTopicFilter: { type: String, default: '' },
   submitterUploader: { type: String, default: '' },
   submitterVideoName: { type: String, default: '' },
@@ -41,7 +39,6 @@ defineProps({
   submitterPageAllSelected: { type: Boolean, default: false },
   submitterJsonPayload: { type: Object, default: null },
   submitterJsonTitle: { type: String, default: '' },
-  submitSubmitterInput: { type: Function, required: true },
   applySubmitterFilters: { type: Function, required: true },
   resetSubmitterFilters: { type: Function, required: true },
   clearSubmitterBatchFocus: { type: Function, required: true },
@@ -64,7 +61,6 @@ defineProps({
 })
 
 const emit = defineEmits([
-  'update:submitterInput',
   'update:submitterTopicFilter',
   'update:submitterUploader',
   'update:submitterVideoName',
@@ -83,22 +79,6 @@ const emit = defineEmits([
       <span v-if="submitterError">Submitter API 异常：{{ submitterError }}</span>
       <span v-else>当前批次：{{ submitterFocusedBatch.slice(0, 8) }}。{{ submitterMessage }}</span>
       <span v-if="submitterStatusCounts" class="submitter-status-counts">{{ submitterStatusCounts }}</span>
-    </section>
-
-    <section class="submitter-actions-panel">
-      <form class="submitter-submit-row" @submit.prevent="submitSubmitterInput">
-        <label>
-          <span>视频或作者</span>
-          <input
-            :value="submitterInput"
-            type="text"
-            placeholder="粘贴 YouTube / TikTok / 抖音视频链接或作者主页"
-            required
-            @input="emit('update:submitterInput', $event.target.value)"
-          />
-        </label>
-        <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '处理中' : '提交' }}</button>
-      </form>
     </section>
 
     <section class="submitter-controls">

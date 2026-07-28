@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
+import { formatDateTime, formatNumber } from '../utils/format'
 import { normalizeResourceUrl } from '../utils/media'
 
 const props = defineProps({
@@ -10,11 +11,30 @@ const props = defineProps({
   platformIconUrls: { type: Object, default: () => ({}) },
   submitterAuthorTypeSaving: { type: String, default: '' },
   submitterAuthorDeleting: { type: String, default: '' },
+  submitterInput: { type: String, default: '' },
+  submitterBusy: { type: Boolean, default: false },
+  submitterMonitorState: { type: Object, default: null },
+  submitterMonitorLoading: { type: Boolean, default: false },
+  submitterMonitorError: { type: String, default: '' },
+  submitterMonitorLoadedAt: { type: String, default: '' },
+  submitterMonitorContinueBusy: { type: String, default: '' },
   autosaveSubmitterAuthorType: { type: Function, required: true },
   deleteSubmitterAuthor: { type: Function, required: true },
+  submitSubmitterInput: { type: Function, required: true },
+  loadSubmitterMonitor: { type: Function, required: true },
+  continueSubmitterAuthorScan: { type: Function, required: true },
 })
 
+const emit = defineEmits(['update:submitterInput'])
 const editMode = ref(false)
+const selectedScan = ref(null)
+
+const monitorState = computed(() => {
+  const raw = props.submitterMonitorState
+  return raw?.data || raw?.item || raw || {}
+})
+const monitorAuthors = computed(() => monitorState.value?.authors || [])
+const monitorBatches = computed(() => monitorState.value?.batches || [])
 
 const authorTypeGroups = computed(() => {
   const groups = new Map()
@@ -111,20 +131,138 @@ function settingRows(row) {
     { key: 'bilibili', label: 'B站已有人发', value: row.draftBilibiliExists },
   ]
 }
+
+function normalizedAuthorKeys(row) {
+  return [
+    row?.author,
+    row?.authorHandle,
+    row?.displayName,
+    row?.authorUrl,
+    row?.sourceUrl,
+  ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean)
+}
+
+function scanForAuthor(row) {
+  const rowKeys = new Set(normalizedAuthorKeys(row))
+  return monitorAuthors.value.find(scan => normalizedAuthorKeys(scan).some(key => rowKeys.has(key))) || null
+}
+
+function num(value) {
+  return formatNumber(Number(value || 0))
+}
+
+function scanLimitText(scan) {
+  const value = Number(scan?.scanMaxCount)
+  return Number.isFinite(value) && value > 0 ? `前 ${num(value)} 条` : '全量'
+}
+
+function urlWaitingCount(scan) {
+  return Number(scan?.pendingImportCount || 0) + Number(scan?.runningImportCount || 0)
+}
+
+function urlStatusTotal(scan) {
+  return Number(scan?.doneImportCount || 0) + urlWaitingCount(scan) + Number(scan?.failedImportCount || 0)
+}
+
+function urlSegmentStyle(scan, key) {
+  const total = urlStatusTotal(scan)
+  const values = {
+    done: Number(scan?.doneImportCount || 0),
+    waiting: urlWaitingCount(scan),
+    failed: Number(scan?.failedImportCount || 0),
+  }
+  const width = total > 0 ? Math.max(0, Math.min(100, (values[key] || 0) / total * 100)) : 0
+  return { width: `${width}%` }
+}
+
+function canContinueScan(scan) {
+  const max = Number(scan?.scanMaxCount)
+  return Boolean(scan?.scanFinished) && Number.isFinite(max) && max > 0
+}
+
+function scanBatches(scan) {
+  if (!scan) return []
+  const keys = new Set(normalizedAuthorKeys(scan))
+  const scanBatch = String(scan.scanBatch || '').trim()
+  return monitorBatches.value.filter(batch => (
+    normalizedAuthorKeys(batch).some(key => keys.has(key))
+    || (scanBatch && String(batch?.batch || '').trim() === scanBatch)
+  ))
+}
+
+function openScanBatches(scan) {
+  selectedScan.value = scan
+}
+
+function statusLabel(status) {
+  return {
+    scanning: '扫描中',
+    processing: '加载中',
+    pending: '等待',
+    running: '执行中',
+    done: '完成',
+    failed: '失败',
+    skipped: '跳过',
+  }[String(status || '').toLowerCase()] || status || '-'
+}
+
+function statusClass(status) {
+  const value = String(status || '').toLowerCase()
+  if (['scanning', 'processing', 'running'].includes(value)) return 'running'
+  if (['done', 'idle'].includes(value)) return 'done'
+  return value
+}
+
+function batchTotal(batch) {
+  return Number(batch?.total || batch?.discovered || 0)
+}
+
+function batchSaved(batch) {
+  return Number(batch?.saved || batch?.registered || 0)
+}
+
+function batchProgressStyle(batch) {
+  const total = batchTotal(batch)
+  const ratio = total > 0 ? Math.round((batchSaved(batch) / total) * 100) : 0
+  return { width: `${Math.max(0, Math.min(100, ratio))}%` }
+}
 </script>
 
 <template>
   <section class="submitter-author-page" aria-label="作者管理">
+    <section class="submitter-actions-panel">
+      <form class="submitter-submit-row" @submit.prevent="submitSubmitterInput">
+        <label>
+          <span>视频或作者</span>
+          <input
+            :value="submitterInput"
+            type="text"
+            placeholder="粘贴 YouTube / TikTok / 抖音视频链接或作者主页"
+            required
+            @input="emit('update:submitterInput', $event.target.value)"
+          />
+        </label>
+        <button type="submit" :disabled="submitterBusy">{{ submitterBusy ? '处理中' : '提交' }}</button>
+      </form>
+    </section>
+
     <section class="submitter-author-page-panel">
       <header class="submitter-author-panel-header">
         <div>
           <h1>作者管理</h1>
           <span>共 {{ submitterAuthorTypeRows.length }} 位作者</span>
         </div>
-        <button type="button" class="submitter-author-edit" @click="editMode = !editMode">
-          {{ editMode ? '完成' : '编辑' }}
-        </button>
+        <div class="submitter-author-header-actions">
+          <span v-if="submitterMonitorLoadedAt">扫描更新 {{ formatDateTime(submitterMonitorLoadedAt) }}</span>
+          <button type="button" class="submitter-author-refresh" :disabled="submitterMonitorLoading" @click="loadSubmitterMonitor">
+            {{ submitterMonitorLoading ? '刷新中' : '刷新扫描' }}
+          </button>
+          <button type="button" class="submitter-author-edit" @click="editMode = !editMode">
+            {{ editMode ? '完成' : '编辑' }}
+          </button>
+        </div>
         <p v-if="submitterAuthorTypeError" class="inline-error">{{ submitterAuthorTypeError }}</p>
+        <p v-if="submitterMonitorError" class="inline-error">{{ submitterMonitorError }}</p>
       </header>
       <div class="submitter-author-type-body" :class="{ editing: editMode }">
         <p v-if="submitterAuthorTypeRows.length === 0" class="submitter-empty">暂无作者</p>
@@ -288,9 +426,71 @@ function settingRows(row) {
                   {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
                 </button>
             </div>
+            <div v-if="scanForAuthor(row)" class="submitter-author-scan">
+              <button type="button" class="submitter-author-scan-summary" @click="openScanBatches(scanForAuthor(row))">
+                <span>
+                  <small>扫描上限</small>
+                  <strong>{{ scanLimitText(scanForAuthor(row)) }}</strong>
+                </span>
+                <span>
+                  <small>URL 总数</small>
+                  <strong>{{ num(scanForAuthor(row).candidateCount) }}</strong>
+                </span>
+                <span class="submitter-author-scan-progress">
+                  <small>URL 加载</small>
+                  <span class="submitter-monitor-url-bar">
+                    <i class="done" :style="urlSegmentStyle(scanForAuthor(row), 'done')"></i>
+                    <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
+                    <i class="failed" :style="urlSegmentStyle(scanForAuthor(row), 'failed')"></i>
+                  </span>
+                  <em>
+                    成功 {{ num(scanForAuthor(row).doneImportCount) }} ·
+                    等待 {{ num(urlWaitingCount(scanForAuthor(row))) }} ·
+                    失败 {{ num(scanForAuthor(row).failedImportCount) }}
+                  </em>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="submitter-monitor-row-action"
+                :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
+                @click="continueSubmitterAuthorScan(scanForAuthor(row))"
+              >
+                {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
+              </button>
+            </div>
           </article>
         </section>
       </div>
     </section>
+
+    <div v-if="selectedScan" class="submitter-monitor-modal-backdrop" @click.self="selectedScan = null">
+      <section class="submitter-monitor-modal" role="dialog" aria-modal="true" aria-labelledby="submitter-author-batches-title">
+        <header>
+          <div>
+            <h2 id="submitter-author-batches-title">{{ authorName(selectedScan) }}</h2>
+            <span>{{ num(scanBatches(selectedScan).length) }} 个批次 · 候选 {{ num(selectedScan.candidateCount) }} · 已加载 {{ num(selectedScan.doneImportCount) }}</span>
+          </div>
+          <button type="button" @click="selectedScan = null">关闭</button>
+        </header>
+        <div class="submitter-monitor-batch-list">
+          <article v-for="batch in scanBatches(selectedScan)" :key="batch.batch" class="submitter-monitor-batch-row">
+            <div class="submitter-monitor-batch-top">
+              <span class="submitter-monitor-badge" :class="statusClass(batch.status)">{{ statusLabel(batch.status) }}</span>
+              <strong>{{ num(batchSaved(batch)) }}/{{ num(batchTotal(batch)) }}</strong>
+              <small>{{ formatDateTime(batch.updatedAt || batch.createdAt) }}</small>
+            </div>
+            <div class="submitter-monitor-progress"><span :style="batchProgressStyle(batch)"></span></div>
+            <p>
+              <span>跳过 {{ num(batch.skipped) }}</span>
+              <span>失败 {{ num(batch.failed) }}</span>
+            </p>
+            <em v-if="batch.currentTitle">{{ batch.currentTitle }}</em>
+            <em v-if="batch.error" class="submitter-monitor-error">{{ batch.error }}</em>
+          </article>
+          <p v-if="scanBatches(selectedScan).length === 0" class="submitter-empty">暂无导入批次</p>
+        </div>
+      </section>
+    </div>
   </section>
 </template>

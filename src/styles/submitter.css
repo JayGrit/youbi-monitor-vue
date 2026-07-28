@@ -636,6 +636,7 @@ a.submitter-cell:hover {
 
 .submitter-author-page {
   display: grid;
+  gap: 12px;
 }
 
 .submitter-author-page-panel {
@@ -653,9 +654,17 @@ a.submitter-cell:hover {
   border-bottom: 1px solid #e8edf3;
 }
 
-.submitter-author-panel-header > div {
+.submitter-author-panel-header > div:first-child {
   display: grid;
   gap: 4px;
+}
+
+.submitter-author-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .submitter-author-panel-header h1 {
@@ -681,6 +690,24 @@ a.submitter-cell:hover {
   font: inherit;
   font-size: 13px;
   font-weight: 720;
+}
+
+.submitter-author-refresh {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344156;
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.submitter-author-refresh:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .submitter-author-page-panel {
@@ -932,6 +959,62 @@ a.submitter-cell:hover {
 .submitter-author-type-row button:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.submitter-author-scan {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #dbe3ed;
+}
+
+.submitter-author-type-row .submitter-author-scan-summary {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.5fr) minmax(100px, 0.5fr) minmax(280px, 2fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #344156;
+  padding: 0;
+  text-align: left;
+}
+
+.submitter-author-type-row .submitter-author-scan-summary:hover {
+  background: transparent;
+}
+
+.submitter-author-scan-summary > span {
+  display: grid;
+  gap: 3px;
+}
+
+.submitter-author-scan-summary small,
+.submitter-author-scan-summary em {
+  color: #6b7788;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.submitter-author-scan-summary strong {
+  color: #1f2a3a;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.submitter-author-scan-progress {
+  grid-template-columns: auto minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 8px !important;
+}
+
+.submitter-author-scan-progress small {
+  grid-column: 1 / -1;
 }
 
 .submitter-monitor-page {
@@ -1214,10 +1297,12 @@ a.submitter-cell:hover {
   background: #e5e7eb;
 }
 
-.submitter-monitor-url-bar span {
+.submitter-monitor-url-bar span,
+.submitter-monitor-url-bar i {
   display: block;
   height: 100%;
   min-width: 0;
+  font-style: normal;
 }
 
 .submitter-monitor-url-bar .done {

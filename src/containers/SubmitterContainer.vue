@@ -9,7 +9,6 @@ defineProps({
 <template>
   <SubmitterPage
     v-bind="app"
-    v-model:submitter-input="app.submitterInput"
     v-model:submitter-topic-filter="app.submitterTopicFilter"
     v-model:submitter-uploader="app.submitterUploader"
     v-model:submitter-video-name="app.submitterVideoName"

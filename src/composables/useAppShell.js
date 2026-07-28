@@ -90,12 +90,12 @@ export function useAppShell({
     if (flowPageOpen.value) {
       closeTaskFlow()
     }
-    if (page === 'submitter' || page === 'submitter-authors' || page === 'submitter-monitor') {
+    if (page === 'submitter' || page === 'submitter-authors') {
       loadSubmitterAuthors()
       if (page === 'submitter') {
         loadSubmitterVideos()
       }
-      if (page === 'submitter-monitor') {
+      if (page === 'submitter-authors') {
         loadSubmitterMonitor()
       }
     }
@@ -115,7 +115,7 @@ export function useAppShell({
     if (activePage.value === 'static-assets') {
       loadStaticAssets()
     }
-    if (activePage.value === 'submitter-monitor') {
+    if (activePage.value === 'submitter-authors') {
       loadSubmitterAuthors()
       loadSubmitterMonitor()
     }
@@ -144,5 +144,6 @@ function initialPage() {
   if (typeof window === 'undefined') return 'accounts'
   const page = new URLSearchParams(window.location.search).get('page')
   if (page === 'operator-diagnostics') return 'accounts'
+  if (page === 'submitter-monitor') return 'submitter-authors'
   return page || 'accounts'
 }

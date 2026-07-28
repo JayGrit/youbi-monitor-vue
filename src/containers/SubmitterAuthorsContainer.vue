@@ -7,5 +7,8 @@ defineProps({
 </script>
 
 <template>
-  <SubmitterAuthorsPage v-bind="app" />
+  <SubmitterAuthorsPage
+    v-bind="app"
+    v-model:submitter-input="app.submitterInput"
+  />
 </template>
