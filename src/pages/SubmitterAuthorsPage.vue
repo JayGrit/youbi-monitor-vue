@@ -478,41 +478,45 @@ onMounted(refreshMonitor)
                 </button>
             </div>
             <div class="submitter-author-scan">
-              <span v-if="!scanForAuthor(row)" class="submitter-author-scan-empty">
-                暂无扫描数据
-              </span>
+              <div v-if="!scanForAuthor(row)" class="submitter-author-scan-empty">
+                <span>
+                  <strong>采集进度</strong>
+                  <small>{{ monitorLoading ? '正在加载扫描数据' : '暂无扫描数据' }}</small>
+                </span>
+                <span class="submitter-monitor-url-bar" aria-hidden="true"></span>
+              </div>
               <template v-else>
-              <button type="button" class="submitter-author-scan-summary" @click="openScanBatches(scanForAuthor(row))">
-                <span>
-                  <small>扫描上限</small>
-                  <strong>{{ scanLimitText(scanForAuthor(row)) }}</strong>
-                </span>
-                <span>
-                  <small>URL 总数</small>
-                  <strong>{{ num(scanForAuthor(row).candidateCount) }}</strong>
-                </span>
-                <span class="submitter-author-scan-progress">
-                  <small>URL 加载</small>
-                  <span class="submitter-monitor-url-bar">
-                    <i class="done" :style="urlSegmentStyle(scanForAuthor(row), 'done')"></i>
-                    <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
-                    <i class="failed" :style="urlSegmentStyle(scanForAuthor(row), 'failed')"></i>
+                <button type="button" class="submitter-author-scan-summary" @click="openScanBatches(scanForAuthor(row))">
+                  <span>
+                    <small>扫描上限</small>
+                    <strong>{{ scanLimitText(scanForAuthor(row)) }}</strong>
                   </span>
-                  <em>
-                    成功 {{ num(scanForAuthor(row).doneImportCount) }} ·
-                    等待 {{ num(urlWaitingCount(scanForAuthor(row))) }} ·
-                    失败 {{ num(scanForAuthor(row).failedImportCount) }}
-                  </em>
-                </span>
-              </button>
-              <button
-                type="button"
-                class="submitter-monitor-row-action"
-                :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
-                @click="continueAuthorScan(scanForAuthor(row))"
-              >
-                {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
-              </button>
+                  <span>
+                    <small>URL 总数</small>
+                    <strong>{{ num(scanForAuthor(row).candidateCount) }}</strong>
+                  </span>
+                  <span class="submitter-author-scan-progress">
+                    <small>采集进度</small>
+                    <span class="submitter-monitor-url-bar">
+                      <i class="done" :style="urlSegmentStyle(scanForAuthor(row), 'done')"></i>
+                      <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
+                      <i class="failed" :style="urlSegmentStyle(scanForAuthor(row), 'failed')"></i>
+                    </span>
+                    <em>
+                      成功 {{ num(scanForAuthor(row).doneImportCount) }} ·
+                      等待 {{ num(urlWaitingCount(scanForAuthor(row))) }} ·
+                      失败 {{ num(scanForAuthor(row).failedImportCount) }}
+                    </em>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="submitter-monitor-row-action"
+                  :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
+                  @click="continueAuthorScan(scanForAuthor(row))"
+                >
+                  {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
+                </button>
               </template>
             </div>
           </article>
