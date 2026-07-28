@@ -497,7 +497,7 @@ onMounted(refreshMonitor)
                   </span>
                   <span class="submitter-author-scan-progress">
                     <small>采集进度</small>
-                    <span class="submitter-monitor-url-bar">
+                    <span class="submitter-author-progress-track">
                       <i class="done" :style="urlSegmentStyle(scanForAuthor(row), 'done')"></i>
                       <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
                       <i class="failed" :style="urlSegmentStyle(scanForAuthor(row), 'failed')"></i>
