@@ -294,7 +294,10 @@ function accountAvailable(row) {
 }
 
 function accountRowUnavailable(item) {
-  return item?.configured && item.row?.enabled !== false && accountAvailable(item.row) === false
+  return item?.configured
+    && item.row?.enabled !== false
+    && item.row?.rateLimited !== true
+    && accountAvailable(item.row) === false
 }
 
 function dateTimeLocalValue(value) {
