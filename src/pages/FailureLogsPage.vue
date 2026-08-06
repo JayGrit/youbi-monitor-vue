@@ -54,6 +54,10 @@ function stageText(row) {
   return stageNameText[row.stage] || row.stage || '-'
 }
 
+function subStageText(row) {
+  return row.subStage || 'main'
+}
+
 function platformFilterText() {
   if (props.platformFilter.length === 0) return '全部平台'
   return props.platformFilter.join(', ')
@@ -267,6 +271,7 @@ function parseUploadLogId(logId) {
           <tr>
             <th v-if="actionsExpanded" class="failure-log-select-column">选择</th>
             <th>阶段</th>
+            <th>子阶段</th>
             <th>Topic</th>
             <th class="failure-log-platform-column">平台</th>
             <th class="failure-log-task-column">任务</th>
@@ -288,6 +293,7 @@ function parseUploadLogId(logId) {
               <span v-else>-</span>
             </td>
             <td><span class="failure-log-stage">{{ stageText(row) }}</span></td>
+            <td>{{ subStageText(row) }}</td>
             <td>{{ row.topic || '-' }}</td>
             <td class="failure-log-platform-column">
               <img
