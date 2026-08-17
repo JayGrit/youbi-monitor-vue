@@ -271,6 +271,21 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
+  async function savePlatformOnlyDraftBox(platform, row) {
+    if (!row?.topic) return
+    const enabled = row.draftOnlyDraftBox === true
+    setPlatformBusy(platform, rowKey(row), 'onlyDraftBox')
+    try {
+      const payload = await accountsApi[platform].setOnlyDraftBox(row.topic, enabled)
+      mergePlatformRow(platform, payload, row.slot)
+      setPlatformError(platform, '')
+    } catch (err) {
+      setPlatformError(platform, err instanceof Error ? err.message : String(err))
+    } finally {
+      clearPlatformBusy(platform)
+    }
+  }
+
   async function savePlatformNextUploadAllowedAt(platform, row) {
     if (!row?.topic) return
     const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
@@ -462,6 +477,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount,
     savePlatformScheduledPublish,
+    savePlatformOnlyDraftBox,
     savePlatformNextUploadAllowedAt,
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,

@@ -43,6 +43,7 @@ defineProps([
   'saveAccountQuietTimeEdit',
   'saveAccountDownloaderMaxStagedCountEdit',
   'saveAccountScheduledPublishEdit',
+  'saveAccountOnlyDraftBoxEdit',
   'saveAccountEnabledEdit',
   'toggleUploadBackfillAll',
   'loadUploadBackfillCandidates',
@@ -91,6 +92,7 @@ defineProps([
         :save-account-quiet-time-edit="saveAccountQuietTimeEdit"
         :save-account-downloader-max-staged-count-edit="saveAccountDownloaderMaxStagedCountEdit"
         :save-account-scheduled-publish-edit="saveAccountScheduledPublishEdit"
+        :save-account-only-draft-box-edit="saveAccountOnlyDraftBoxEdit"
         :save-account-enabled-edit="saveAccountEnabledEdit"
       />
 

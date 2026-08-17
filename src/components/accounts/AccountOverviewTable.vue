@@ -26,6 +26,7 @@ const props = defineProps([
   'saveAccountQuietTimeEdit',
   'saveAccountDownloaderMaxStagedCountEdit',
   'saveAccountScheduledPublishEdit',
+  'saveAccountOnlyDraftBoxEdit',
   'saveAccountEnabledEdit',
 ])
 
@@ -112,6 +113,7 @@ function formatFollowerGrowth(value) {
             <span v-if="accountEditMode">最大暂存</span>
             <span v-if="accountEditMode">支持定时</span>
             <span v-if="accountEditMode">最大定时天数</span>
+            <span v-if="accountEditMode">只发草稿箱</span>
             <span v-if="accountEditMode">启用</span>
           </div>
         </div>
@@ -299,6 +301,18 @@ function formatFollowerGrowth(value) {
                   :disabled="accountRowSaving(item) || !item.row.draftSupportsScheduledPublish"
                   @change="saveAccountScheduledPublishEdit(item)"
                 />
+                <template v-else>-</template>
+              </span>
+              <span v-if="accountEditMode" class="account-cell" data-label="只发草稿箱">
+                <label v-if="item.configured && item.type === 'jinritoutiao'" class="account-enabled-edit">
+                  <input
+                    v-model="item.row.draftOnlyDraftBox"
+                    type="checkbox"
+                    :disabled="accountRowSaving(item)"
+                    @change="saveAccountOnlyDraftBoxEdit(item)"
+                  />
+                  {{ item.row.draftOnlyDraftBox ? '是' : '否' }}
+                </label>
                 <template v-else>-</template>
               </span>
               <span v-if="accountEditMode" class="account-cell" data-label="启用">

@@ -28,6 +28,9 @@ function genericPlatformAccountApi(apiBase, platform, context) {
     setScheduledPublish(topic, supported, maxDays) {
       return postJson(`${base}/${encodeURIComponent(topic)}/scheduled-publish`, { supported, maxDays }, describe('保存账号定时发布配置'))
     },
+    setOnlyDraftBox(topic, enabled) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/only-draft-box`, { enabled }, describe('保存账号仅草稿箱配置'))
+    },
     updateProfile(topic, displayName, avatarUrl = undefined) {
       const body = { displayName }
       if (avatarUrl !== undefined) body.avatarUrl = avatarUrl
