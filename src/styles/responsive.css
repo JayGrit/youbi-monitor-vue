@@ -61,7 +61,7 @@
   .account-table.editing .account-row,
   .account-table.editing .account-row.account-platform-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(110px, 1fr) minmax(140px, 1fr) 88px 140px 166px 72px 64px;
+    grid-template-columns: 58px 54px minmax(110px, 1fr) 86px minmax(120px, 1fr) minmax(140px, 1fr) 72px 64px 86px 64px 64px;
   }
 
   .task-row {

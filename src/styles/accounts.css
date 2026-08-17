@@ -455,7 +455,7 @@
 .account-table.editing .account-row,
 .account-table.editing .account-row.account-platform-row {
   min-width: 0;
-  grid-template-columns: 52px 48px minmax(92px, 150px) 84px 130px 170px 84px 90px 96px 70px;
+  grid-template-columns: 52px 48px minmax(92px, 150px) 84px 130px 170px 84px 90px 96px 90px 70px;
   justify-content: space-between;
   gap: 8px;
 }
