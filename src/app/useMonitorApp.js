@@ -744,6 +744,7 @@ export function useMonitorApp() {
     savePlatformQuietTime,
     savePlatformDownloaderMaxStagedCount,
     savePlatformScheduledPublish,
+    savePlatformOnlyDraftBox,
     savePlatformNextUploadAllowedAt,
     savePlatformKey,
     savePlatformAccountProfile,
