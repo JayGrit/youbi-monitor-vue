@@ -23,6 +23,7 @@ const props = defineProps({
   deleteSubmitterAuthor: { type: Function, required: true },
   submitSubmitterInput: { type: Function, required: true },
   continueSubmitterAuthorScan: { type: Function, required: true },
+  fetchSubmitterAuthorNewVideos: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:submitterInput'])
@@ -276,6 +277,11 @@ async function continueAuthorScan(scan) {
   await refreshMonitor()
 }
 
+async function fetchAuthorNewVideos(row) {
+  await props.fetchSubmitterAuthorNewVideos(row)
+  await refreshMonitor()
+}
+
 onMounted(refreshMonitor)
 </script>
 
@@ -509,14 +515,24 @@ onMounted(refreshMonitor)
                     </em>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  class="submitter-monitor-row-action"
-                  :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
-                  @click="continueAuthorScan(scanForAuthor(row))"
-                >
-                  {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
-                </button>
+                <span class="submitter-author-scan-actions">
+                  <button
+                    type="button"
+                    class="submitter-monitor-row-action"
+                    :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
+                    @click="continueAuthorScan(scanForAuthor(row))"
+                  >
+                    {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : (canContinueScan(scanForAuthor(row)) ? '全量加载' : '已完成') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="submitter-monitor-row-action submitter-monitor-row-action-incremental"
+                    :disabled="!scanForAuthor(row).scanFinished || submitterMonitorContinueBusy === scanForAuthor(row).author"
+                    @click="fetchAuthorNewVideos(row)"
+                  >
+                    {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : '增量拉取' }}
+                  </button>
+                </span>
               </template>
             </div>
           </article>

@@ -1444,6 +1444,21 @@ a.submitter-cell:hover {
   white-space: nowrap;
 }
 
+.submitter-author-scan-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submitter-monitor-row-action-incremental {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.submitter-monitor-row-action-incremental:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
 .submitter-monitor-row-action:hover:not(:disabled) {
   background: #243044;
 }

@@ -210,6 +210,26 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
+  async function fetchSubmitterAuthorNewVideos(authorRow) {
+    const author = String(authorRow?.author || '').trim()
+    if (!author || submitterMonitorContinueBusy.value) return
+    submitterMonitorContinueBusy.value = author
+    submitterMonitorError.value = ''
+    try {
+      const result = await submitterApi.fetchNewAuthorVideos(author)
+      submitterMessage.value = `已提交增量拉取：${author}`
+      await Promise.all([
+        loadSubmitterMonitor(),
+        loadSubmitterAuthors(),
+      ])
+      return result
+    } catch (err) {
+      submitterMonitorError.value = err instanceof Error ? err.message : String(err)
+    } finally {
+      submitterMonitorContinueBusy.value = ''
+    }
+  }
+
   async function resetSubmitterFilters() {
     submitterTopicFilter.value = ''
     submitterUploader.value = ''
@@ -487,6 +507,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     loadSubmitterAuthors,
     loadSubmitterMonitor,
     continueSubmitterAuthorScan,
+    fetchSubmitterAuthorNewVideos,
     resetSubmitterFilters,
     clearSubmitterBatchFocus,
     submitVideoToYoubi,
