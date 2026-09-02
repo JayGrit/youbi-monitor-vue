@@ -36,6 +36,7 @@ const newTopicName = ref('')
 const newTopicCreating = ref(false)
 const newTopicError = ref('')
 const selectedScan = ref(null)
+const pendingDeleteRow = ref(null)
 const localMonitorState = ref(null)
 const localMonitorLoading = ref(false)
 const localMonitorError = ref('')
@@ -263,6 +264,13 @@ function openScanBatches(scan) {
   selectedScan.value = scan
 }
 
+async function confirmDeleteAuthor() {
+  const row = pendingDeleteRow.value
+  if (!row) return
+  pendingDeleteRow.value = null
+  await props.deleteSubmitterAuthor(row)
+}
+
 function statusLabel(status) {
   return {
     scanning: '扫描中',
@@ -389,11 +397,11 @@ onMounted(refreshMonitor)
               <span>任务类型</span>
               <span v-if="editMode">配置</span>
               <span v-if="editMode">语言</span>
-              <span v-if="editMode">操作</span>
               <span>扫描上限</span>
               <span>URL 总数</span>
               <span>采集进度</span>
               <span>操作</span>
+              <span>删除</span>
             </div>
             <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
             <div class="submitter-author-source-cell">
@@ -534,16 +542,6 @@ onMounted(refreshMonitor)
                   @blur="autosaveSubmitterAuthorType(row)"
                 />
             </div>
-            <div v-if="editMode" class="submitter-author-action-cell">
-                <button
-                  type="button"
-                  class="submitter-author-delete"
-                  :disabled="submitterAuthorDeleting === row.author || Boolean(submitterAuthorTypeSaving)"
-                  @click="deleteSubmitterAuthor(row)"
-                >
-                  {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
-                </button>
-            </div>
             <div class="submitter-author-scan">
               <div v-if="!scanForAuthor(row)" class="submitter-author-scan-empty">
                 <small>{{ monitorLoading ? '正在加载扫描数据' : '暂无扫描数据' }}</small>
@@ -590,7 +588,17 @@ onMounted(refreshMonitor)
                 </span>
               </template>
             </div>
-            </article>
+            <div class="submitter-author-action-cell">
+              <button
+                type="button"
+                class="submitter-author-delete"
+                :disabled="submitterAuthorDeleting === row.author || Boolean(submitterAuthorTypeSaving)"
+                @click="pendingDeleteRow = row"
+              >
+                {{ submitterAuthorDeleting === row.author ? '删除中' : '删除' }}
+              </button>
+            </div>
+          </article>
           </template>
         </section>
       </div>
@@ -621,6 +629,20 @@ onMounted(refreshMonitor)
             <em v-if="batch.error" class="submitter-monitor-error">{{ batch.error }}</em>
           </article>
           <p v-if="scanBatches(selectedScan).length === 0" class="submitter-empty">暂无导入批次</p>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="pendingDeleteRow" class="submitter-monitor-modal-backdrop" @click.self="pendingDeleteRow = null">
+      <section class="submitter-author-delete-modal" role="dialog" aria-modal="true" aria-labelledby="submitter-author-delete-title">
+        <h2 id="submitter-author-delete-title">删除作者</h2>
+        <p>
+          确定删除作者“<strong>{{ authorName(pendingDeleteRow) }}</strong>”吗？
+          该作者名下的所有视频和导入记录也会一并删除，此操作无法撤销。
+        </p>
+        <div>
+          <button type="button" class="submitter-author-delete-cancel" @click="pendingDeleteRow = null">取消</button>
+          <button type="button" class="submitter-author-delete-confirm" @click="confirmDeleteAuthor">确认删除</button>
         </div>
       </section>
     </div>

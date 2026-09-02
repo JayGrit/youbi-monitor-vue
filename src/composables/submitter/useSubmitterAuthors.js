@@ -202,7 +202,6 @@ export function useSubmitterAuthors({
   async function deleteSubmitterAuthor(row) {
     const author = String(row?.author || '').trim()
     if (!author || submitterAuthorDeleting.value || submitterAuthorTypeSaving.value) return
-    if (!window.confirm(`确定删除作者 ${author} 并清理其所有视频？`)) return
     submitterAuthorDeleting.value = author
     submitterAuthorTypeError.value = ''
     try {
