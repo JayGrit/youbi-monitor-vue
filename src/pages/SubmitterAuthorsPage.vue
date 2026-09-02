@@ -246,7 +246,7 @@ function urlSegmentStyle(scan, key) {
 }
 
 function canContinueScan(scan) {
-  return Boolean(scan?.scanFinished)
+  return !['queued', 'scanning', 'processing'].includes(String(scan?.lastBatchStatus || '').toLowerCase())
 }
 
 function scanBatches(scan) {
@@ -557,7 +557,7 @@ async function fetchAuthorNewVideos(row) {
                   <button
                     type="button"
                     class="submitter-monitor-row-action submitter-monitor-row-action-incremental"
-                    :disabled="!scanForAuthor(row).scanFinished || submitterMonitorContinueBusy === scanForAuthor(row).author"
+                    :disabled="!canContinueScan(scanForAuthor(row)) || submitterMonitorContinueBusy === scanForAuthor(row).author"
                     @click="fetchAuthorNewVideos(row)"
                   >
                     {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : '增量拉取' }}
