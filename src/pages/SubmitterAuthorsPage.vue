@@ -26,7 +26,7 @@ const props = defineProps({
   continueSubmitterAuthorScan: { type: Function, required: true },
   fetchSubmitterAuthorNewVideos: { type: Function, required: true },
   loadSubmitterEditingOptions: { type: Function, required: true },
-  loadSubmitterMonitor: { type: Function, required: true },
+  loadSubmitterAuthorTypes: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:submitterInput'])
@@ -303,7 +303,7 @@ function batchProgressStyle(batch) {
 }
 
 async function refreshMonitor() {
-  await props.loadSubmitterMonitor()
+  await props.loadSubmitterAuthorTypes()
 }
 
 async function continueAuthorScan(scan) {

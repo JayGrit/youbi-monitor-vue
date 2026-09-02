@@ -210,10 +210,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
         topic: authorRow?.topic || undefined,
         taskType: authorRow?.taskType || undefined,
       })
-      await Promise.all([
-        loadSubmitterMonitor(),
-        loadSubmitterAuthorTypes(),
-      ])
+      await loadSubmitterAuthorTypes()
     } catch (err) {
       submitterMonitorError.value = err instanceof Error ? err.message : String(err)
     } finally {
@@ -229,10 +226,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     try {
       const result = await submitterApi.fetchNewAuthorVideos(author)
       submitterMessage.value = `已提交增量拉取：${author}`
-      await Promise.all([
-        loadSubmitterMonitor(),
-        loadSubmitterAuthorTypes(),
-      ])
+      await loadSubmitterAuthorTypes()
       return result
     } catch (err) {
       submitterMonitorError.value = err instanceof Error ? err.message : String(err)

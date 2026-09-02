@@ -3,6 +3,10 @@ export function useSubmitterAuthors({
   submitterAuthors,
   submitterAuthorTypeRows,
   submitterTaskTypes,
+  submitterMonitorState,
+  submitterMonitorLoading,
+  submitterMonitorError,
+  submitterMonitorLoadedAt,
   submitterAuthorTypeSaving,
   submitterAuthorDeleting,
   submitterAuthorTypeError,
@@ -14,9 +18,17 @@ export function useSubmitterAuthors({
 }) {
   async function loadSubmitterAuthorTypes({ includeVideoAuthors = false } = {}) {
     submitterAuthorTypeError.value = ''
+    submitterMonitorLoading.value = true
+    submitterMonitorError.value = ''
     try {
       const payload = await submitterApi.listAuthorTypes()
-      const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
+      const items = Array.isArray(payload) ? payload : (payload?.items || [])
+      const byAuthor = new Map(items.map(item => [String(item.author || ''), item]))
+      submitterMonitorState.value = {
+        authors: items,
+        batches: Array.isArray(payload?.batches) ? payload.batches : [],
+      }
+      submitterMonitorLoadedAt.value = new Date().toISOString()
       const authorRows = new Map()
       if (includeVideoAuthors) {
         for (const item of submitterAuthors.value) {
@@ -62,6 +74,9 @@ export function useSubmitterAuthors({
       }))
     } catch (err) {
       submitterAuthorTypeError.value = err instanceof Error ? err.message : String(err)
+      submitterMonitorError.value = submitterAuthorTypeError.value
+    } finally {
+      submitterMonitorLoading.value = false
     }
   }
 
