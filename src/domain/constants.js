@@ -41,10 +41,17 @@ export const SUBMITTER_UPLOAD_FILTERS = [
 ]
 
 export const SUBMITTER_DURATION_FILTERS = [
-  { value: 'all', label: '全部时长' },
-  { value: 'short', label: '短视频（0-120 秒）' },
-  { value: 'medium', label: '中视频（121-1200 秒）' },
-  { value: 'long', label: '长视频（1201 秒以上）' },
+  { value: 'all', label: '全部时长', min: null, max: null },
+  { value: '0_2', label: '0–2 分钟', min: 0, max: 120 },
+  { value: '2_5', label: '2–5 分钟', min: 121, max: 300 },
+  { value: '5_10', label: '5–10 分钟', min: 301, max: 600 },
+  { value: '10_15', label: '10–15 分钟', min: 601, max: 900 },
+  { value: '15_20', label: '15–20 分钟', min: 901, max: 1200 },
+  { value: '20_30', label: '20–30 分钟', min: 1201, max: 1800 },
+  { value: '30_40', label: '30–40 分钟', min: 1801, max: 2400 },
+  { value: '40_60', label: '40–60 分钟', min: 2401, max: 3600 },
+  { value: '60_120', label: '60–120 分钟', min: 3601, max: 7200 },
+  { value: '120_plus', label: '120 分钟以上', min: 7201, max: null },
 ]
 
 export const SUBMITTER_PUBLISHED_FILTERS = [

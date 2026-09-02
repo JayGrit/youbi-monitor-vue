@@ -9,6 +9,7 @@ const props = defineProps({
   submitterAuthorTypeError: { type: String, default: '' },
   submitterAuthorTypeRows: { type: Array, default: () => [] },
   submitterTaskTypes: { type: Array, default: () => [] },
+  submitterTopics: { type: Array, default: () => [] },
   platformIconUrls: { type: Object, default: () => ({}) },
   submitterAuthorTypeSaving: { type: String, default: '' },
   submitterAuthorDeleting: { type: String, default: '' },
@@ -20,6 +21,7 @@ const props = defineProps({
   submitterMonitorLoadedAt: { type: String, default: '' },
   submitterMonitorContinueBusy: { type: String, default: '' },
   autosaveSubmitterAuthorType: { type: Function, required: true },
+  createSubmitterTopic: { type: Function, required: true },
   deleteSubmitterAuthor: { type: Function, required: true },
   submitSubmitterInput: { type: Function, required: true },
   continueSubmitterAuthorScan: { type: Function, required: true },
@@ -29,6 +31,10 @@ const props = defineProps({
 const emit = defineEmits(['update:submitterInput'])
 const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const editMode = ref(false)
+const newTopicAuthor = ref('')
+const newTopicName = ref('')
+const newTopicCreating = ref(false)
+const newTopicError = ref('')
 const selectedScan = ref(null)
 const localMonitorState = ref(null)
 const localMonitorLoading = ref(false)
@@ -57,6 +63,44 @@ const authorTypeGroups = computed(() => {
 
 function flushTypeAutosave(row, autosave) {
   autosave(row)
+}
+
+const topicOptions = computed(() => props.submitterTopics
+  .map(item => String(item?.topic || '').trim())
+  .filter(Boolean))
+
+function onTopicSelect(row, event) {
+  const topic = String(event.target.value || '')
+  if (topic === '__new__') {
+    newTopicAuthor.value = row.author
+    newTopicName.value = ''
+    newTopicError.value = ''
+    event.target.value = row.draftTopic
+    return
+  }
+  newTopicAuthor.value = ''
+  newTopicName.value = ''
+  newTopicError.value = ''
+  row.draftTopic = topic
+  props.autosaveSubmitterAuthorType(row)
+}
+
+async function createTopicForRow(row) {
+  const topic = newTopicName.value.trim()
+  if (!topic || newTopicCreating.value) return
+  newTopicCreating.value = true
+  newTopicError.value = ''
+  try {
+    const created = await props.createSubmitterTopic(topic)
+    row.draftTopic = String(created?.topic || topic)
+    newTopicAuthor.value = ''
+    newTopicName.value = ''
+    await props.autosaveSubmitterAuthorType(row)
+  } catch (err) {
+    newTopicError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    newTopicCreating.value = false
+  }
 }
 
 function onResetCoverChange(row, autosave) {
@@ -360,14 +404,27 @@ onMounted(refreshMonitor)
                 </div>
               </div>
               <div v-if="editMode" class="submitter-author-type-edit">
-                <input
-                  v-model="row.draftTopic"
-                  type="text"
-                  placeholder="投稿 topic"
+                <select
+                  :value="row.draftTopic"
                   :disabled="submitterAuthorTypeSaving === row.author"
-                  @change="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
-                  @keydown.enter.prevent="flushTypeAutosave(row, autosaveSubmitterAuthorType)"
-                />
+                  @change="onTopicSelect(row, $event)"
+                >
+                  <option value="__new__">新建 Topic</option>
+                  <option v-for="topic in topicOptions" :key="topic" :value="topic">{{ topic }}</option>
+                </select>
+                <div v-if="newTopicAuthor === row.author" class="submitter-new-topic">
+                  <input
+                    v-model="newTopicName"
+                    type="text"
+                    placeholder="输入新 Topic"
+                    :disabled="newTopicCreating"
+                    @keydown.enter.prevent="createTopicForRow(row)"
+                  />
+                  <button type="button" :disabled="!newTopicName.trim() || newTopicCreating" @click="createTopicForRow(row)">
+                    {{ newTopicCreating ? '新建中…' : '新建' }}
+                  </button>
+                  <small v-if="newTopicError" class="submitter-new-topic-error">{{ newTopicError }}</small>
+                </div>
               </div>
             </div>
             <div class="submitter-author-task-cell">

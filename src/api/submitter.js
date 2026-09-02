@@ -142,6 +142,10 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       return requestJson(`${submitterApiBase}/submitter-author-types/topics`, undefined, describe('查询投稿Topic选项'))
     },
 
+    createTopic(topic) {
+      return postJson(`${submitterApiBase}/submitter-author-types/topics`, { topic }, describe('新建投稿Topic'))
+    },
+
     saveAuthorType(author, topic, taskType, hasBackgroundAudio, sourceLanguage, targetLanguage, resetCover, coverOrientation, fetchNewVideos, bilibiliExists) {
       return postJson(`${submitterApiBase}/submitter-author-types`, {
         author,

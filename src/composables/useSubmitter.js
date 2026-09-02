@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { SUBMITTER_PAGE_SIZE } from '../domain/constants'
+import { SUBMITTER_DURATION_FILTERS, SUBMITTER_PAGE_SIZE } from '../domain/constants'
 import { formatNumber } from '../utils/format'
 import { useSubmitterActions } from './submitter/useSubmitterActions'
 import { useSubmitterAuthors } from './submitter/useSubmitterAuthors'
@@ -173,6 +173,14 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     }
   }
 
+  async function createSubmitterTopic(topic) {
+    const normalized = String(topic || '').trim()
+    if (!normalized) throw new Error('Topic 不能为空')
+    const created = await submitterApi.createTopic(normalized)
+    await loadSubmitterTopics()
+    return created
+  }
+
   async function loadSubmitterMonitor() {
     submitterMonitorLoading.value = true
     submitterMonitorError.value = ''
@@ -254,10 +262,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
   }
 
   function submitterDurationRange() {
-    if (submitterDurationFilter.value === 'short') return { min: 0, max: 120 }
-    if (submitterDurationFilter.value === 'medium') return { min: 121, max: 1200 }
-    if (submitterDurationFilter.value === 'long') return { min: 1201, max: null }
-    return { min: null, max: null }
+    const range = SUBMITTER_DURATION_FILTERS.find(item => item.value === submitterDurationFilter.value)
+    return { min: range?.min ?? null, max: range?.max ?? null }
   }
 
   function submitterPublishedRange() {
@@ -277,10 +283,8 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     if (submitterDurationFilter.value === 'all') return true
     const duration = Number(item?.duration)
     if (!Number.isFinite(duration)) return false
-    if (submitterDurationFilter.value === 'short') return duration >= 0 && duration <= 120
-    if (submitterDurationFilter.value === 'medium') return duration >= 121 && duration <= 1200
-    if (submitterDurationFilter.value === 'long') return duration >= 1201
-    return true
+    const range = submitterDurationRange()
+    return (range.min === null || duration >= range.min) && (range.max === null || duration <= range.max)
   }
 
   async function clearSubmitterBatchFocus() {
@@ -493,6 +497,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterTotal,
     submitterAuthorTypeRows,
     submitterTaskTypes,
+    submitterTopics,
     submitterAuthorTypeSaving,
     submitterAuthorDeleting,
     submitterAuthorTypeError,
@@ -505,6 +510,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
+    createSubmitterTopic,
     loadSubmitterMonitor,
     continueSubmitterAuthorScan,
     fetchSubmitterAuthorNewVideos,
