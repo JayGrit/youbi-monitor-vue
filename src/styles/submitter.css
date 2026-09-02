@@ -778,14 +778,14 @@ a.submitter-cell:hover {
 .submitter-author-type-head,
 .submitter-author-type-row {
   display: grid;
-  grid-template-columns: 48px 280px 140px 100px 100px minmax(280px, 1fr) 190px 78px;
+  grid-template-columns: 48px 280px 140px 100px 100px minmax(280px, 1fr) 280px;
   align-items: center;
   gap: 12px;
 }
 
 .submitter-author-type-body.editing .submitter-author-type-head,
 .submitter-author-type-body.editing .submitter-author-type-row {
-  grid-template-columns: 48px 280px 140px 360px 160px 100px 100px minmax(280px, 1fr) 190px 78px;
+  grid-template-columns: 48px 280px 140px 360px 160px 100px 100px minmax(280px, 1fr) 280px;
 }
 
 .submitter-author-type-head {
@@ -828,7 +828,7 @@ a.submitter-cell:hover {
 
 .submitter-author-main-cell {
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: 8px;
 }
 
@@ -838,7 +838,7 @@ a.submitter-cell:hover {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  justify-self: center;
+  justify-self: stretch;
 }
 
 .submitter-author-profile img,
@@ -866,18 +866,9 @@ a.submitter-cell:hover {
   min-width: 0;
 }
 
-.submitter-author-profile small {
-  display: block;
-  margin-top: 3px;
-  color: #7a8798;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .submitter-author-link,
 .submitter-author-name {
+  display: block;
   min-width: 0;
   overflow: hidden;
   color: #1f2a3a;
@@ -1081,7 +1072,7 @@ a.submitter-cell:hover {
 }
 
 .submitter-author-scan-empty {
-  grid-column: span 4;
+  grid-column: span 3;
   display: grid;
   grid-template-columns: auto minmax(120px, 1fr);
   align-items: center;
@@ -1543,10 +1534,10 @@ a.submitter-cell:hover {
   white-space: nowrap;
 }
 
-.submitter-author-scan-actions {
+.submitter-author-action-cell {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 

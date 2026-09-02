@@ -401,7 +401,6 @@ onMounted(refreshMonitor)
               <span>URL 总数</span>
               <span>采集进度</span>
               <span>操作</span>
-              <span>删除</span>
             </div>
             <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
             <div class="submitter-author-source-cell">
@@ -422,7 +421,6 @@ onMounted(refreshMonitor)
                     {{ authorName(row) }}
                   </a>
                   <span v-else class="submitter-author-name">{{ authorName(row) }}</span>
-                  <small v-if="row.authorHandle">{{ row.authorHandle }}</small>
                 </div>
               </div>
               <div v-if="editMode" class="submitter-author-type-edit">
@@ -561,14 +559,12 @@ onMounted(refreshMonitor)
                       <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
                       <i class="failed" :style="urlSegmentStyle(scanForAuthor(row), 'failed')"></i>
                     </span>
-                    <em>
-                      成功 {{ num(scanForAuthor(row).doneImportCount) }} ·
-                      等待 {{ num(urlWaitingCount(scanForAuthor(row))) }} ·
-                      失败 {{ num(scanForAuthor(row).failedImportCount) }}
-                    </em>
                   </span>
                 </button>
-                <span class="submitter-author-scan-actions">
+              </template>
+            </div>
+            <div class="submitter-author-action-cell">
+              <template v-if="scanForAuthor(row)">
                   <button
                     type="button"
                     class="submitter-monitor-row-action"
@@ -585,10 +581,7 @@ onMounted(refreshMonitor)
                   >
                     {{ submitterMonitorContinueBusy === scanForAuthor(row).author ? '提交中' : '增量拉取' }}
                   </button>
-                </span>
               </template>
-            </div>
-            <div class="submitter-author-action-cell">
               <button
                 type="button"
                 class="submitter-author-delete"
