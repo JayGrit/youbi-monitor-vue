@@ -753,14 +753,14 @@ a.submitter-cell:hover {
 .submitter-author-type-head,
 .submitter-author-type-row {
   display: grid;
-  grid-template-columns: 112px minmax(180px, 1.25fr) minmax(140px, 0.8fr) minmax(360px, 2fr);
+  grid-template-columns: 48px 220px 140px minmax(420px, 1fr);
   align-items: center;
   gap: 12px;
 }
 
 .submitter-author-type-body.editing .submitter-author-type-head,
 .submitter-author-type-body.editing .submitter-author-type-row {
-  grid-template-columns: 112px minmax(180px, 1fr) minmax(140px, 0.75fr) minmax(360px, 1.9fr) 160px 78px;
+  grid-template-columns: 48px 220px 140px 360px 160px 78px minmax(420px, 1fr);
 }
 
 .submitter-author-type-head {
@@ -795,7 +795,7 @@ a.submitter-cell:hover {
 .submitter-author-source-cell {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   color: #516174;
   font-weight: 680;
 }
@@ -991,19 +991,17 @@ a.submitter-cell:hover {
 }
 
 .submitter-author-scan {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed #dbe3ed;
+  min-width: 0;
 }
 
 .submitter-author-scan-empty {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(110px, auto) minmax(220px, 1fr);
+  grid-template-columns: auto minmax(120px, 1fr);
   align-items: center;
   gap: 12px;
   color: #94a3b8;
@@ -1027,7 +1025,7 @@ a.submitter-cell:hover {
 
 .submitter-author-type-row .submitter-author-scan-summary {
   display: grid;
-  grid-template-columns: minmax(100px, 0.5fr) minmax(100px, 0.5fr) minmax(280px, 2fr);
+  grid-template-columns: 76px 76px minmax(220px, 1fr);
   align-items: center;
   gap: 16px;
   min-height: 44px;
@@ -1072,7 +1070,7 @@ a.submitter-cell:hover {
 .submitter-author-progress-track {
   display: flex !important;
   width: 100%;
-  min-width: 320px;
+  min-width: 0;
   height: 12px;
   overflow: hidden;
   border-radius: 999px;

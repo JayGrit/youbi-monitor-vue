@@ -121,10 +121,6 @@ function onCoverOrientationChange(row, orientation, autosave) {
   autosave(row)
 }
 
-function boolMark(value) {
-  return value ? '✔' : '✘'
-}
-
 function sourcePlatform(row) {
   const value = String(row?.source || row?.platform || '').trim().toLowerCase()
   if (value.includes('youtube') || value === 'yt') return 'youtube'
@@ -172,17 +168,6 @@ function authorInitial(row) {
 function taskTypeLabel(value) {
   const option = props.submitterTaskTypes.find(item => item.taskType === value)
   return option?.name || value || '-'
-}
-
-function settingRows(row) {
-  return [
-    { key: 'background', label: '有背景音', value: row.draftHasBackgroundAudio },
-    { key: 'resetCover', label: '重制封面', value: row.draftResetCover },
-    { key: 'horizontal', label: '横向封面', value: row.draftCoverOrientation === 'horizontal' },
-    { key: 'vertical', label: '竖向封面', value: row.draftCoverOrientation === 'vertical' },
-    { key: 'fetchNew', label: '拉取新视频', value: row.draftFetchNewVideos },
-    { key: 'bilibili', label: 'B站已有人发', value: row.draftBilibiliExists },
-  ]
 }
 
 function normalizedAuthorKeys(row) {
@@ -376,14 +361,14 @@ onMounted(refreshMonitor)
             <span>来源</span>
             <span>作者</span>
             <span>任务类型</span>
-            <span>配置</span>
+            <span v-if="editMode">配置</span>
             <span v-if="editMode">语言</span>
             <span v-if="editMode">操作</span>
+            <span>采集进度</span>
           </div>
           <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
             <div class="submitter-author-source-cell">
               <PlatformIcon :src="sourceIconUrl(row)" :label="sourceLabel(row)" :platform="sourcePlatform(row)" :size="24" />
-              <span>{{ sourceLabel(row) }}</span>
             </div>
             <div class="submitter-author-main-cell">
               <div class="submitter-author-profile">
@@ -444,18 +429,8 @@ onMounted(refreshMonitor)
                 </select>
                 <span v-else>{{ taskTypeLabel(row.draftTaskType) }}</span>
             </div>
-            <div class="submitter-author-settings-cell">
-              <div v-if="!editMode" class="submitter-author-setting-list">
-                <span
-                  v-for="setting in settingRows(row)"
-                  :key="setting.key"
-                  class="submitter-author-setting-pill"
-                  :class="{ active: setting.value }"
-                >
-                  {{ setting.label }} {{ boolMark(setting.value) }}
-                </span>
-              </div>
-              <div v-else class="submitter-author-check-grid">
+            <div v-if="editMode" class="submitter-author-settings-cell">
+              <div class="submitter-author-check-grid">
                 <label v-if="editMode" class="submitter-author-type-check">
                   <input
                     v-model="row.draftHasBackgroundAudio"
