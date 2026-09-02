@@ -223,8 +223,7 @@ function num(value) {
 }
 
 function scanLimitText(scan) {
-  const value = Number(scan?.scanMaxCount)
-  return Number.isFinite(value) && value > 0 ? `前 ${num(value)} 条` : '全量'
+  return '前 200 条'
 }
 
 function urlWaitingCount(scan) {
@@ -247,17 +246,15 @@ function urlSegmentStyle(scan, key) {
 }
 
 function canContinueScan(scan) {
-  const max = Number(scan?.scanMaxCount)
-  return Boolean(scan?.scanFinished) && Number.isFinite(max) && max > 0
+  return Boolean(scan?.scanFinished)
 }
 
 function scanBatches(scan) {
   if (!scan) return []
   const keys = new Set(normalizedAuthorKeys(scan))
-  const scanBatch = String(scan.scanBatch || '').trim()
   return monitorBatches.value.filter(batch => (
-    normalizedAuthorKeys(batch).some(key => keys.has(key))
-    || (scanBatch && String(batch?.batch || '').trim() === scanBatch)
+    Number(batch?.authorId) === Number(scan?.id)
+    || normalizedAuthorKeys(batch).some(key => keys.has(key))
   ))
 }
 
@@ -602,7 +599,6 @@ async function fetchAuthorNewVideos(row) {
               <span>跳过 {{ num(batch.skipped) }}</span>
               <span>失败 {{ num(batch.failed) }}</span>
             </p>
-            <em v-if="batch.currentTitle">{{ batch.currentTitle }}</em>
             <em v-if="batch.error" class="submitter-monitor-error">{{ batch.error }}</em>
           </article>
           <p v-if="scanBatches(selectedScan).length === 0" class="submitter-empty">暂无导入批次</p>

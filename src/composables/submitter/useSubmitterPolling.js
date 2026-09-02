@@ -55,12 +55,11 @@ export function useSubmitterPolling({
     const skipped = formatNumber(status?.skipped || 0)
     const saved = formatNumber(status?.saved || 0)
     const failed = formatNumber(status?.failed || 0)
-    const current = status?.current_title ? ` 当前：${status.current_title}` : ''
     if (status?.status === 'scanning') {
       return `正在扫描频道，新增 ${discovered} 个视频，跳过已存在 ${skipped} 个。`
     }
     if (status?.status === 'processing') {
-      return `正在处理新增视频，已保存 ${saved} 个，跳过 ${skipped} 个，失败 ${failed} 个。${current}`
+      return `正在处理新增视频，已保存 ${saved} 个，跳过 ${skipped} 个，失败 ${failed} 个。`
     }
     if (status?.status === 'done') {
       return `导入完成：新增 ${discovered} 个视频，跳过 ${skipped} 个，已保存 ${saved} 个，失败 ${failed} 个。`
