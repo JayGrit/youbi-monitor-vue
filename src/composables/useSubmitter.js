@@ -153,14 +153,17 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     try {
       const authorsPayload = await submitterApi.listAuthors()
       submitterAuthors.value = authorsPayload?.items || []
-      await Promise.all([
-        loadSubmitterAuthorTypes(),
-        loadSubmitterTaskTypes(),
-        loadSubmitterTopics(),
-      ])
+      await loadSubmitterAuthorTypes()
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
+  }
+
+  async function loadSubmitterEditingOptions() {
+    await Promise.all([
+      loadSubmitterTaskTypes(),
+      loadSubmitterTopics(),
+    ])
   }
 
   async function loadSubmitterTopics() {
@@ -510,6 +513,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
+    loadSubmitterEditingOptions,
     createSubmitterTopic,
     loadSubmitterMonitor,
     continueSubmitterAuthorScan,

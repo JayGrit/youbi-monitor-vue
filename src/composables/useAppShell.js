@@ -4,6 +4,7 @@ export function useAppShell({
   flowPageOpen,
   closeTaskFlow,
   loadSubmitterAuthors,
+  loadSubmitterMonitor,
   loadSubmitterVideos,
   warmPlatformIcons,
   startAccountPolling,
@@ -90,7 +91,10 @@ export function useAppShell({
       closeTaskFlow()
     }
     if (page === 'submitter' || page === 'submitter-authors') {
-      loadSubmitterAuthors()
+      const authorsPromise = loadSubmitterAuthors()
+      if (page === 'submitter-authors') {
+        void authorsPromise.then(() => loadSubmitterMonitor())
+      }
       if (page === 'submitter') {
         loadSubmitterVideos()
       }
@@ -112,7 +116,7 @@ export function useAppShell({
       loadStaticAssets()
     }
     if (activePage.value === 'submitter-authors') {
-      loadSubmitterAuthors()
+      void loadSubmitterAuthors().then(() => loadSubmitterMonitor())
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     syncPolling()

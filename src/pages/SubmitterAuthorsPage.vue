@@ -1,6 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, unref } from 'vue'
-import { requestJson } from '../api/http'
+import { computed, ref, unref } from 'vue'
 import PlatformIcon from '../components/PlatformIcon.vue'
 import { formatDateTime, formatNumber } from '../utils/format'
 import { normalizeResourceUrl } from '../utils/media'
@@ -26,10 +25,11 @@ const props = defineProps({
   submitSubmitterInput: { type: Function, required: true },
   continueSubmitterAuthorScan: { type: Function, required: true },
   fetchSubmitterAuthorNewVideos: { type: Function, required: true },
+  loadSubmitterEditingOptions: { type: Function, required: true },
+  loadSubmitterMonitor: { type: Function, required: true },
 })
 
 const emit = defineEmits(['update:submitterInput'])
-const submitterApiBase = `${import.meta.env.BASE_URL}submitter-api`
 const editMode = ref(false)
 const newTopicAuthor = ref('')
 const newTopicName = ref('')
@@ -37,19 +37,15 @@ const newTopicCreating = ref(false)
 const newTopicError = ref('')
 const selectedScan = ref(null)
 const pendingDeleteRow = ref(null)
-const localMonitorState = ref(null)
-const localMonitorLoading = ref(false)
-const localMonitorError = ref('')
-const localMonitorLoadedAt = ref('')
 const expandedTopics = ref(new Set())
 
 const monitorState = computed(() => {
-  const raw = localMonitorState.value || unref(props.submitterMonitorState)
+  const raw = unref(props.submitterMonitorState)
   return raw?.data || raw?.item || raw || {}
 })
-const monitorLoading = computed(() => localMonitorLoading.value || props.submitterMonitorLoading)
-const monitorError = computed(() => localMonitorError.value || props.submitterMonitorError)
-const monitorLoadedAt = computed(() => localMonitorLoadedAt.value || props.submitterMonitorLoadedAt)
+const monitorLoading = computed(() => props.submitterMonitorLoading)
+const monitorError = computed(() => props.submitterMonitorError)
+const monitorLoadedAt = computed(() => props.submitterMonitorLoadedAt)
 const monitorAuthors = computed(() => monitorState.value?.authors || [])
 const monitorBatches = computed(() => monitorState.value?.batches || [])
 
@@ -72,6 +68,11 @@ function toggleTopic(topic) {
   if (next.has(topic)) next.delete(topic)
   else next.add(topic)
   expandedTopics.value = next
+}
+
+async function toggleEditMode() {
+  editMode.value = !editMode.value
+  if (editMode.value) await props.loadSubmitterEditingOptions()
 }
 
 function flushTypeAutosave(row, autosave) {
@@ -305,33 +306,16 @@ function batchProgressStyle(batch) {
 }
 
 async function refreshMonitor() {
-  localMonitorLoading.value = true
-  localMonitorError.value = ''
-  try {
-    localMonitorState.value = await requestJson(
-      `${submitterApiBase}/monitor`,
-      undefined,
-      { service: 'submitter', summary: '查询Submitter采集监控' },
-    )
-    localMonitorLoadedAt.value = new Date().toISOString()
-  } catch (err) {
-    localMonitorError.value = err instanceof Error ? err.message : String(err)
-  } finally {
-    localMonitorLoading.value = false
-  }
+  await props.loadSubmitterMonitor()
 }
 
 async function continueAuthorScan(scan) {
   await props.continueSubmitterAuthorScan(scan)
-  await refreshMonitor()
 }
 
 async function fetchAuthorNewVideos(row) {
   await props.fetchSubmitterAuthorNewVideos(row)
-  await refreshMonitor()
 }
-
-onMounted(refreshMonitor)
 </script>
 
 <template>
@@ -363,7 +347,7 @@ onMounted(refreshMonitor)
           <button type="button" class="submitter-author-refresh" :disabled="monitorLoading" @click="refreshMonitor">
             {{ monitorLoading ? '刷新中' : '刷新扫描' }}
           </button>
-          <button type="button" class="submitter-author-edit" @click="editMode = !editMode">
+          <button type="button" class="submitter-author-edit" @click="toggleEditMode">
             {{ editMode ? '完成' : '编辑' }}
           </button>
         </div>
