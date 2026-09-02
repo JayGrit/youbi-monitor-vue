@@ -778,14 +778,14 @@ a.submitter-cell:hover {
 .submitter-author-type-head,
 .submitter-author-type-row {
   display: grid;
-  grid-template-columns: 48px 220px 140px minmax(420px, 1fr);
+  grid-template-columns: 48px 280px 140px 100px 100px minmax(280px, 1fr) 190px;
   align-items: center;
   gap: 12px;
 }
 
 .submitter-author-type-body.editing .submitter-author-type-head,
 .submitter-author-type-body.editing .submitter-author-type-row {
-  grid-template-columns: 48px 220px 140px 360px 160px 78px minmax(420px, 1fr);
+  grid-template-columns: 48px 280px 140px 360px 160px 78px 100px 100px minmax(280px, 1fr) 190px;
 }
 
 .submitter-author-type-head {
@@ -796,6 +796,7 @@ a.submitter-cell:hover {
   color: #64748b;
   font-size: 13px;
   font-weight: 760;
+  text-align: center;
 }
 
 .submitter-author-type-row {
@@ -827,6 +828,7 @@ a.submitter-cell:hover {
 
 .submitter-author-main-cell {
   display: grid;
+  justify-items: center;
   gap: 8px;
 }
 
@@ -836,6 +838,7 @@ a.submitter-cell:hover {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  justify-self: center;
 }
 
 .submitter-author-profile img,
@@ -895,6 +898,7 @@ a.submitter-cell:hover {
 .submitter-author-task-cell {
   color: #344156;
   font-weight: 680;
+  text-align: center;
 }
 
 .submitter-author-type-row input,
@@ -1016,30 +1020,17 @@ a.submitter-cell:hover {
 }
 
 .submitter-author-scan {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+  display: contents;
 }
 
 .submitter-author-scan-empty {
-  grid-column: 1 / -1;
+  grid-column: span 4;
   display: grid;
   grid-template-columns: auto minmax(120px, 1fr);
   align-items: center;
+  justify-content: center;
   gap: 12px;
   color: #94a3b8;
-  font-size: 12px;
-}
-
-.submitter-author-scan-empty > span:first-child {
-  display: grid;
-  gap: 2px;
-}
-
-.submitter-author-scan-empty strong {
-  color: #64748b;
   font-size: 12px;
 }
 
@@ -1049,11 +1040,7 @@ a.submitter-cell:hover {
 }
 
 .submitter-author-type-row .submitter-author-scan-summary {
-  display: grid;
-  grid-template-columns: 76px 76px minmax(220px, 1fr);
-  align-items: center;
-  gap: 16px;
-  min-height: 44px;
+  display: contents;
   border: 0;
   background: transparent;
   color: #344156;
@@ -1061,13 +1048,15 @@ a.submitter-cell:hover {
   text-align: left;
 }
 
-.submitter-author-type-row .submitter-author-scan-summary:hover {
-  background: transparent;
-}
-
 .submitter-author-scan-summary > span {
   display: grid;
+  align-items: center;
   gap: 3px;
+}
+
+.submitter-author-scan-number {
+  justify-items: center;
+  text-align: center;
 }
 
 .submitter-author-scan-summary small,
@@ -1090,6 +1079,7 @@ a.submitter-cell:hover {
   align-items: stretch;
   gap: 6px !important;
   width: 100%;
+  text-align: center;
 }
 
 .submitter-author-progress-track {
@@ -1499,6 +1489,7 @@ a.submitter-cell:hover {
 .submitter-author-scan-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 

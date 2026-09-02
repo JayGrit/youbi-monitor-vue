@@ -390,7 +390,10 @@ onMounted(refreshMonitor)
               <span v-if="editMode">配置</span>
               <span v-if="editMode">语言</span>
               <span v-if="editMode">操作</span>
+              <span>扫描上限</span>
+              <span>URL 总数</span>
               <span>采集进度</span>
+              <span>操作</span>
             </div>
             <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
             <div class="submitter-author-source-cell">
@@ -543,24 +546,18 @@ onMounted(refreshMonitor)
             </div>
             <div class="submitter-author-scan">
               <div v-if="!scanForAuthor(row)" class="submitter-author-scan-empty">
-                <span>
-                  <strong>采集进度</strong>
-                  <small>{{ monitorLoading ? '正在加载扫描数据' : '暂无扫描数据' }}</small>
-                </span>
+                <small>{{ monitorLoading ? '正在加载扫描数据' : '暂无扫描数据' }}</small>
                 <span class="submitter-monitor-url-bar" aria-hidden="true"></span>
               </div>
               <template v-else>
                 <button type="button" class="submitter-author-scan-summary" @click="openScanBatches(scanForAuthor(row))">
-                  <span>
-                    <small>扫描上限</small>
+                  <span class="submitter-author-scan-number">
                     <strong>{{ scanLimitText(scanForAuthor(row)) }}</strong>
                   </span>
-                  <span>
-                    <small>URL 总数</small>
+                  <span class="submitter-author-scan-number">
                     <strong>{{ num(scanForAuthor(row).candidateCount) }}</strong>
                   </span>
                   <span class="submitter-author-scan-progress">
-                    <small>采集进度</small>
                     <span class="submitter-author-progress-track">
                       <i class="done" :style="urlSegmentStyle(scanForAuthor(row), 'done')"></i>
                       <i class="waiting" :style="urlSegmentStyle(scanForAuthor(row), 'waiting')"></i>
