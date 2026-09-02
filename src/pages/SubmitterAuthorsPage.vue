@@ -40,6 +40,7 @@ const localMonitorState = ref(null)
 const localMonitorLoading = ref(false)
 const localMonitorError = ref('')
 const localMonitorLoadedAt = ref('')
+const expandedTopics = ref(new Set())
 
 const monitorState = computed(() => {
   const raw = localMonitorState.value || unref(props.submitterMonitorState)
@@ -60,6 +61,17 @@ const authorTypeGroups = computed(() => {
   }
   return [...groups.entries()].map(([topic, rows]) => ({ topic, rows }))
 })
+
+function isTopicExpanded(topic) {
+  return expandedTopics.value.has(topic)
+}
+
+function toggleTopic(topic) {
+  const next = new Set(expandedTopics.value)
+  if (next.has(topic)) next.delete(topic)
+  else next.add(topic)
+  expandedTopics.value = next
+}
 
 function flushTypeAutosave(row, autosave) {
   autosave(row)
@@ -352,21 +364,35 @@ onMounted(refreshMonitor)
       </header>
       <div class="submitter-author-type-body" :class="{ editing: editMode }">
         <p v-if="submitterAuthorTypeRows.length === 0" class="submitter-empty">暂无作者</p>
-        <section v-for="group in authorTypeGroups" :key="group.topic" class="submitter-author-type-group">
-          <header class="submitter-author-type-title">
+        <section
+          v-for="group in authorTypeGroups"
+          :key="group.topic"
+          class="submitter-author-type-group"
+          :class="{ expanded: isTopicExpanded(group.topic) }"
+        >
+          <button
+            type="button"
+            class="submitter-author-type-title"
+            :aria-expanded="isTopicExpanded(group.topic)"
+            @click="toggleTopic(group.topic)"
+          >
             <strong>{{ group.topic }}</strong>
-            <span>{{ group.rows.length }} 位作者</span>
-          </header>
-          <div class="submitter-author-type-head" aria-hidden="true">
-            <span>来源</span>
-            <span>作者</span>
-            <span>任务类型</span>
-            <span v-if="editMode">配置</span>
-            <span v-if="editMode">语言</span>
-            <span v-if="editMode">操作</span>
-            <span>采集进度</span>
-          </div>
-          <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
+            <span>
+              {{ group.rows.length }} 位作者
+              <i aria-hidden="true">{{ isTopicExpanded(group.topic) ? '−' : '+' }}</i>
+            </span>
+          </button>
+          <template v-if="isTopicExpanded(group.topic)">
+            <div class="submitter-author-type-head" aria-hidden="true">
+              <span>来源</span>
+              <span>作者</span>
+              <span>任务类型</span>
+              <span v-if="editMode">配置</span>
+              <span v-if="editMode">语言</span>
+              <span v-if="editMode">操作</span>
+              <span>采集进度</span>
+            </div>
+            <article v-for="row in group.rows" :key="row.author" class="submitter-author-type-row">
             <div class="submitter-author-source-cell">
               <PlatformIcon :src="sourceIconUrl(row)" :label="sourceLabel(row)" :platform="sourcePlatform(row)" :size="24" />
             </div>
@@ -567,7 +593,8 @@ onMounted(refreshMonitor)
                 </span>
               </template>
             </div>
-          </article>
+            </article>
+          </template>
         </section>
       </div>
     </section>

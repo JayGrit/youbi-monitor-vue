@@ -731,12 +731,25 @@ a.submitter-cell:hover {
 
 .submitter-author-type-title {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border: 0;
   padding: 12px 14px;
   background: #f8fafc;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.submitter-author-type-group.expanded .submitter-author-type-title {
   border-bottom: 1px solid #e5eaf1;
+}
+
+.submitter-author-type-title:hover {
+  background: #f1f5f9;
 }
 
 .submitter-author-type-title strong {
@@ -746,8 +759,20 @@ a.submitter-cell:hover {
 }
 
 .submitter-author-type-title span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #7a8798;
   font-size: 12px;
+}
+
+.submitter-author-type-title i {
+  width: 18px;
+  color: #475569;
+  font-size: 18px;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
 }
 
 .submitter-author-type-head,
