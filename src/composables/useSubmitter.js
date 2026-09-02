@@ -153,7 +153,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     try {
       const authorsPayload = await submitterApi.listAuthors()
       submitterAuthors.value = authorsPayload?.items || []
-      await loadSubmitterAuthorTypes()
+      await loadSubmitterAuthorTypes({ includeVideoAuthors: true })
     } catch (err) {
       submitterError.value = err instanceof Error ? err.message : String(err)
     }
@@ -212,7 +212,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       })
       await Promise.all([
         loadSubmitterMonitor(),
-        loadSubmitterAuthors(),
+        loadSubmitterAuthorTypes(),
       ])
     } catch (err) {
       submitterMonitorError.value = err instanceof Error ? err.message : String(err)
@@ -231,7 +231,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
       submitterMessage.value = `已提交增量拉取：${author}`
       await Promise.all([
         loadSubmitterMonitor(),
-        loadSubmitterAuthors(),
+        loadSubmitterAuthorTypes(),
       ])
       return result
     } catch (err) {
@@ -513,6 +513,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     loadSubmitterVideos,
     applySubmitterFilters,
     loadSubmitterAuthors,
+    loadSubmitterAuthorTypes,
     loadSubmitterEditingOptions,
     createSubmitterTopic,
     loadSubmitterMonitor,

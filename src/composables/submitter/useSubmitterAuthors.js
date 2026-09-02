@@ -12,15 +12,17 @@ export function useSubmitterAuthors({
   submitterAuthorTopicFilters,
   loadSubmitterVideos,
 }) {
-  async function loadSubmitterAuthorTypes() {
+  async function loadSubmitterAuthorTypes({ includeVideoAuthors = false } = {}) {
     submitterAuthorTypeError.value = ''
     try {
       const payload = await submitterApi.listAuthorTypes()
       const byAuthor = new Map((payload || []).map(item => [String(item.author || ''), item]))
       const authorRows = new Map()
-      for (const item of submitterAuthors.value) {
-        const normalized = normalizeSubmitterAuthorRow(item)
-        if (normalized.author) authorRows.set(normalized.author, normalized)
+      if (includeVideoAuthors) {
+        for (const item of submitterAuthors.value) {
+          const normalized = normalizeSubmitterAuthorRow(item)
+          if (normalized.author) authorRows.set(normalized.author, normalized)
+        }
       }
       for (const author of byAuthor.keys()) {
         if (!authorRows.has(author)) authorRows.set(author, { author })

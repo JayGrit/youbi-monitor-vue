@@ -4,6 +4,7 @@ export function useAppShell({
   flowPageOpen,
   closeTaskFlow,
   loadSubmitterAuthors,
+  loadSubmitterAuthorTypes,
   loadSubmitterMonitor,
   loadSubmitterVideos,
   warmPlatformIcons,
@@ -90,14 +91,12 @@ export function useAppShell({
     if (flowPageOpen.value) {
       closeTaskFlow()
     }
-    if (page === 'submitter' || page === 'submitter-authors') {
-      const authorsPromise = loadSubmitterAuthors()
-      if (page === 'submitter-authors') {
-        void authorsPromise.then(() => loadSubmitterMonitor())
-      }
-      if (page === 'submitter') {
-        loadSubmitterVideos()
-      }
+    if (page === 'submitter-authors') {
+      void loadSubmitterAuthorTypes().then(() => loadSubmitterMonitor())
+    }
+    if (page === 'submitter') {
+      loadSubmitterAuthors()
+      loadSubmitterVideos()
     }
     if (page === 'monitor') ensureTaskTypesLoaded()
     if (page === 'accounts') warmPlatformIcons()
@@ -116,7 +115,7 @@ export function useAppShell({
       loadStaticAssets()
     }
     if (activePage.value === 'submitter-authors') {
-      void loadSubmitterAuthors().then(() => loadSubmitterMonitor())
+      void loadSubmitterAuthorTypes().then(() => loadSubmitterMonitor())
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     syncPolling()
