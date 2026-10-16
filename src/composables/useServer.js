@@ -86,7 +86,7 @@ export function useServer(serverApi) {
   }
 
   function clearBuildCache() {
-    return runServerAction('build-cache', '确认清空服务器 Docker 构建缓存？')
+    return runServerAction('build-cache', '确认清空服务器上所有 Docker 和 Buildx 构建缓存？')
   }
 
   function runMinioCleanup() {
