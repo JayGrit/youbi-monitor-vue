@@ -31,9 +31,8 @@ const layout = computed(() => {
     }
   }
 
-  const roots = nodes.value
-    .filter(node => !parents.get(node.id)?.length)
-    .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
+  const nodeOrder = new Map(nodes.value.map((node, index) => [node.id, index]))
+  const roots = nodes.value.filter(node => !parents.get(node.id)?.length)
   const depthCache = new Map()
 
   function depth(id, visiting = new Set()) {
@@ -45,19 +44,23 @@ const layout = computed(() => {
     return value
   }
 
-  // A DAG with a single root can still fork into parallel branches. Use the
-  // children of its first fork as lane origins; roots are only sufficient when
-  // the graph genuinely starts with multiple independent branches.
-  const firstFork = nodes.value
-    .filter(node => (children.get(node.id) || []).length > 1)
-    .sort((left, right) => depth(left.id) - depth(right.id) || Number(left.order) - Number(right.order))[0]
-  const laneOrigins = (roots.length > 1
-    ? roots
-    : (children.get(firstFork?.id) || []).map(id => nodeById.get(id)))
-    .filter(Boolean)
-    .sort((left, right) => rootLanePriority(left) - rootLanePriority(right))
-  const downstreamLengthCache = new Map()
+  // Count every fork until its branches join. A later fork needs its own rows
+  // even when an earlier fork already divided the graph into lanes.
+  const widthCache = new Map()
+  function branchWidth(id, visiting = new Set()) {
+    if (widthCache.has(id)) return widthCache.get(id)
+    if (visiting.has(id)) return 1
+    const nextVisiting = new Set(visiting).add(id)
+    const next = children.get(id) || []
+    const width = next.length
+      ? next.reduce((total, child) => total + ((parents.get(child) || []).length > 1
+        ? 1 : branchWidth(child, nextVisiting)), 0)
+      : 1
+    widthCache.set(id, width)
+    return width
+  }
 
+  const downstreamLengthCache = new Map()
   function downstreamLength(id, visiting = new Set()) {
     if (downstreamLengthCache.has(id)) return downstreamLengthCache.get(id)
     if (visiting.has(id)) return 1
@@ -67,49 +70,63 @@ const layout = computed(() => {
     return value
   }
 
-  function centeredLaneSlots(count) {
-    const center = Math.ceil(count / 2)
-    const slots = [center]
-    for (let offset = 1; slots.length < count; offset += 1) {
-      if (center - offset >= 1) slots.push(center - offset)
-      if (center + offset <= count) slots.push(center + offset)
-    }
-    return slots
+  function branchPriority(leftId, rightId) {
+    const left = nodeById.get(leftId)
+    const right = nodeById.get(rightId)
+    return branchWidth(rightId) - branchWidth(leftId)
+      || downstreamLength(rightId) - downstreamLength(leftId)
+      || rootLanePriority(left) - rootLanePriority(right)
+      || nodeOrder.get(leftId) - nodeOrder.get(rightId)
   }
 
-  const laneSlots = centeredLaneSlots(laneOrigins.length)
-  const laneByOrigin = new Map(laneOrigins
-    .map(node => ({
-      node,
-      priority: rootLanePriority(node),
-      length: downstreamLength(node.id),
-    }))
-    .sort((left, right) => right.length - left.length || left.priority - right.priority)
-    .map((item, index) => [item.node.id, laneSlots[index] || index + 1]))
-  const branchCache = new Map()
+  const orderedRoots = [...roots].sort((left, right) => branchPriority(left.id, right.id))
+  const rootWidth = orderedRoots.reduce((total, node) => total + branchWidth(node.id), 0)
+  const rowUnits = Math.max(1, rootWidth, ...nodes.value.map(node => branchWidth(node.id)))
+  const intervals = new Map()
+  const edgeIntervals = new Map()
+  let nextRootRow = 1
+  orderedRoots.forEach((node, index) => {
+    const span = branchWidth(node.id) + (index === 0 ? rowUnits - rootWidth : 0)
+    intervals.set(node.id, { start: nextRootRow, end: nextRootRow + span - 1 })
+    nextRootRow += span
+  })
 
-  function branches(id, visiting = new Set()) {
-    if (branchCache.has(id)) return branchCache.get(id)
-    if (visiting.has(id)) return new Set()
-    if (laneByOrigin.has(id)) {
-      const value = new Set([id])
-      branchCache.set(id, value)
-      return value
+  const orderedNodes = [...nodes.value].sort((left, right) =>
+    depth(left.id) - depth(right.id) || nodeOrder.get(left.id) - nodeOrder.get(right.id))
+  for (const node of orderedNodes) {
+    const nodeParents = parents.get(node.id) || []
+    if (nodeParents.length) {
+      const ranges = nodeParents.map(parent => edgeIntervals.get(`${parent}->${node.id}`))
+        .filter(Boolean)
+      if (ranges.length) {
+        intervals.set(node.id, {
+          start: Math.min(...ranges.map(range => range.start)),
+          end: Math.max(...ranges.map(range => range.end)),
+        })
+      }
     }
-    const nodeParents = parents.get(id) || []
-    const value = new Set(nodeParents.flatMap(parent => [...branches(parent, new Set(visiting).add(id))]))
-    branchCache.set(id, value)
-    return value
+    const range = intervals.get(node.id)
+    if (!range) continue
+    const next = [...(children.get(node.id) || [])].sort(branchPriority)
+    const weights = next.map(child => (parents.get(child) || []).length > 1
+      ? 1 : branchWidth(child))
+    const totalWeight = weights.reduce((total, weight) => total + weight, 0)
+    const available = range.end - range.start + 1
+    let usedWeight = 0
+    next.forEach((child, index) => {
+      const start = range.start + Math.floor(usedWeight * available / totalWeight)
+      usedWeight += weights[index]
+      const end = range.start + Math.floor(usedWeight * available / totalWeight) - 1
+      edgeIntervals.set(`${node.id}->${child}`, { start, end: Math.max(start, end) })
+    })
   }
 
-  const rowUnits = Math.max(1, laneOrigins.length)
   const nodeLayouts = new Map(nodes.value.map(node => {
-    const lanes = [...branches(node.id)].map(origin => laneByOrigin.get(origin)).filter(Boolean)
-    const isShared = lanes.length !== 1
+    const range = intervals.get(node.id) || { start: 1, end: rowUnits }
     return [node.id, {
       column: depth(node.id),
-      rowStart: isShared ? 1 : lanes[0],
-      rowSpan: isShared ? rowUnits : 1,
+      rowStart: range.start,
+      rowSpan: range.end - range.start + 1,
     }]
   }))
 
