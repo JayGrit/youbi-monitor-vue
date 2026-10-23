@@ -76,7 +76,9 @@ const uploaderPhoneEditMode = ref(false)
 const standaloneLabels = {
   douyin: '抖音',
   notebooklm: 'NotebookLM',
+  youtube: 'YouTube',
   chatgpt: 'ChatGPT',
+  x: 'X',
 }
 
 const youtubeCookieUpdating = computed(() => props.uploaderPhoneAgentBusyKey === 'youtube:cookies:default')
@@ -262,7 +264,7 @@ const visibleAccountGroups = computed(() => {
 })
 
 const visiblePhonePlatforms = computed(() => {
-  return props.accountPlatforms.filter(platform => phoneAccountOptions(platform.type).length > 0)
+  return props.accountPlatforms.filter(platform => !['notebooklm', 'youtube', 'chatgpt', 'x'].includes(platform.type) && phoneAccountOptions(platform.type).length > 0)
 })
 
 async function cacheAccountAvatar(url) {

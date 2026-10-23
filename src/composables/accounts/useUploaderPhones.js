@@ -55,21 +55,34 @@ export function useUploaderPhones(accountsApi, agentApi) {
 
   async function runStandaloneAccount(row) {
     if (!row?.platform || standaloneAccountBusyKey.value) return
-    const action = row.exists ? 'open' : 'new'
-    const topic = row.topic || (row.platform === 'chatgpt' ? 'default' : 'server-profile')
+    const action = row.exists
+      ? (row.available === false && ['x', 'youtube', 'notebooklm'].includes(row.platform) ? 'renew' : 'open')
+      : 'new'
+    const topic = row.exists
+      ? row.topic
+      : window.prompt('请输入新账号 topic', row.platform === 'notebooklm' ? `profile-${row.profileKey}` : row.platform === 'x' ? 'x-new' : 'default')?.trim()
+    if (!topic) return
     standaloneAccountBusyKey.value = row.platform
     try {
-      await runUploaderPhoneAccountScript(row.platform, action, topic)
+      const accepted = await runUploaderPhoneAccountScript(row.platform, action, topic, row.profileKey || '')
+      if (accepted) {
+        await waitAccountScript(row.platform, action, topic, 900)
+        await loadStandaloneAccounts()
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      uploaderPhoneError.value = message
+      window.alert(message)
     } finally {
       standaloneAccountBusyKey.value = ''
     }
   }
 
-  async function runUploaderPhoneAccountScript(platform, action, topic) {
+  async function runUploaderPhoneAccountScript(platform, action, topic, profileKey = '') {
     const busyKey = `${platform}:${action}:${topic}`
     uploaderPhoneAgentBusyKey.value = busyKey
     try {
-      const payload = await agentApi.runAccountScript(platform, action, topic)
+      const payload = await agentApi.runAccountScript(platform, action, topic, profileKey)
       uploaderPhoneError.value = ''
       return payload
     } catch (err) {
@@ -113,8 +126,8 @@ export function useUploaderPhones(accountsApi, agentApi) {
     }
   }
 
-  async function waitAccountScript(platform, action, topic) {
-    for (let attempt = 0; attempt < 90; attempt += 1) {
+  async function waitAccountScript(platform, action, topic, maxAttempts = 90) {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       const payload = await agentApi.accountScriptStatus(platform, action, topic)
       if (payload?.status === 'success') return payload
       if (payload?.status === 'failed') {

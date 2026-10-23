@@ -491,6 +491,14 @@
   margin-top: 16px;
 }
 
+.standalone-account-group {
+  margin-top: 16px;
+}
+
+.standalone-account-group > strong {
+  color: #334155;
+}
+
 .standalone-account-actions {
   display: flex;
   flex-wrap: wrap;
@@ -534,6 +542,11 @@
   color: var(--muted-color, #64748b);
   font-size: 12px;
   text-transform: uppercase;
+}
+
+.standalone-account-actions button .standalone-account-detail {
+  color: #243044;
+  text-transform: none;
 }
 
 .uploader-phone-head {
