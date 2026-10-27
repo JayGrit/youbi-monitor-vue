@@ -12,10 +12,10 @@ export function createAgentApi(baseUrl = import.meta.env.VITE_AGENT_BASE_URL || 
     standaloneAccounts() {
       return requestJson(`${normalizedBaseUrl}/api/accounts/standalone`, undefined, describe('查询本机独立账号状态'))
     },
-    runAccountScript(platform, action, topic, profileKey = "", phoneId = null) {
+    runAccountScript(platform, action, topic, profileKey = "", phoneId = null, sourceTopic = '') {
       return postJson(
         accountScriptUrl(platform, action),
-        { topic, ...(profileKey ? { profileKey } : {}), ...(phoneId ? { phoneId } : {}) },
+        { topic, ...(profileKey ? { profileKey } : {}), ...(phoneId ? { phoneId } : {}), ...(sourceTopic ? { sourceTopic } : {}) },
         describe('执行本机账号维护脚本'),
       )
     },

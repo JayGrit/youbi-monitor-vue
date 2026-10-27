@@ -570,15 +570,34 @@ async function runPhoneCellAction(phone, platform) {
     return
   }
 
-  const topic = window.prompt('请输入新topic', defaultNewTopic(phone, platform))
+  const topic = window.prompt('请输入新topic', phoneNoteValue(phone, platform) || defaultNewTopic(phone, platform))
   if (!topic?.trim()) return
   const normalizedKey = topic.trim()
+  let sourceTopic = ''
+  if (platform === 'bilibili') {
+    const sources = phoneAccountOptions(platform).filter(item => item.topic && item.isAvailable !== false)
+    if (!sources.length) {
+      window.alert('没有可复用的 B 站登录态')
+      return
+    }
+    const suggestedSource = sources.find(item => item.topic === 'gaming') || sources[0]
+    sourceTopic = window.prompt(`复用哪个已有 B 站 key？\n${sources.map(item => item.topic).join('、')}`, suggestedSource.topic)?.trim() || ''
+    if (!sourceTopic) return
+    if (!sources.some(item => item.topic === sourceTopic)) {
+      window.alert(`找不到可复用的 B 站 key：${sourceTopic}`)
+      return
+    }
+    if (sourceTopic === normalizedKey) {
+      window.alert('新 key 必须与复用来源不同')
+      return
+    }
+  }
   if (!window.confirm(`确认新建 ${platform} 账号：${normalizedKey}？`)) return
   const newAction = platform === 'bilibili'
-    ? `将打开 Chrome 登录 B 站；登录成功后使用 key ${normalizedKey} 绑定当前手机号。`
+    ? `将复用 ${sourceTopic} 的 B 站登录态，保存为 key ${normalizedKey} 并绑定当前手机号。`
     : `将执行 new，并使用 key ${normalizedKey}。`
   if (!window.confirm(`请再次确认：${newAction}`)) return
-  await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey, '', platform === 'bilibili' ? phone.id : null)
+  await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey, '', platform === 'bilibili' ? phone.id : null, sourceTopic)
 }
 
 async function savePhonePlatform(phone, platform, event) {
