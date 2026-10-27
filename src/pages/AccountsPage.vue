@@ -574,8 +574,11 @@ async function runPhoneCellAction(phone, platform) {
   if (!topic?.trim()) return
   const normalizedKey = topic.trim()
   if (!window.confirm(`确认新建 ${platform} 账号：${normalizedKey}？`)) return
-  if (!window.confirm(`请再次确认：将执行 new，并使用 key ${normalizedKey}。`)) return
-  await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey)
+  const newAction = platform === 'bilibili'
+    ? `将打开 Chrome 登录 B 站；登录成功后使用 key ${normalizedKey} 绑定当前手机号。`
+    : `将执行 new，并使用 key ${normalizedKey}。`
+  if (!window.confirm(`请再次确认：${newAction}`)) return
+  await props.runUploaderPhoneAccountScript(platform, 'new', normalizedKey, '', platform === 'bilibili' ? phone.id : null)
 }
 
 async function savePhonePlatform(phone, platform, event) {

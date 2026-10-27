@@ -78,11 +78,11 @@ export function useUploaderPhones(accountsApi, agentApi) {
     }
   }
 
-  async function runUploaderPhoneAccountScript(platform, action, topic, profileKey = '') {
+  async function runUploaderPhoneAccountScript(platform, action, topic, profileKey = '', phoneId = null) {
     const busyKey = `${platform}:${action}:${topic}`
     uploaderPhoneAgentBusyKey.value = busyKey
     try {
-      const payload = await agentApi.runAccountScript(platform, action, topic, profileKey)
+      const payload = await agentApi.runAccountScript(platform, action, topic, profileKey, phoneId)
       uploaderPhoneError.value = ''
       return payload
     } catch (err) {
