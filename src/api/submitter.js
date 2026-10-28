@@ -49,6 +49,7 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       submissionStatus,
       manualSubtitle,
       bilibiliExists,
+      isUpowerExclusive,
     } = {}) {
       const params = new URLSearchParams()
       if (limit !== undefined && limit !== null) params.set('limit', String(limit))
@@ -65,6 +66,9 @@ export function createSubmitterApi(submitterApiBase, service = 'submitter') {
       if (publishedTo !== undefined && publishedTo !== null) params.set('published_to', String(publishedTo))
       if (submissionStatus && submissionStatus !== 'all') params.set('submission_status', submissionStatus)
       if (manualSubtitle && manualSubtitle !== 'all') params.set('manual_subtitle', manualSubtitle)
+      if (isUpowerExclusive && isUpowerExclusive !== 'all') {
+        params.set('is_upower_exclusive', isUpowerExclusive === 'yes' ? '1' : '0')
+      }
       if (bilibiliExists && bilibiliExists !== 'all') {
         params.set('bilibili_exists', bilibiliExists === 'exists' ? '1' : '0')
       }

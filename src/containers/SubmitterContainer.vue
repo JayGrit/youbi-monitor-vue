@@ -16,6 +16,7 @@ defineProps({
     v-model:submitter-published-filter="app.submitterPublishedFilter"
     v-model:submitter-manual-subtitle-filter="app.submitterManualSubtitleFilter"
     v-model:submitter-bilibili-filter="app.submitterBilibiliFilter"
+    v-model:submitter-upower-filter="app.submitterUpowerFilter"
     v-model:submitter-sort="app.submitterSort"
     v-model:submitter-upload-filter="app.submitterUploadFilter"
   />

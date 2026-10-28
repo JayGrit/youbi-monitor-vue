@@ -2,6 +2,7 @@
 import {
   SUBMITTER_DURATION_FILTERS,
   SUBMITTER_BILIBILI_FILTERS,
+  SUBMITTER_UPOWER_FILTERS,
   SUBMITTER_PUBLISHED_FILTERS,
   SUBMITTER_SORT_OPTIONS,
   SUBMITTER_UPLOAD_FILTERS,
@@ -24,6 +25,7 @@ defineProps({
   submitterPublishedFilter: { type: String, default: 'all' },
   submitterManualSubtitleFilter: { type: String, default: 'all' },
   submitterBilibiliFilter: { type: String, default: 'all' },
+  submitterUpowerFilter: { type: String, default: 'all' },
   submitterSort: { type: String, default: 'published_desc' },
   submitterUploadFilter: { type: String, default: 'unuploaded' },
   submitterFilteredVideos: { type: Array, default: () => [] },
@@ -68,6 +70,7 @@ const emit = defineEmits([
   'update:submitterPublishedFilter',
   'update:submitterManualSubtitleFilter',
   'update:submitterBilibiliFilter',
+  'update:submitterUpowerFilter',
   'update:submitterSort',
   'update:submitterUploadFilter',
 ])
@@ -155,6 +158,17 @@ const emit = defineEmits([
             @change="emit('update:submitterBilibiliFilter', $event.target.value); applySubmitterFilters()"
           >
             <option v-for="option in SUBMITTER_BILIBILI_FILTERS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>B站充电视频</span>
+          <select
+            :value="submitterUpowerFilter"
+            @change="emit('update:submitterUpowerFilter', $event.target.value); applySubmitterFilters()"
+          >
+            <option v-for="option in SUBMITTER_UPOWER_FILTERS" :key="option.value" :value="option.value">
               {{ option.label }}
             </option>
           </select>
@@ -296,6 +310,9 @@ const emit = defineEmits([
                     <div class="submitter-video-meta">
                       <span>{{ formatDuration(submitterFieldValue(item, 'duration')) }}</span>
                       <span>{{ formatNumber(submitterFieldValue(item, 'view_count')) }}</span>
+                      <span v-if="submitterFieldValue(item, 'is_upower_exclusive') !== null && submitterFieldValue(item, 'is_upower_exclusive') !== undefined">
+                        充电视频：{{ submitterFieldValue(item, 'is_upower_exclusive') ? '是' : '否' }}
+                      </span>
                     </div>
                   </div>
                 </div>

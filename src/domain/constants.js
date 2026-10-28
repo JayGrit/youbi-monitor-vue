@@ -60,6 +60,12 @@ export const SUBMITTER_PUBLISHED_FILTERS = [
   { value: 'month', label: '一个月内' },
 ]
 
+export const SUBMITTER_UPOWER_FILTERS = [
+  { value: 'all', label: '全部' },
+  { value: 'yes', label: '是' },
+  { value: 'no', label: '否' },
+]
+
 export const SUBMITTER_BILIBILI_FILTERS = [
   { value: 'all', label: '全部B站状态' },
   { value: 'exists', label: 'B站有人发' },
