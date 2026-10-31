@@ -130,11 +130,30 @@ const layout = computed(() => {
     }]
   }))
 
+  // Joining branches can make the combined interval of a join node overlap
+  // with a sibling branch in the same column. Keep the interval layout as an
+  // ordering hint, then give each node its own grid row to prevent card overlap.
+  const columnNodes = new Map()
+  for (const [id, nodeLayout] of nodeLayouts) {
+    if (!columnNodes.has(nodeLayout.column)) columnNodes.set(nodeLayout.column, [])
+    columnNodes.get(nodeLayout.column).push({ id, nodeLayout })
+  }
+  for (const column of columnNodes.values()) {
+    column.sort((left, right) =>
+      left.nodeLayout.rowStart - right.nodeLayout.rowStart
+        || nodeOrder.get(left.id) - nodeOrder.get(right.id))
+    column.forEach(({ nodeLayout }, index) => {
+      nodeLayout.rowStart = index + 1
+      nodeLayout.rowSpan = 1
+    })
+  }
+  const gridRows = Math.max(rowUnits, ...[...columnNodes.values()].map(column => column.length))
+
   return {
     columns: Math.max(1, ...[...nodeLayouts.values()].map(node => node.column)),
-    maxRows: rowUnits,
+    maxRows: gridRows,
     nodeLayouts,
-    rowUnits,
+    rowUnits: gridRows,
   }
 })
 
