@@ -27,8 +27,8 @@
 
 .service-device-row {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(var(--service-count), minmax(0, 1fr));
+  gap: clamp(2px, 0.5vw, 8px);
 }
 
 .service-device-cell {
@@ -42,7 +42,7 @@
   border-radius: 8px;
   border: 1px solid rgb(148 163 184 / 0.35);
   background: rgb(241 245 249 / 0.72);
-  padding: 8px;
+  padding: 8px 2px;
 }
 
 .service-device-cell.online {
@@ -60,7 +60,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: #243044;
-  font-size: 13px;
+  font-size: clamp(9px, 0.85vw, 13px);
   white-space: nowrap;
 }
 
@@ -401,7 +401,6 @@
 }
 
 .task-actions-toggle.task-filter-button,
-.task-sort-button.task-filter-button,
 .upload-retry-platform-select,
 .downloader-failure-toggle.task-filter-button {
   font-family: inherit;
@@ -410,7 +409,6 @@
 }
 
 .task-actions-toggle.task-filter-button,
-.task-sort-button.task-filter-button,
 .downloader-failure-toggle.task-filter-button {
   min-height: 34px;
   border-radius: 8px;
@@ -418,8 +416,7 @@
   padding: 0 10px;
 }
 
-.task-actions-toggle.task-filter-button.active,
-.task-sort-button.task-filter-button.active {
+.task-actions-toggle.task-filter-button.active {
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
@@ -616,8 +613,7 @@
 .restart-button:hover:not(:disabled),
 .delete-button:hover:not(:disabled),
 .task-actions-toggle.task-filter-button:hover:not(:disabled),
-.task-details-toggle.task-filter-button:hover:not(:disabled),
-.task-sort-button.task-filter-button:hover:not(:disabled) {
+.task-details-toggle.task-filter-button:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
 }
@@ -640,8 +636,7 @@
 .restart-button:disabled,
 .delete-button:disabled,
 .task-actions-toggle:disabled,
-.task-details-toggle:disabled,
-.task-sort-button:disabled {
+.task-details-toggle:disabled {
   cursor: wait;
   opacity: 0.65;
 }

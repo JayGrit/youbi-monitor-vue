@@ -1,6 +1,5 @@
 <script setup>
 import { MONITOR_PAGE_SIZE, statusText } from '../domain/constants'
-import { formatDateTime, formatDuration } from '../utils/format'
 import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
 
 const props = defineProps({
@@ -12,10 +11,11 @@ const props = defineProps({
   taskStatusFilter: { type: String, default: 'all' },
   topicFilter: { type: String, default: 'all' },
   topicFilters: { type: Array, default: () => [] },
+  taskTypeFilter: { type: String, default: 'all' },
+  taskTypeFilters: { type: Array, default: () => [] },
   taskStageFilter: { type: String, default: 'all' },
   taskStageFilters: { type: Array, default: () => [] },
   taskIdFilter: { type: String, default: '' },
-  taskSort: { type: String, default: 'created_desc' },
   taskPage: { type: Number, default: 1 },
   taskTotalCount: { type: Number, default: 0 },
   taskPageCount: { type: Number, default: 1 },
@@ -39,9 +39,7 @@ const props = defineProps({
   taskCachedThumbnailUrl: { type: Function, required: true },
   markImageBroken: { type: Function, required: true },
   copyTaskId: { type: Function, required: true },
-  sourceDurationSeconds: { type: Function, required: true },
   topicText: { type: Function, required: true },
-  minioStorageText: { type: Function, required: true },
   stageName: { type: Function, required: true },
   nodeProgress: { type: Function, required: true },
   nodeTitle: { type: Function, required: true },
@@ -63,9 +61,9 @@ const props = defineProps({
 const emit = defineEmits([
   'update:taskStatusFilter',
   'update:topicFilter',
+  'update:taskTypeFilter',
   'update:taskStageFilter',
   'update:taskIdFilter',
-  'update:taskSort',
   'applyTaskIdFilter',
   'setTaskPage',
   'clearFailure',
@@ -106,7 +104,7 @@ function onlineDeviceNames(service) {
   </section>
 
   <section class="heartbeat-panel" aria-label="服务设备在线状态">
-    <div class="service-device-row">
+    <div class="service-device-row" :style="{ '--service-count': serviceHeartbeats.length || 1 }">
       <div
         v-for="service in serviceHeartbeats"
         :key="service.serviceName"
@@ -170,15 +168,23 @@ function onlineDeviceNames(service) {
         <option value="all">Topic</option>
         <option v-for="type in topicFilters" :key="type" :value="type">{{ type }}</option>
       </select>
+      <select
+        class="task-type-filter"
+        :value="taskTypeFilter"
+        aria-label="按任务 tasktype 筛选"
+        @change="emit('update:taskTypeFilter', $event.target.value)"
+      >
+        <option value="all">Tasktype</option>
+        <option v-for="type in taskTypeFilters" :key="type" :value="type">{{ type }}</option>
+      </select>
       <form class="task-id-filter" @submit.prevent="emit('applyTaskIdFilter')">
         <input
           :value="taskIdFilter"
           type="search"
-          placeholder="搜索任务 ID"
-          aria-label="按任务 ID 搜索"
+          aria-label="按任务 ID 或上传标题搜索"
           @input="emit('update:taskIdFilter', $event.target.value)"
         />
-        <button type="submit">搜索</button>
+        <button type="submit" class="task-filter-button">搜索</button>
       </form>
       <button
         type="button"
@@ -194,14 +200,6 @@ function onlineDeviceNames(service) {
         @click="toggleTaskActions"
       >
         {{ taskActionsExpanded ? '收起操作' : '展开操作' }}
-      </button>
-      <button
-        type="button"
-        :class="['task-filter-button', 'task-sort-button', { active: taskSort === 'minio_storage_desc' }]"
-        title="按 MinIO 占用体积降序排序"
-        @click="emit('update:taskSort', taskSort === 'minio_storage_desc' ? 'created_desc' : 'minio_storage_desc')"
-      >
-        {{ taskSort === 'minio_storage_desc' ? '体积降序' : '按体积排' }}
       </button>
     </div>
 
@@ -254,6 +252,7 @@ function onlineDeviceNames(service) {
           </h2>
         </div>
         <div class="task-details">
+          <span class="task-type">{{ topicText(task) }}</span>
           <span
             role="button"
             tabindex="0"
@@ -262,15 +261,6 @@ function onlineDeviceNames(service) {
             @keydown.enter.prevent="copyTaskId(task)"
             @keydown.space.prevent="copyTaskId(task)"
           >{{ task.taskId }}</span>
-          <span v-if="sourceDurationSeconds(task) !== null">{{ formatDuration(sourceDurationSeconds(task)) }}</span>
-          <span class="task-type">{{ topicText(task) }}</span>
-          <span
-            v-if="minioStorageText(task)"
-            class="task-minio-storage"
-            :title="task.minioStorageUpdatedAt ? `更新于 ${formatDateTime(task.minioStorageUpdatedAt)}` : '等待 backuper 扫描'"
-          >
-            {{ minioStorageText(task) }}
-          </span>
         </div>
         <p v-if="task.errorMessage" class="task-error">{{ task.errorMessage }}</p>
       </div>

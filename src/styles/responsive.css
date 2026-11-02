@@ -15,7 +15,7 @@
   }
 
   .service-device-row {
-    grid-template-columns: repeat(4, minmax(112px, 1fr));
+    grid-template-columns: repeat(var(--service-count), minmax(0, 1fr));
   }
 
   .biliup-actions {
@@ -177,7 +177,6 @@
   .task-type-filter,
   .task-stage-filter,
   .task-actions-toggle.task-filter-button,
-  .task-sort-button.task-filter-button,
   .downloader-failure-toggle.task-filter-button,
   .upload-retry-platform-select {
     width: 100%;
@@ -248,7 +247,7 @@
   }
 
   .service-device-row {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--service-count), minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -260,7 +259,7 @@
 
   .service-device-cell strong {
     text-align: left;
-    font-size: 13px;
+    font-size: clamp(9px, 2vw, 13px);
   }
 
   .biliup-head {

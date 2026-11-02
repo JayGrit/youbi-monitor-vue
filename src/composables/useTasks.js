@@ -26,10 +26,11 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   const deleteTaskId = ref('')
   const taskStatusFilter = ref('all')
   const topicFilter = ref('all')
+  const taskTypeFilter = ref('all')
   const taskStageFilter = ref('all')
   const taskIdFilter = ref('')
-  const taskSort = ref('created_desc')
   const topicFilters = ref([])
+  const taskTypeFilters = ref([])
   const taskPage = ref(1)
   const taskTotalCount = ref(0)
   const taskActionsExpanded = ref(false)
@@ -60,8 +61,9 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     return tasks.value.filter(task => {
       if (taskStatusFilter.value !== 'all' && task.status !== taskStatusFilter.value) return false
       if (topicFilter.value !== 'all' && topicText(task) !== topicFilter.value) return false
+      if (taskTypeFilter.value !== 'all' && task.taskType !== taskTypeFilter.value) return false
       if (taskStageFilter.value !== 'all' && String(task.currentStage || '') !== taskStageFilter.value) return false
-      if (taskIdFilter.value && !String(task.taskId || '').includes(taskIdFilter.value.trim())) return false
+      if (taskIdFilter.value && ![task.taskId, task.title].some(value => String(value || '').includes(taskIdFilter.value.trim()))) return false
       return true
     })
   })
@@ -69,6 +71,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   const hasTaskFilter = computed(() => {
     return taskStatusFilter.value !== 'all'
       || topicFilter.value !== 'all'
+      || taskTypeFilter.value !== 'all'
       || taskStageFilter.value !== 'all'
       || Boolean(taskIdFilter.value.trim())
   })
@@ -107,9 +110,9 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
       const payload = await tasksApi.loadMonitorTasks(taskPage.value, MONITOR_PAGE_SIZE, {
         status: taskStatusFilter.value,
         topic: topicFilter.value,
+        taskType: taskTypeFilter.value,
         stage: taskStageFilter.value,
-        taskId: taskIdFilter.value.trim(),
-        sort: taskSort.value,
+        search: taskIdFilter.value.trim(),
       })
       tasks.value = payload.tasks || []
       initializeTaskProgress(tasks.value)
@@ -261,7 +264,11 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   async function loadTaskTypes() {
     try {
       const payload = await tasksApi.loadTaskTypes()
-      topicFilters.value = [...new Set((payload?.items || [])
+      topicFilters.value = [...new Set((payload?.topics || [])
+        .map(type => String(type || '').trim())
+        .filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right))
+      taskTypeFilters.value = [...new Set((payload?.taskTypes || [])
         .map(type => String(type || '').trim())
         .filter(Boolean))]
         .sort((left, right) => left.localeCompare(right))
@@ -413,11 +420,6 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     }
   }
 
-  function sourceDurationSeconds(task) {
-    const value = Number(task?.sourceDurationSeconds)
-    return Number.isFinite(value) && value > 0 ? value : null
-  }
-
   function uploadAccountText(task) {
     const name = String(task?.bilibiliUploadAccountName || '').trim()
     const key = String(task?.bilibiliUploadTopic || '').trim()
@@ -429,19 +431,14 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     return String(task?.topic || '').trim() || '-'
   }
 
-  function minioStorageText(task) {
-    const objectCount = Number(task?.minioStorageObjectCount)
-    if (!Number.isFinite(objectCount) || objectCount <= 1) return ''
-    const bytes = Number(task?.minioStorageBytes)
-    if (!Number.isFinite(bytes) || bytes <= 0) return ''
-    const megabytes = bytes / (1024 ** 2)
-    const digits = megabytes >= 100 ? 0 : megabytes >= 10 ? 1 : 2
-    const size = megabytes.toFixed(digits).replace(/\.0+$/, '')
-    return `${size}MB(${Math.floor(objectCount)})`
-  }
-
   function setTopicFilter(value) {
     topicFilter.value = value
+    taskPage.value = 1
+    loadTasks()
+  }
+
+  function setTaskTypeFilter(value) {
+    taskTypeFilter.value = value
     taskPage.value = 1
     loadTasks()
   }
@@ -465,14 +462,6 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
   }
 
   function applyTaskIdFilter() {
-    taskPage.value = 1
-    loadTasks()
-  }
-
-  function setTaskSort(value) {
-    const nextSort = value === 'minio_storage_desc' ? 'minio_storage_desc' : 'created_desc'
-    if (nextSort === taskSort.value) return
-    taskSort.value = nextSort
     taskPage.value = 1
     loadTasks()
   }
@@ -621,9 +610,9 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     deleteTaskId,
     taskStatusFilter,
     topicFilter,
+    taskTypeFilter,
     taskStageFilter,
     taskIdFilter,
-    taskSort,
     taskPage,
     taskTotalCount,
     taskActionsExpanded,
@@ -634,6 +623,7 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     taskProgressLoading,
     taskProgressError,
     topicFilters,
+    taskTypeFilters,
     taskStageFilters,
     filteredTasks,
     hasTaskFilter,
@@ -666,16 +656,14 @@ export function useTasks(tasksApi, cacheImageUrl, brokenImageUrls, distributorAp
     taskCachedThumbnailUrl,
     markImageBroken,
     warmTaskThumbnails,
-    sourceDurationSeconds,
     uploadAccountText,
     topicText,
-    minioStorageText,
     setTopicFilter,
+    setTaskTypeFilter,
     setTaskStatusFilter,
     setTaskStageFilter,
     setTaskIdFilter,
     applyTaskIdFilter,
-    setTaskSort,
     setTaskPage,
     copyText,
     copyTaskId,

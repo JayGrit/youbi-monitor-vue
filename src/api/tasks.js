@@ -9,9 +9,9 @@ export function createTasksApi(apiBase, service = 'monitor') {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) })
       if (filters.status && filters.status !== 'all') params.set('status', filters.status)
       if (filters.topic && filters.topic !== 'all') params.set('topic', filters.topic)
+      if (filters.taskType && filters.taskType !== 'all') params.set('taskType', filters.taskType)
       if (filters.stage && filters.stage !== 'all') params.set('stage', filters.stage)
-      if (filters.taskId) params.set('taskId', filters.taskId)
-      if (filters.sort && filters.sort !== 'created_desc') params.set('sort', filters.sort)
+      if (filters.search) params.set('search', filters.search)
       return requestJson(`${apiBase}/video-tasks/monitor?${params.toString()}`, undefined, describe('查询监控任务分页列表'))
     },
 
@@ -32,7 +32,7 @@ export function createTasksApi(apiBase, service = 'monitor') {
     },
 
     loadTaskTypes() {
-      return requestJson(`${apiBase}/accounts/types`, undefined, describe('查询监控任务类型筛选'))
+      return requestJson(`${apiBase}/video-tasks/monitor/filters`, undefined, describe('查询监控任务筛选选项'))
     },
   }
 }
