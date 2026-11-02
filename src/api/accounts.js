@@ -19,6 +19,9 @@ function genericPlatformAccountApi(apiBase, platform, context) {
     setNextUploadAllowedAt(topic, nextUploadAllowedAt) {
       return postJson(`${base}/${encodeURIComponent(topic)}/next-upload-allowed-at`, { nextUploadAllowedAt }, describe('保存账号下次可投时间'))
     },
+    allowUploadNow(topic) {
+      return postJson(`${base}/${encodeURIComponent(topic)}/next-upload-allowed-at/now`, {}, describe('解除账号上传时间冷却'))
+    },
     setQuietTime(topic, startTime, endTime) {
       return postJson(`${base}/${encodeURIComponent(topic)}/quiet-time`, { startTime, endTime }, describe('保存账号静默投稿时段'))
     },

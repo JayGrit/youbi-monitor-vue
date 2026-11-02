@@ -38,12 +38,11 @@ const props = defineProps({
   savePlatformDownloaderMaxStagedCount: { type: Function, required: true },
   savePlatformScheduledPublish: { type: Function, required: true },
   savePlatformOnlyDraftBox: { type: Function, required: true },
-  savePlatformNextUploadAllowedAt: { type: Function, required: true },
+  allowPlatformUploadNow: { type: Function, required: true },
   savePlatformKey: { type: Function, required: true },
   savePlatformAccountProfile: { type: Function, required: true },
   uploadPlatformAccountAvatar: { type: Function, required: true },
   openUploadBackfill: { type: Function, required: true },
-  openTaskFlow: { type: Function, required: true },
   closeUploadBackfill: { type: Function, required: true },
   loadUploadBackfillCandidates: { type: Function, required: true },
   toggleUploadBackfillRow: { type: Function, required: true },
@@ -58,14 +57,12 @@ const props = defineProps({
   accountAvatarUrl: { type: Function, required: true },
   accountAvatarInitial: { type: Function, required: true },
   accountCountText: { type: Function, required: true },
-  nextSendText: { type: Function, required: true },
   platformBusyKey: { type: Function, required: true },
   platformBusyAction: { type: Function, required: true },
   qrImageUrl: { type: Function, required: true },
   platformErrorText: { type: Function, required: true },
 })
 
-const STALE_READY_MINUTES = 10
 const OVERVIEW_TOOL_ACCOUNT_TYPES = new Set(['chatgpt', 'doubao', 'notebooklm'])
 const FOLLOWER_PROFILE_PLATFORMS = new Set(['bilibili', 'douyin', 'jinritoutiao', 'kuaishou', 'shipinhao', 'youtube'])
 
@@ -129,7 +126,6 @@ function accountDraft(row, type) {
     supportsScheduledPublish: row.supportsScheduledPublish === true,
     onlyDraftBox: row.onlyDraftBox === true,
     scheduledPublishMaxDays: String(Number.isFinite(Number(row.scheduledPublishMaxDays)) ? Number(row.scheduledPublishMaxDays) : 3),
-    nextUploadAllowedAt: dateTimeLocalValue(row.nextUploadAllowedAt),
   }
 }
 
@@ -156,7 +152,6 @@ function resetAccountDraft(item) {
   item.row.draftSupportsScheduledPublish = draft.supportsScheduledPublish
   item.row.draftOnlyDraftBox = draft.onlyDraftBox
   item.row.draftScheduledPublishMaxDays = draft.scheduledPublishMaxDays
-  item.row.draftNextUploadAllowedAt = draft.nextUploadAllowedAt
 }
 
 function accountChanges(item) {
@@ -176,7 +171,6 @@ function accountChanges(item) {
       || String(row.draftUploadQuietEndTime ?? '').trim() !== draft.uploadQuietEndTime,
     enabled: (row.draftEnabled !== false) !== draft.enabled,
     key: Boolean(String(row.draftKey || '').trim()) && String(row.draftKey || '').trim() !== draft.key,
-    nextUploadAllowedAt: String(row.draftNextUploadAllowedAt ?? '').trim() !== draft.nextUploadAllowedAt,
   }
 }
 
@@ -223,11 +217,6 @@ async function saveAccountScheduledPublishEdit(item) {
 async function saveAccountOnlyDraftBoxEdit(item) {
   if (!item?.configured || !accountChanges(item).onlyDraftBox) return
   await props.savePlatformOnlyDraftBox(item.type, item.row)
-}
-
-async function saveAccountNextSendEdit(item) {
-  if (!item?.configured || !accountChanges(item).nextUploadAllowedAt) return
-  await props.savePlatformNextUploadAllowedAt(item.type, item.row)
 }
 
 async function saveAccountEnabledEdit(item) {
@@ -311,12 +300,6 @@ function accountRowUnavailable(item) {
     && accountAvailable(item.row) === false
 }
 
-function dateTimeLocalValue(value) {
-  const date = parseLocalDateTime(value)
-  if (!date) return ''
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
-}
-
 function lastUploadText(value) {
   const date = parseLocalDateTime(value)
   if (!date) return '-'
@@ -362,38 +345,14 @@ function latestVideoText(value) {
   return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`
 }
 
-function nextSendDisplay(row) {
-  if (accountStatsLoading(row)) return '加载中'
-  const text = props.nextSendText(row)
-  if (text !== '可发送') return text
-  const next = parseLocalDateTime(row?.nextUploadAllowedAt)
-  if (!next) return text
-  const waitingMs = Date.now() - next.getTime()
-  if (waitingMs < STALE_READY_MINUTES * 60 * 1000) return text
-  const minutes = Math.floor(waitingMs / 60000)
-  return `超时${minutes}Min`
+function nextDeliveryText(value) {
+  return formatDateTime(value).slice(0, 16)
 }
 
-function runningTaskId(row) {
-  return String(row?.uploadRunningTaskId || '').trim()
-}
-
-function nextSendRunning(row) {
-  return !accountStatsLoading(row) && nextSendDisplay(row) === '发送中' && Boolean(runningTaskId(row))
-}
-
-function openRunningTask(row) {
-  const taskId = runningTaskId(row)
-  if (!taskId) return
-  props.openTaskFlow({ taskId }, 'uploader')
-}
-
-function nextSendStale(row) {
-  return !accountStatsLoading(row) && nextSendDisplay(row).startsWith('超时')
-}
-
-function nextSendReady(row) {
-  return !accountStatsLoading(row) && nextSendDisplay(row) === '可发送'
+async function allowUploadNow(item) {
+  if (!item?.configured || accountRowSaving(item)) return
+  if (!window.confirm(`确认将 ${item.label}/${accountName(item.type, item.row)} 的下次投递时间改为现在？\n\n这只解除时间冷却，投递仍由现有调度规则决定。`)) return
+  await props.allowPlatformUploadNow(item.type, item.row)
 }
 
 function failedUploadCount(row) {
@@ -681,11 +640,8 @@ async function syncPhoneAccountProfile(phone, platform) {
       :failed-upload-count="failedUploadCount"
       :last-upload-text="lastUploadText"
       :latest-video-text="latestVideoText"
-      :next-send-ready="nextSendReady"
-      :next-send-stale="nextSendStale"
-      :next-send-running="nextSendRunning"
-      :open-running-task="openRunningTask"
-      :next-send-display="nextSendDisplay"
+      :next-delivery-text="nextDeliveryText"
+      :allow-upload-now="allowUploadNow"
       :save-topic-edit="saveTopicEdit"
       :open-upload-backfill="openUploadBackfill"
       :save-account-cooldown-edit="saveAccountCooldownEdit"

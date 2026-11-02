@@ -1,9 +1,3 @@
-import {
-  formatTime,
-  isSameDate,
-  pad2,
-  parseLocalDateTime,
-} from '../../utils/format'
 import { normalizeAccountAvatarUrl } from '../../utils/accountAvatar'
 
 export const ACCOUNT_PLATFORM_TYPES = [
@@ -31,17 +25,10 @@ export function accountRows(accounts) {
     draftCooldownMaxMinutes: cooldownMinutes(account.uploadCooldownMaxSeconds, 120),
     draftUploadQuietStartTime: timeInputValue(account.uploadQuietStartTime, '01:00'),
     draftUploadQuietEndTime: timeInputValue(account.uploadQuietEndTime, '07:00'),
-    draftNextUploadAllowedAt: dateTimeLocalValue(account.nextUploadAllowedAt),
     draftEnabled: account.enabled !== false,
     draftDisplayName: '',
     draftAvatarUrl: account.avatarUrl || account.avatar_url || '',
   }))
-}
-
-function dateTimeLocalValue(value) {
-  const date = parseLocalDateTime(value)
-  if (!date) return ''
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
 export function cooldownMinutes(seconds, fallback) {
@@ -59,39 +46,6 @@ export function cooldownText(account) {
   const min = cooldownMinutes(account?.uploadCooldownMinSeconds, 60)
   const max = cooldownMinutes(account?.uploadCooldownMaxSeconds, 120)
   return min === max ? `${min} 分钟` : `${min}-${max} 分钟`
-}
-
-export function nextSendText(account) {
-  if (account?.enabled === false) {
-    return '已禁用'
-  }
-  if (account?.uploadRunningTaskId || Number(account?.uploadRunningCount || 0) > 0) {
-    return '发送中'
-  }
-  const next = parseLocalDateTime(account?.nextUploadAllowedAt)
-  if (!next || next.getTime() <= Date.now()) {
-    return '可发送'
-  }
-  const now = new Date()
-  const tomorrow = new Date(now)
-  tomorrow.setDate(now.getDate() + 1)
-  const dayAfterTomorrow = new Date(now)
-  dayAfterTomorrow.setDate(now.getDate() + 2)
-  const threeDaysLater = new Date(now)
-  threeDaysLater.setDate(now.getDate() + 3)
-  if (isSameDate(next, now)) {
-    return formatTime(next)
-  }
-  if (isSameDate(next, tomorrow)) {
-    return `明天${formatTime(next)}`
-  }
-  if (isSameDate(next, dayAfterTomorrow)) {
-    return `后天${formatTime(next)}`
-  }
-  if (isSameDate(next, threeDaysLater)) {
-    return `大后天${formatTime(next)}`
-  }
-  return `${pad2(next.getMonth() + 1)}-${pad2(next.getDate())} ${formatTime(next)}`
 }
 
 export function accountCountText(value) {

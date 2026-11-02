@@ -15,11 +15,8 @@ const props = defineProps([
   'failedUploadCount',
   'lastUploadText',
   'latestVideoText',
-  'nextSendReady',
-  'nextSendStale',
-  'nextSendRunning',
-  'openRunningTask',
-  'nextSendDisplay',
+  'nextDeliveryText',
+  'allowUploadNow',
   'saveTopicEdit',
   'openUploadBackfill',
   'saveAccountCooldownEdit',
@@ -100,10 +97,10 @@ function formatFollowerGrowth(value) {
             <span v-if="!accountEditMode">账号</span>
             <span v-if="!accountEditMode">今日已发</span>
             <span v-if="!accountEditMode">冷却等待</span>
-            <span v-if="!accountEditMode">上传中</span>
-            <span v-if="!accountEditMode">失败任务</span>
+            <span v-if="!accountEditMode">上传失败</span>
             <span v-if="!accountEditMode">上次上传</span>
             <span v-if="!accountEditMode">最新视频</span>
+            <span v-if="!accountEditMode">下次投递</span>
             <span v-if="!accountEditMode">粉丝量</span>
             <span v-if="!accountEditMode">收益</span>
             <span v-if="accountEditMode">Key</span>
@@ -178,17 +175,28 @@ function formatFollowerGrowth(value) {
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-today" data-label="今日已发">{{ item.configured ? accountMetricText(item.row, 'todayUploadCount') : '-' }}</span>
               <span v-if="!accountEditMode" class="account-cell account-col-cooldown" data-label="冷却等待">{{ item.configured ? accountMetricText(item.row, 'cooldownWaitingCount') : '-' }}</span>
-              <span v-if="!accountEditMode" class="account-cell account-col-upload-running" data-label="上传中">{{ item.configured ? accountMetricText(item.row, 'uploadRunningCount') : '-' }}</span>
-              <span v-if="!accountEditMode" class="account-cell account-col-failed-upload" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="失败任务">
+              <span v-if="!accountEditMode" class="account-cell account-col-failed-upload" :class="{ 'failed-task-count': item.configured && failedUploadCount(item.row) > 0 }" data-label="上传失败">
                 {{ item.configured ? accountMetricText(item.row, 'failedUploadCount') : '-' }}
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-last-upload last-upload-time" data-label="上次上传">{{ item.configured ? lastUploadText(item.row.lastUploadAt) : '-' }}</span>
               <span
                 v-if="!accountEditMode"
-                class="account-cell account-col-next-send"
+                class="account-cell account-col-latest-video"
                 data-label="最新视频"
               >
                 {{ item.configured ? latestVideoText(item.row.latestVideoPublishAt) : '-' }}
+              </span>
+              <span v-if="!accountEditMode" class="account-cell account-col-next-delivery" data-label="下次投递">
+                <button
+                  v-if="item.configured"
+                  type="button"
+                  class="account-next-delivery-button"
+                  :disabled="accountRowSaving(item)"
+                  :title="item.row.nextUploadAllowedAt || '尚未设置下次投递时间'"
+                  :aria-label="`${item.label}/${accountName(item.type, item.row)} 下次投递 ${nextDeliveryText(item.row.nextUploadAllowedAt)}，点击改为现在`"
+                  @click="allowUploadNow(item)"
+                >{{ nextDeliveryText(item.row.nextUploadAllowedAt) }}</button>
+                <template v-else>-</template>
               </span>
               <span v-if="!accountEditMode" class="account-cell account-col-followers" data-label="粉丝量">{{ item.configured ? followerText(item.row) : '' }}</span>
               <span v-if="!accountEditMode" class="account-cell account-col-income" data-label="收益">{{ item.configured ? accountIncomeText(item.row) : '-' }}</span>

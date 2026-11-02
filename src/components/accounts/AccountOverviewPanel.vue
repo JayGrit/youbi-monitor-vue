@@ -32,11 +32,8 @@ defineProps([
   'failedUploadCount',
   'lastUploadText',
   'latestVideoText',
-  'nextSendReady',
-  'nextSendStale',
-  'nextSendRunning',
-  'openRunningTask',
-  'nextSendDisplay',
+  'nextDeliveryText',
+  'allowUploadNow',
   'saveTopicEdit',
   'openUploadBackfill',
   'saveAccountCooldownEdit',
@@ -81,11 +78,8 @@ defineProps([
         :failed-upload-count="failedUploadCount"
         :last-upload-text="lastUploadText"
         :latest-video-text="latestVideoText"
-        :next-send-ready="nextSendReady"
-        :next-send-stale="nextSendStale"
-        :next-send-running="nextSendRunning"
-        :open-running-task="openRunningTask"
-        :next-send-display="nextSendDisplay"
+        :next-delivery-text="nextDeliveryText"
+        :allow-upload-now="allowUploadNow"
         :save-topic-edit="saveTopicEdit"
         :open-upload-backfill="openUploadBackfill"
         :save-account-cooldown-edit="saveAccountCooldownEdit"

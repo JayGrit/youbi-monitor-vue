@@ -51,11 +51,11 @@
 
   .account-row.account-platform-row {
     min-width: 0;
-    grid-template-columns: 58px 54px minmax(90px, 1fr) 64px 64px 64px 64px 74px 110px 88px 64px;
+    grid-template-columns: 58px 54px minmax(90px, 1fr) 64px 64px 64px 74px 110px 120px 88px 64px;
   }
 
   .account-table:not(.editing) {
-    grid-template-columns: 58px 54px minmax(90px, 1fr) 64px 64px 64px 64px 74px 110px 88px 64px;
+    grid-template-columns: 58px 54px minmax(90px, 1fr) 64px 64px 64px 74px 110px 120px 88px 64px;
   }
 
   .account-table.editing .account-row,

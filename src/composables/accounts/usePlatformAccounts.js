@@ -13,8 +13,6 @@ const ACCOUNT_STATS_FIELDS = [
   'stagedFailedCount',
   'todayUploadCount',
   'cooldownWaitingCount',
-  'uploadRunningTaskId',
-  'uploadRunningCount',
   'failedUploadCount',
   'currentIncome',
   'currentIncomeUpdatedAt',
@@ -286,14 +284,14 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     }
   }
 
-  async function savePlatformNextUploadAllowedAt(platform, row) {
+  async function allowPlatformUploadNow(platform, row) {
     if (!row?.topic) return
-    const nextUploadAllowedAt = String(row.draftNextUploadAllowedAt ?? '').trim()
-    setPlatformBusy(platform, rowKey(row), 'nextUploadAllowedAt')
+    setPlatformBusy(platform, rowKey(row), 'allowUploadNow')
     try {
-      const payload = await accountsApi[platform].setNextUploadAllowedAt(row.topic, nextUploadAllowedAt || null)
+      const payload = await accountsApi[platform].allowUploadNow(row.topic)
       mergePlatformRow(platform, payload, row.slot)
       setPlatformError(platform, '')
+      return payload
     } catch (err) {
       setPlatformError(platform, err instanceof Error ? err.message : String(err))
     } finally {
@@ -478,7 +476,7 @@ export function usePlatformAccounts(accountsApi, accountPlatforms) {
     savePlatformDownloaderMaxStagedCount,
     savePlatformScheduledPublish,
     savePlatformOnlyDraftBox,
-    savePlatformNextUploadAllowedAt,
+    allowPlatformUploadNow,
     savePlatformAccountProfile,
     uploadPlatformAccountAvatar,
     platformBusyKey,
