@@ -199,6 +199,30 @@ function updatePaths() {
   const root = container.value
   if (!root) return
   const rootRect = root.getBoundingClientRect()
+  const rects = new Map([...nodeElements].map(([id, element]) => {
+    const rect = element.getBoundingClientRect()
+    return [id, {
+      left: rect.left - rootRect.left,
+      right: rect.right - rootRect.left,
+      top: rect.top - rootRect.top,
+      bottom: rect.bottom - rootRect.top,
+    }]
+  }))
+  const blocked = (x1, x2, y, excluded) => [...rects].some(([id, rect]) =>
+    !excluded.has(id) && rect.left < x2 && rect.right > x1
+    && rect.top < y + 8 && rect.bottom > y - 8)
+  const branchPath = (source, junctionX, y2, targetId) => {
+    const excluded = new Set([source.edge.from, targetId])
+    if (!blocked(source.x, junctionX, source.y, excluded)) {
+      return `M ${source.x} ${source.y} H ${junctionX} V ${y2}`
+    }
+    const bendX = source.x + 12
+    const rails = Array.from({ length: 24 }, (_, index) => index * 14 + 18)
+      .flatMap(offset => [source.rect.top - offset, source.rect.bottom + offset])
+    const railY = rails.find(y => !blocked(bendX, junctionX, y, excluded))
+      ?? Math.min(...[...rects.values()].map(rect => rect.top)) - 24
+    return `M ${source.x} ${source.y} H ${bendX} V ${railY} H ${junctionX} V ${y2}`
+  }
   const incoming = new Map()
   for (const edge of edges.value) {
     if (!incoming.has(edge.to)) incoming.set(edge.to, [])
@@ -219,6 +243,7 @@ function updatePaths() {
         edge,
         x: rect.right - rootRect.left,
         y: rect.top + rect.height / 2 - rootRect.top,
+        rect: rects.get(edge.from),
       }]
     })
     if (!sources.length) return []
@@ -228,7 +253,7 @@ function updatePaths() {
       const middle = source.x + Math.max(12, (x2 - source.x) / 2)
       return [{
         id: `${source.edge.from}->${targetId}`,
-        d: `M ${source.x} ${source.y} H ${middle} V ${y2} H ${x2}`,
+        d: `${branchPath(source, middle, y2, targetId)} H ${x2}`,
         arrow: true,
       }]
     }
@@ -238,7 +263,7 @@ function updatePaths() {
     const junctionX = x2 - trunkLength
     const branches = sources.map(source => ({
       id: `${source.edge.from}->${targetId}:branch`,
-      d: `M ${source.x} ${source.y} H ${junctionX} V ${y2}`,
+      d: branchPath(source, junctionX, y2, targetId),
       arrow: false,
     }))
     return [
