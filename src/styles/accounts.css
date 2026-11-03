@@ -447,11 +447,10 @@
 .account-next-delivery-button {
   min-width: 0;
   max-width: 100%;
-  padding: 4px 6px;
+  padding: 0;
   border: 0;
-  border-radius: 5px;
   background: transparent;
-  color: #2563eb;
+  color: inherit;
   font: inherit;
   cursor: pointer;
   overflow: hidden;
@@ -459,14 +458,12 @@
   white-space: nowrap;
 }
 
-.account-next-delivery-button:hover:not(:disabled),
 .account-next-delivery-button:focus-visible {
-  background: #eff6ff;
-  text-decoration: underline;
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .account-next-delivery-button:disabled {
-  color: #94a3b8;
   cursor: wait;
 }
 
