@@ -14,13 +14,14 @@ const props = defineProps({
 const container = ref(null)
 const nodeElements = new Map()
 const paths = ref([])
-const activeNodeId = ref(null)
+const activeEdgeId = ref(null)
 const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
 const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
 let resizeObserver = null
 
 const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
 const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
+const nodeLabels = computed(() => new Map(nodes.value.map(node => [node.id, node.label || node.id])))
 const layout = computed(() => {
   const nodeById = new Map(nodes.value.map(node => [node.id, node]))
   const parents = new Map(nodes.value.map(node => [node.id, []]))
@@ -223,9 +224,10 @@ function updatePaths() {
     if (!blocked(source.x, junctionX, source.y, excluded)) {
       return `M ${source.x} ${source.y} H ${junctionX} V ${y2}`
     }
-    const bendX = source.x + 12
-    const rails = Array.from({ length: 24 }, (_, index) => index * 14 + 18)
-      .flatMap(offset => [source.rect.top - offset, source.rect.bottom + offset])
+    const bendX = source.x + Math.min(12, (junctionX - source.x) / 2)
+    const rails = [...rects.values()]
+      .flatMap(rect => [rect.top - 16, rect.bottom + 16])
+      .sort((left, right) => Math.abs(left - source.y) - Math.abs(right - source.y))
     const railY = rails.find(y => !blocked(bendX, junctionX, y, excluded))
       ?? Math.min(...[...rects.values()].map(rect => rect.top)) - 24
     return `M ${source.x} ${source.y} H ${bendX} V ${railY} H ${junctionX} V ${y2}`
@@ -259,12 +261,15 @@ function updatePaths() {
     // crossing lines look like they belong to the same branch.
     return sources.map((source, index) => {
       const portY = y2 + (index - (sources.length - 1) / 2) * 12
-      const middle = source.x + Math.max(12, (x2 - source.x) / 2)
+      // Keep vertical turns in the gap immediately before the target column.
+      // A midpoint turn can cut through unrelated nodes in a long edge.
+      const junctionX = x2 - Math.min(16, Math.max(4, (x2 - source.x) / 2))
       return {
         id: `${source.edge.from}->${targetId}`,
         from: source.edge.from,
         to: targetId,
-        d: `${branchPath(source, middle, portY, targetId)} H ${x2}`,
+        long: x2 - source.x > 180,
+        d: `${branchPath(source, junctionX, portY, targetId)} H ${x2}`,
         arrow: true,
       }
     })
@@ -298,7 +303,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     }"
     aria-label="任务 DAG 阶段图"
   >
-    <svg class="task-dag-links" aria-hidden="true">
+    <svg class="task-dag-links">
       <defs>
         <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
           <path d="M0,0 L7,3.5 L0,7 Z" />
@@ -308,12 +313,20 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
         v-for="path in paths"
         :key="path.id"
         :class="{
-          'is-dimmed': activeNodeId && path.from !== activeNodeId && path.to !== activeNodeId,
-          'is-highlighted': activeNodeId && (path.from === activeNodeId || path.to === activeNodeId),
+          'is-dimmed': activeEdgeId && path.id !== activeEdgeId,
+          'is-highlighted': path.id === activeEdgeId,
+          'is-long': path.long,
         }"
       >
-        <path class="edge-halo" :d="path.d" />
         <path class="edge-line" :d="path.d" :marker-end="path.arrow ? `url(#${markerId})` : null" />
+        <path
+          class="edge-hit"
+          :d="path.d"
+          @mouseenter="activeEdgeId = path.id"
+          @mouseleave="activeEdgeId = null"
+        >
+          <title>{{ nodeLabels.get(path.from) }} → {{ nodeLabels.get(path.to) }}</title>
+        </path>
       </g>
     </svg>
 
@@ -330,10 +343,6 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
           '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
         }"
         :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-        @mouseenter="activeNodeId = node.id"
-        @mouseleave="activeNodeId = null"
-        @focus="activeNodeId = node.id"
-        @blur="activeNodeId = null"
         @click="openTaskFlow(task, node.stage, node.subStage)"
       >
         <span class="stage-label">{{ node.label }}</span>

@@ -733,6 +733,7 @@
 .task-dag-grid {
   position: relative;
   z-index: 1;
+  pointer-events: none;
   display: grid;
   grid-template-columns: repeat(var(--dag-columns), minmax(100px, 1fr));
   grid-template-rows: repeat(var(--dag-row-units), minmax(0, 1fr));
@@ -746,6 +747,7 @@
   grid-row: var(--dag-row-start) / span var(--dag-row-span);
   align-self: center;
   justify-self: center;
+  pointer-events: auto;
 }
 
 .task-dag-links {
@@ -766,12 +768,6 @@
   opacity: 0.12;
 }
 
-.task-dag-links .edge-halo {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 7;
-}
-
 .task-dag-links .edge-line {
   fill: none;
   stroke: #94a3b8;
@@ -779,9 +775,22 @@
   transition: stroke 120ms ease;
 }
 
+.task-dag-links g.is-long .edge-line {
+  stroke: #b7c3d2;
+  stroke-dasharray: 5 5;
+}
+
 .task-dag-links g.is-highlighted .edge-line {
   stroke: #2563eb;
   stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.task-dag-links .edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  pointer-events: stroke;
 }
 
 .task-dag-links marker path {
