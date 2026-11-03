@@ -14,6 +14,7 @@ const props = defineProps({
 const container = ref(null)
 const nodeElements = new Map()
 const paths = ref([])
+const activeNodeId = ref(null)
 const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
 const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
 let resizeObserver = null
@@ -138,7 +139,6 @@ const layout = computed(() => {
     if (!columns.has(desired.column)) columns.set(desired.column, [])
     columns.get(desired.column).push(node)
   }
-  let occupiedRows = rowUnits
   for (const columnNodes of columns.values()) {
     columnNodes.sort((left, right) =>
       desiredLayouts.get(left.id).row - desiredLayouts.get(right.id).row
@@ -149,9 +149,16 @@ const layout = computed(() => {
       const rowStart = Math.max(Math.round(desired.row), previousRow + 1)
       nodeLayouts.set(node.id, { column: desired.column, rowStart, rowSpan: 1 })
       previousRow = rowStart
-      occupiedRows = Math.max(occupiedRows, rowStart)
     }
   }
+
+  // The interval allocator leaves room for branches that later converge.
+  // Remove rows that contain no node in any column before sizing the grid.
+  const usedRows = [...new Set([...nodeLayouts.values()].map(node => node.rowStart))]
+    .sort((left, right) => left - right)
+  const compactRow = new Map(usedRows.map((row, index) => [row, index + 1]))
+  for (const node of nodeLayouts.values()) node.rowStart = compactRow.get(node.rowStart)
+  const occupiedRows = usedRows.length
 
   return {
     columns: Math.max(1, ...[...nodeLayouts.values()].map(node => node.column)),
@@ -248,32 +255,19 @@ function updatePaths() {
     })
     if (!sources.length) return []
 
-    if (sources.length === 1) {
-      const source = sources[0]
+    // Each dependency gets its own arrow and input port. A shared trunk makes
+    // crossing lines look like they belong to the same branch.
+    return sources.map((source, index) => {
+      const portY = y2 + (index - (sources.length - 1) / 2) * 12
       const middle = source.x + Math.max(12, (x2 - source.x) / 2)
-      return [{
+      return {
         id: `${source.edge.from}->${targetId}`,
-        d: `${branchPath(source, middle, y2, targetId)} H ${x2}`,
+        from: source.edge.from,
+        to: targetId,
+        d: `${branchPath(source, middle, portY, targetId)} H ${x2}`,
         arrow: true,
-      }]
-    }
-
-    const nearestSourceX = Math.max(...sources.map(source => source.x))
-    const trunkLength = Math.max(12, Math.min(36, (x2 - nearestSourceX) / 2))
-    const junctionX = x2 - trunkLength
-    const branches = sources.map(source => ({
-      id: `${source.edge.from}->${targetId}:branch`,
-      d: branchPath(source, junctionX, y2, targetId),
-      arrow: false,
-    }))
-    return [
-      ...branches,
-      {
-        id: `${targetId}:incoming-trunk`,
-        d: `M ${junctionX} ${y2} H ${x2}`,
-        arrow: true,
-      },
-    ]
+      }
+    })
   })
 }
 
@@ -310,12 +304,17 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
           <path d="M0,0 L7,3.5 L0,7 Z" />
         </marker>
       </defs>
-      <path
+      <g
         v-for="path in paths"
         :key="path.id"
-        :d="path.d"
-        :marker-end="path.arrow ? `url(#${markerId})` : null"
-      />
+        :class="{
+          'is-dimmed': activeNodeId && path.from !== activeNodeId && path.to !== activeNodeId,
+          'is-highlighted': activeNodeId && (path.from === activeNodeId || path.to === activeNodeId),
+        }"
+      >
+        <path class="edge-halo" :d="path.d" />
+        <path class="edge-line" :d="path.d" :marker-end="path.arrow ? `url(#${markerId})` : null" />
+      </g>
     </svg>
 
     <div class="task-dag-grid">
@@ -331,6 +330,10 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
           '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
         }"
         :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
+        @mouseenter="activeNodeId = node.id"
+        @mouseleave="activeNodeId = null"
+        @focus="activeNodeId = node.id"
+        @blur="activeNodeId = null"
         @click="openTaskFlow(task, node.stage, node.subStage)"
       >
         <span class="stage-label">{{ node.label }}</span>

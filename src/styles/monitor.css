@@ -758,10 +758,30 @@
   pointer-events: none;
 }
 
-.task-dag-links path {
+.task-dag-links g {
+  transition: opacity 120ms ease;
+}
+
+.task-dag-links g.is-dimmed {
+  opacity: 0.12;
+}
+
+.task-dag-links .edge-halo {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 7;
+}
+
+.task-dag-links .edge-line {
   fill: none;
   stroke: #94a3b8;
   stroke-width: 2;
+  transition: stroke 120ms ease;
+}
+
+.task-dag-links g.is-highlighted .edge-line {
+  stroke: #2563eb;
+  stroke-width: 3;
 }
 
 .task-dag-links marker path {
