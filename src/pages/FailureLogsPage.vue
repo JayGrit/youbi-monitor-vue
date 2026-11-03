@@ -78,7 +78,7 @@ function openTask(row) {
 }
 
 function canMarkActualPublished(row) {
-  return row.stage === 'uploader' && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
+  return row.stage === 'uploader' && ['failed', 'ready'].includes(row.submissionStatus) && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
 }
 
 function canRetryUpload(row) {
@@ -304,6 +304,7 @@ function parseUploadLogId(logId) {
                 :title="row.platform"
               >
               <span v-else>-</span>
+              <span v-if="row.submissionStatus === 'ready'" class="failure-log-submission-status">待投递</span>
             </td>
             <td class="failure-log-task-column">
               <div class="failure-log-task">

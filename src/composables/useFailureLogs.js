@@ -253,7 +253,7 @@ export function useFailureLogs(failureLogsApi, distributorApi, submitterApi) {
 }
 
 function canMarkActualPublished(row) {
-  return row?.stage === 'uploader' && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
+  return row?.stage === 'uploader' && ['failed', 'ready'].includes(row.submissionStatus) && Boolean(row.platform) && Boolean(parseUploadLogId(row.id))
 }
 
 function canRetryUpload(row) {

@@ -304,6 +304,14 @@
   object-fit: cover;
 }
 
+.failure-log-submission-status {
+  display: block;
+  margin-top: 4px;
+  color: #8a5a00;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .failure-log-task {
   display: grid;
   justify-items: center;
