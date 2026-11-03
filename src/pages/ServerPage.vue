@@ -22,7 +22,7 @@ const props = defineProps({
   generateUploadIncompleteReport: { type: Function, required: true },
 })
 
-const uploadReportSort = ref('topic')
+const uploadReportSort = ref('size')
 const backupperStatusSummary = computed(() => {
   if (props.backupperDiskStatusText) return `硬盘占用 ${props.backupperDiskStatusText}`
   if (props.loading) return '加载中'
@@ -229,8 +229,8 @@ const minioConsoleUrl = 'http://120.53.92.66:9001/'
         <div class="upload-report-controls">
           <button
             type="button"
-            :class="{ active: uploadReportSort === 'type' }"
-            @click="uploadReportSort = 'type'"
+            :class="{ active: uploadReportSort === 'topic' }"
+            @click="uploadReportSort = 'topic'"
           >
             Topic
           </button>
