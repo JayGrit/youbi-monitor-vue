@@ -121,22 +121,43 @@ const layout = computed(() => {
     })
   }
 
-  const nodeLayouts = new Map(nodes.value.map(node => {
+  const desiredLayouts = new Map(nodes.value.map(node => {
     const range = intervals.get(node.id) || { start: 1, end: rowUnits }
     return [node.id, {
-      column: depth(node.id) + (
-        node.stage === 'publisher' && node.subStage === 'article_document_generation' ? 1 : 0
-      ),
-      rowStart: range.start,
-      rowSpan: range.end - range.start + 1,
+      column: depth(node.id),
+      row: (range.start + range.end) / 2,
     }]
   }))
 
+  // A branch can share row intervals with another branch after a join. Give
+  // every node in the same column its own grid row before drawing connectors.
+  const nodeLayouts = new Map()
+  const columns = new Map()
+  for (const node of nodes.value) {
+    const desired = desiredLayouts.get(node.id)
+    if (!columns.has(desired.column)) columns.set(desired.column, [])
+    columns.get(desired.column).push(node)
+  }
+  let occupiedRows = rowUnits
+  for (const columnNodes of columns.values()) {
+    columnNodes.sort((left, right) =>
+      desiredLayouts.get(left.id).row - desiredLayouts.get(right.id).row
+      || nodeOrder.get(left.id) - nodeOrder.get(right.id))
+    let previousRow = 0
+    for (const node of columnNodes) {
+      const desired = desiredLayouts.get(node.id)
+      const rowStart = Math.max(Math.round(desired.row), previousRow + 1)
+      nodeLayouts.set(node.id, { column: desired.column, rowStart, rowSpan: 1 })
+      previousRow = rowStart
+      occupiedRows = Math.max(occupiedRows, rowStart)
+    }
+  }
+
   return {
     columns: Math.max(1, ...[...nodeLayouts.values()].map(node => node.column)),
-    maxRows: rowUnits,
+    maxRows: occupiedRows,
     nodeLayouts,
-    rowUnits,
+    rowUnits: occupiedRows,
   }
 })
 
