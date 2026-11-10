@@ -426,8 +426,11 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterMessage.value = '正在识别输入并提交到 Submitter...'
     submitterError.value = ''
     try {
-      const topic = submitterTopicFilter.value.trim()
-      const payload = await submitterApi.intake(input, topic ? { topic } : {})
+      const selectedTopic = submitterTopicFilter.value.trim()
+      const defaultTopic = /^https?:\/\/space\.bilibili\.com\/\d+(?:[/?#]|$)/i.test(input)
+        ? 'long_knowledge'
+        : 'others'
+      const payload = await submitterApi.intake(input, { topic: selectedTopic || defaultTopic })
       submitterInput.value = ''
       if (payload.kind === 'author') {
         submitterActiveBatch.value = payload.batch || ''
