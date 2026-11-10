@@ -427,10 +427,7 @@ export function useSubmitter(submitterApi, cacheImageUrl) {
     submitterError.value = ''
     try {
       const selectedTopic = submitterTopicFilter.value.trim()
-      const defaultTopic = /^https?:\/\/space\.bilibili\.com\/\d+(?:[/?#]|$)/i.test(input)
-        ? 'long_knowledge'
-        : 'others'
-      const payload = await submitterApi.intake(input, { topic: selectedTopic || defaultTopic })
+      const payload = await submitterApi.intake(input, { topic: selectedTopic || 'others' })
       submitterInput.value = ''
       if (payload.kind === 'author') {
         submitterActiveBatch.value = payload.batch || ''
