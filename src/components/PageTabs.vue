@@ -12,6 +12,13 @@ const emit = defineEmits(['openPage'])
     <nav class="page-tabs" aria-label="页面切换">
       <button
         type="button"
+        :class="{ active: activePage === 'newyouth' && !flowPageOpen }"
+        @click="emit('openPage', 'newyouth')"
+      >
+        新青年
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'submitter-authors' && !flowPageOpen }"
         @click="emit('openPage', 'submitter-authors')"
       >

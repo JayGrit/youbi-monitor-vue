@@ -7,6 +7,7 @@ import AirouterQueueContainer from './containers/AirouterQueueContainer.vue'
 import FailureLogsContainer from './containers/FailureLogsContainer.vue'
 import FfmpegerQueueContainer from './containers/FfmpegerQueueContainer.vue'
 import MonitorContainer from './containers/MonitorContainer.vue'
+import NewYouthPage from './pages/NewYouthPage.vue'
 import OperatorDiagnosticsContainer from './containers/OperatorDiagnosticsContainer.vue'
 import ServerContainer from './containers/ServerContainer.vue'
 import SpeakerSegmentsContainer from './containers/SpeakerSegmentsContainer.vue'
@@ -28,7 +29,8 @@ const pageShellClass = computed(() => ['page-shell', app.flowPageOpen ? 'flow-pa
     />
 
     <template v-if="!app.flowPageOpen">
-      <MonitorContainer v-if="app.activePage === 'monitor'" :app="app" />
+      <NewYouthPage v-if="app.activePage === 'newyouth'" />
+      <MonitorContainer v-else-if="app.activePage === 'monitor'" :app="app" />
       <SubmitterContainer v-else-if="app.activePage === 'submitter'" :app="app" />
       <StaticAssetsContainer v-else-if="app.activePage === 'static-assets'" :app="app" />
       <SubmitterAuthorsContainer v-else-if="app.activePage === 'submitter-authors'" :app="app" />
