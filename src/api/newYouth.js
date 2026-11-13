@@ -21,3 +21,21 @@ export function releaseNewYouthUpload(taskId) {
     body: '{}',
   }, { service: 'distributor', summary: '发表选中的新青年视频' })
 }
+
+export function loadScheduledNewYouthUploads() {
+  return requestJson(`${import.meta.env.BASE_URL}distributor-api/uploads/scheduled?taskType=podcast_new`, undefined, {
+    service: 'distributor', summary: '查询定时发表视频',
+  })
+}
+
+export function scheduleNewYouthUpload(taskId, startAt) {
+  return requestJson(`${import.meta.env.BASE_URL}distributor-api/tasks/${encodeURIComponent(taskId)}/upload-schedule`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startAt }),
+  }, { service: 'distributor', summary: '设置定时发表' })
+}
+
+export function cancelNewYouthUploadSchedule(taskId) {
+  return requestJson(`${import.meta.env.BASE_URL}distributor-api/tasks/${encodeURIComponent(taskId)}/upload-schedule`, {
+    method: 'DELETE',
+  }, { service: 'distributor', summary: '取消定时发表' })
+}

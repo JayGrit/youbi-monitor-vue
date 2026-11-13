@@ -54,7 +54,12 @@
 .ny-pending-cover { display: block; width: 180px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 9px; background: #edf2f5; }
 .ny-pending-cover-empty { display: grid; place-items: center; color: #8394a0; font-size: 12px; }
 .ny-pending-title { min-width: 0; color: #223249; font-weight: 700; overflow-wrap: anywhere; }
+.ny-pending-title small { display: block; margin-top: 6px; color: #64748b; font-size: 12px; font-weight: 500; }
+.ny-pending-actions, .ny-schedule-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ny-schedule-editor { grid-column: 2 / -1; }
+.ny-schedule-editor select { min-width: 180px; max-width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.ny-schedule-editor button { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; cursor: pointer; }
 .ny-publish-button { padding: 10px 19px; border: 0; border-radius: 9px; background: #247b78; color: #fff; font-weight: 700; cursor: pointer; }
 .ny-publish-button:disabled { opacity: .55; cursor: wait; }
 .ny-pending-empty { margin-top: 18px; color: #8193a1; }
-@media (max-width: 640px) { .ny-pending-row { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; } .ny-pending-cover { width: 112px; } .ny-publish-button { grid-column: 2; justify-self: start; } }
+@media (max-width: 640px) { .ny-pending-row { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; } .ny-pending-cover { width: 112px; } .ny-pending-actions, .ny-schedule-editor { grid-column: 2; } }
