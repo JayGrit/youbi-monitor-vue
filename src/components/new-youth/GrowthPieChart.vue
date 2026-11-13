@@ -8,12 +8,12 @@ const props = defineProps({
 })
 
 const ageGroups = [
-  { key: 'today', label: '今天发布', color: '#d86160' },
-  { key: 'recent', label: '昨天、前天', color: '#6388b5' },
-  { key: 'earlier', label: '更早或未知', color: '#5a9a79' },
+  { key: 'today', label: '今天', color: '#d86160' },
+  { key: 'recent', label: '最近', color: '#6388b5' },
+  { key: 'earlier', label: '以前', color: '#78bc91' },
 ]
 const groupColor = key => ageGroups.find(group => group.key === key)?.color || ageGroups[2].color
-const slices = computed(() => (props.data?.slices || []).filter(item => Number(item.growth) > 0))
+const slices = computed(() => (props.data?.slices || []).filter(item => Number(item.growth) > 0).slice(0, 10))
 const total = computed(() => Number(props.data?.totalGrowth || 0))
 const groups = computed(() => ageGroups.map(group => ({
   ...group,
@@ -32,7 +32,6 @@ const pieStyle = computed(() => {
 
 const formatNumber = value => Number(value || 0).toLocaleString('zh-CN')
 const share = value => total.value ? `${((Number(value) / total.value) * 100).toFixed(1)}%` : '0%'
-const publishText = value => value ? `发布于 ${String(value).replace('T', ' ').slice(5, 16)}` : '发布时间未知'
 </script>
 
 <template>
@@ -66,10 +65,7 @@ const publishText = value => value ? `发布于 ${String(value).replace('T', ' '
       <div class="ny-video-list">
         <div v-for="slice in slices" :key="slice.bvid" class="ny-video-row">
           <span class="ny-legend-dot" :style="{ background: groupColor(slice.ageGroup) }"></span>
-          <div class="ny-video-detail">
-            <a :href="slice.url" target="_blank" rel="noopener noreferrer" :title="slice.title">{{ slice.title }}</a>
-            <small>{{ publishText(slice.publishedAt) }}</small>
-          </div>
+          <a class="ny-video-title" :href="slice.url" target="_blank" rel="noopener noreferrer" :title="slice.title">{{ slice.title }}</a>
           <strong>+{{ formatNumber(slice.growth) }}</strong>
           <span class="ny-legend-share">{{ share(slice.growth) }}</span>
         </div>
