@@ -62,7 +62,7 @@ onUnmounted(() => {
         <GrowthPieChart heading="今日 00:00 至今" :period="todayPeriod" :data="data.today" />
       </div>
       <FollowerBarChart :points="data.followers || []" />
-      <p class="ny-source-note">播放量按同一 BV 的两次成功快照计算；此前没有记录的新视频按 0 次播放计算。饼图按发布时间汇总为今天、昨天和前天、更早三组；发布时间未知的视频归入更早一组。右侧列出全部增长视频。粉丝缺少相邻快照的小时以“—”表示。</p>
+      <p class="ny-source-note">播放量按同一 BV 的两次成功快照计算；此前没有记录的新视频按 0 次播放计算。饼图按视频绑定的 uploader 发布时间汇总为今天、昨天和前天、更早三组；时间未知的视频归入更早一组。右侧列出全部增长视频。粉丝缺少相邻快照的小时以“—”表示。</p>
     </template>
   </div>
 </template>
