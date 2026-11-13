@@ -33,7 +33,7 @@ const share = value => total.value ? `${((Number(value) / total.value) * 100).to
         <h2>{{ heading }}</h2>
         <p>{{ period }}</p>
       </div>
-      <span class="ny-card-count">{{ data?.comparableVideos || 0 }} 条可比视频</span>
+      <span class="ny-card-count">{{ data?.comparableVideos || 0 }} 条视频</span>
     </div>
 
     <div v-if="!data?.available" class="ny-empty">等待这段时间的完整采集快照</div>
