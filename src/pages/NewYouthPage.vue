@@ -184,7 +184,7 @@ onUnmounted(() => {
         <li v-for="item in scheduledUploads" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
-          <div class="ny-pending-title" :title="item.title">{{ item.title }}<small> {{ formatScheduled(item.dispatchAtUtc) }} · {{ item.scheduleState === 'missed' ? (item.errorMessage || '定时发表失败') : item.scheduleState === 'waiting' ? '到点等待启动' : '等待定时发表' }}</small></div>
+          <div class="ny-pending-title" :title="item.title">{{ item.title }}<small> {{ formatScheduled(item.dispatchAtUtc) }} · {{ item.scheduleState === 'missed' ? (item.errorMessage || '定时发表失败') : item.scheduleState === 'queued' ? '已进入投稿队列' : item.scheduleState === 'waiting' ? '到点等待接纳' : '等待定时发表' }}</small></div>
           <div v-if="item.scheduleState !== 'missed'" class="ny-pending-actions">
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">改期</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
