@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { loadNewYouthOverview, loadPendingNewYouthUploads, releaseNewYouthUpload } from '../api/newYouth'
+import { normalizeResourceUrl } from '../utils/media'
 import GrowthPieChart from '../components/new-youth/GrowthPieChart.vue'
 import FollowerBarChart from '../components/new-youth/FollowerBarChart.vue'
 
@@ -95,7 +96,7 @@ onUnmounted(() => {
       <p v-if="!pendingUploads.length" class="ny-pending-empty">暂无待发表视频</p>
       <ul v-else class="ny-pending-list">
         <li v-for="item in pendingUploads" :key="item.taskId" class="ny-pending-row">
-          <img v-if="item.coverUrl" class="ny-pending-cover" :src="item.coverUrl" :alt="item.title" />
+          <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
           <div class="ny-pending-title" :title="item.title">{{ item.title }}</div>
           <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">
