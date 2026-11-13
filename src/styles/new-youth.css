@@ -47,3 +47,14 @@
 @media (max-width: 1200px) { .ny-pies { grid-template-columns: 1fr; } .ny-pie-layout { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); } }
 @media (max-width: 1100px) { .top-bar::before { display: none; } .page-tabs { width: 100%; min-width: 0; overflow-x: auto; justify-content: flex-start; white-space: nowrap; scrollbar-width: thin; } .page-tabs button { flex: none; } }
 @media (max-width: 640px) { .ny-hero { align-items: start; flex-direction: column; padding: 24px; } .ny-card { padding: 19px; } .ny-pie-layout { grid-template-columns: 1fr; } .ny-pie-wrap { width: 66%; min-width: 190px; } .ny-video-list { max-height: 350px; } .ny-card-count { display: none; } }
+
+.ny-pending-uploads .ny-card-heading { min-height: 0; }
+.ny-pending-list { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; }
+.ny-pending-row { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 12px; border: 1px solid #e7edf1; border-radius: 14px; }
+.ny-pending-cover { display: block; width: 180px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 9px; background: #edf2f5; }
+.ny-pending-cover-empty { display: grid; place-items: center; color: #8394a0; font-size: 12px; }
+.ny-pending-title { min-width: 0; color: #223249; font-weight: 700; overflow-wrap: anywhere; }
+.ny-publish-button { padding: 10px 19px; border: 0; border-radius: 9px; background: #247b78; color: #fff; font-weight: 700; cursor: pointer; }
+.ny-publish-button:disabled { opacity: .55; cursor: wait; }
+.ny-pending-empty { margin-top: 18px; color: #8193a1; }
+@media (max-width: 640px) { .ny-pending-row { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; } .ny-pending-cover { width: 112px; } .ny-publish-button { grid-column: 2; justify-self: start; } }
