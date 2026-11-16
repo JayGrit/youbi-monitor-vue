@@ -9,6 +9,7 @@ const props = defineProps({
 const COLORS = ['#2563eb', '#0f766e', '#16a34a', '#f59e0b', '#8b5cf6', '#db2777', '#dc2626', '#7c3aed', '#0891b2', '#b45309', '#9333ea', '#475569']
 const OTHER_COLOR = '#64748b'
 const FREE_COLOR = '#f8fafc'
+const VISIBLE_MINIO_BUCKETS = ['newyouth', 'ydbi', 'youbi-assets', 'youbi-diagnostics', 'youbi-cover']
 const gib = 1024 ** 3
 const nowTick = ref(Date.now())
 let relativeTimer = null
@@ -55,32 +56,27 @@ const minioDisk = computed(() => {
     return { title: 'MinIO 磁盘', unavailable: part.errorMessage || '等待 40G 磁盘统计', entries: [] }
   }
   const disk = part.payload
-  const buckets = Object.entries(disk.bucketBytes || {})
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([name, bytes], index) => item(name, bytes, COLORS[index % COLORS.length], part.createdAt))
+  const buckets = VISIBLE_MINIO_BUCKETS.map((name, index) =>
+    item(name, disk.bucketBytes?.[name], COLORS[index], part.createdAt))
   return makeChart({
     title: 'MinIO 磁盘', mount: disk.mountPoint || '/minio-data',
     total: Number(disk.totalBytes || 0), used: Number(disk.usedBytes || 0),
     available: Number(disk.availableBytes || 0), percent: disk.usedPercent,
-    entries: [...buckets, item('MinIO 系统数据', disk.systemBytes, COLORS[buckets.length % COLORS.length], part.createdAt)],
-    otherBytes: disk.otherBytes, otherLabel: '文件系统及其他占用', createdAt: part.createdAt,
-    overcountBytes: disk.overcountBytes,
+    entries: buckets, otherLabel: '其他占用', createdAt: part.createdAt,
   })
 })
 
 const charts = computed(() => [systemDisk.value, minioDisk.value])
 
-function makeChart({ title, mount, total, used, available, percent, entries, otherBytes, otherLabel, createdAt, overcountBytes }) {
+function makeChart({ title, mount, total, used, available, percent, entries, otherLabel, createdAt }) {
   const known = entries.reduce((sum, entry) => sum + entry.value, 0)
-  const other = otherBytes === undefined ? Math.max(0, used - known) : Math.max(0, Number(otherBytes || 0))
-  const reserved = Math.max(0, total - used - available)
-  const usedRows = [...entries, item(otherLabel, other, OTHER_COLOR, createdAt)]
-    .filter(row => row.value > 0)
-  const rows = [...usedRows, item('文件系统保留空间', reserved, '#cbd5e1', createdAt), item('可用空间', available, FREE_COLOR, createdAt)]
+  const occupied = Math.max(0, total - available)
+  const other = Math.max(0, occupied - known)
+  const rows = [...entries, item(otherLabel, other, OTHER_COLOR, createdAt), item('可用空间', available, FREE_COLOR, createdAt)]
     .filter(row => row.value > 0 || row.label === '可用空间')
   const knownUsed = known + other
-  const chartUsed = knownUsed > used && knownUsed > 0
-    ? rows.map(row => ({ ...row, chartValue: usedRows.includes(row) ? row.value / knownUsed * used : row.value }))
+  const chartUsed = knownUsed > occupied && knownUsed > 0
+    ? rows.map(row => ({ ...row, chartValue: row.label === '可用空间' ? row.value : row.value / knownUsed * occupied }))
     : rows.map(row => ({ ...row, chartValue: row.value }))
   const chartTotal = chartUsed.reduce((sum, row) => sum + row.chartValue, 0)
   let offset = 0
@@ -92,7 +88,6 @@ function makeChart({ title, mount, total, used, available, percent, entries, oth
   return {
     title, mount, total: Math.max(total, used + available), used, percent,
     entries: rows, style: { background: stops.length ? `conic-gradient(${stops.join(', ')})` : FREE_COLOR },
-    overcountBytes: Math.max(0, Number(overcountBytes || 0)),
   }
 }
 
@@ -147,7 +142,6 @@ onUnmounted(() => { if (relativeTimer) window.clearInterval(relativeTimer) })
             <strong>{{ formatStorageBytes(row.value) }}</strong>
             <small>{{ usagePercent(row.value, chart.total) }}</small>
           </div>
-          <p v-if="chart.overcountBytes" class="disk-status-note">目录占盘比磁盘已用量多 {{ formatStorageBytes(chart.overcountBytes) }}，请检查挂载与统计时差。</p>
         </div>
       </div>
     </section>
