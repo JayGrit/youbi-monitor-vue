@@ -156,12 +156,46 @@
   cursor: pointer;
 }
 
+.disk-status-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  padding: 28px;
+}
+
+.disk-status-section {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.disk-status-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.disk-status-section-head h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.disk-status-section-head span,
+.disk-status-unavailable,
+.disk-status-note {
+  color: #64748b;
+  font-size: 13px;
+}
+
 .disk-status-panel-body {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   align-items: center;
-  gap: 30px;
-  padding: 28px;
+  gap: 22px;
 }
 
 .disk-status-chart {
@@ -201,7 +235,7 @@
 
 .disk-status-legend-row {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto 52px;
+  grid-template-columns: 12px minmax(0, 1fr) auto 48px;
   align-items: center;
   gap: 9px;
   color: #334155;
@@ -231,12 +265,26 @@
   text-align: right;
 }
 
+@media (max-width: 1250px) {
+  .disk-status-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 680px) {
+  .disk-status-panels {
+    padding: 18px;
+  }
+
+  .disk-status-section {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .disk-status-panel-body {
     grid-template-columns: 1fr;
     justify-items: center;
     gap: 22px;
-    padding: 22px 18px;
   }
 
   .disk-status-chart {

@@ -6,172 +6,150 @@ const props = defineProps({
   statusText: { type: String, default: '' },
 })
 
-const DISK_CHART_COLORS = [
-  '#2563eb',
-  '#0f766e',
-  '#16a34a',
-  '#f59e0b',
-  '#8b5cf6',
-  '#db2777',
-  '#dc2626',
-  '#7c3aed',
-  '#64748b',
-  '#f8fafc',
-]
+const COLORS = ['#2563eb', '#0f766e', '#16a34a', '#f59e0b', '#8b5cf6', '#db2777', '#dc2626', '#7c3aed', '#0891b2', '#b45309', '#9333ea', '#475569']
+const OTHER_COLOR = '#64748b'
+const FREE_COLOR = '#f8fafc'
+const gib = 1024 ** 3
 const nowTick = ref(Date.now())
 let relativeTimer = null
 
-const diskUsageContext = computed(() => {
-  const gib = 1024 ** 3
+function component(name) {
+  return props.status?.components?.[name] || {}
+}
+
+function item(label, value, color, createdAt) {
+  return { label, value: Math.max(0, Number(value || 0)), color, createdAt }
+}
+
+const systemDisk = computed(() => {
   const status = props.status || {}
-  const disk = status.components?.disk?.payload || status.summary?.disk || status
-  const minio = status.components?.minio?.payload || {}
-  const minioBucketBytes = minio.bucketBytes || status.summary?.minioBucketBytes || {}
-  const docker = status.components?.docker?.payload || status.summary?.docker || {}
-  const workfolder = status.components?.workfolder?.payload || {}
-  const mysql = status.components?.mysql?.payload || {}
-  const mysqlBinlog = status.components?.mysql_binlog?.payload || {}
-  const componentTimes = {
-    disk: status.components?.disk?.createdAt || status.createdAt,
-    minio: status.components?.minio?.createdAt || status.createdAt,
-    docker: status.components?.docker?.createdAt || status.createdAt,
-    workfolder: status.components?.workfolder?.createdAt || status.createdAt,
-    mysql: status.components?.mysql?.createdAt || status.createdAt,
-    mysql_binlog: status.components?.mysql_binlog?.createdAt || status.createdAt,
-  }
-  const usedBytes = Math.max(0, Number(disk.usedGb || status.usedGb || 0) * gib)
-  const availableBytes = Math.max(0, Number(disk.availableGb || status.availableGb || 0) * gib)
-  const totalBytes = Math.max(
-    Number(disk.totalGb || status.totalGb || 0) * gib,
-    usedBytes + availableBytes,
-  )
-  const minioYdbiBytes = Math.max(0, Number(minioBucketBytes.ydbi ?? status.minioYdbiBytes ?? status.minioBytes ?? 0))
-  const minioDiagnosticsBytes = Math.max(0, Number(minioBucketBytes['youbi-diagnostics'] ?? status.minioDiagnosticsBytes ?? 0))
-  const dockerImageBytes = Math.max(0, Number(docker.imageBytes ?? status.dockerImageBytes ?? 0))
-  const danglingBytes = Math.min(dockerImageBytes, Math.max(0, Number(docker.danglingImageBytes ?? status.dockerDanglingImageBytes ?? 0)))
-  const dockerNonDanglingImageBytes = Math.max(0, dockerImageBytes - danglingBytes)
-  const buildCacheBytes = Math.max(0, Number(docker.buildCacheBytes ?? status.dockerBuildCacheBytes ?? 0))
-  const workfolderBytes = Math.max(0, Number(workfolder.bytes ?? status.summary?.workfolderBytes ?? status.workfolderBytes ?? 0))
-  const mysqlBytes = Math.max(0, Number(mysql.bytes ?? status.summary?.mysqlBytes ?? status.mysqlBytes ?? 0))
-  const mysqlBinlogBytes = Math.max(0, Number(mysqlBinlog.bytes ?? status.summary?.mysqlBinlogBytes ?? status.mysqlBinlogBytes ?? 0))
-  const knownUsedBytes = minioYdbiBytes + minioDiagnosticsBytes + dockerNonDanglingImageBytes + danglingBytes
-    + buildCacheBytes + workfolderBytes + mysqlBytes + mysqlBinlogBytes
-
-  return {
-    totalBytes,
-    usedBytes,
-    availableBytes,
-    knownUsedBytes,
-    items: [
-      { label: 'MinIO ydbi', value: minioYdbiBytes, color: DISK_CHART_COLORS[0], createdAt: componentTimes.minio },
-      { label: 'MinIO 诊断', value: minioDiagnosticsBytes, color: DISK_CHART_COLORS[1], createdAt: componentTimes.minio },
-      { label: 'Docker 镜像', value: dockerNonDanglingImageBytes, color: DISK_CHART_COLORS[2], createdAt: componentTimes.docker },
-      { label: 'Docker dangling 镜像', value: danglingBytes, color: DISK_CHART_COLORS[3], createdAt: componentTimes.docker },
-      { label: 'Docker 构建缓存', value: buildCacheBytes, color: DISK_CHART_COLORS[4], createdAt: componentTimes.docker },
-      { label: 'YouBi workfolder', value: workfolderBytes, color: DISK_CHART_COLORS[5], createdAt: componentTimes.workfolder },
-      { label: 'MySQL 数据', value: mysqlBytes, color: DISK_CHART_COLORS[6], createdAt: componentTimes.mysql },
-      { label: 'MySQL binlog', value: mysqlBinlogBytes, color: DISK_CHART_COLORS[7], createdAt: componentTimes.mysql_binlog },
-    ],
-    diskCreatedAt: componentTimes.disk,
-  }
-})
-
-const diskUsageItems = computed(() => {
-  const context = diskUsageContext.value
-  const otherUsedBytes = Math.max(0, context.usedBytes - context.knownUsedBytes)
-  return [
-    ...context.items,
-    { label: '其他系统占用', value: otherUsedBytes, color: DISK_CHART_COLORS[8], createdAt: context.diskCreatedAt },
-    { label: '可用空间', value: context.availableBytes, color: DISK_CHART_COLORS[9], createdAt: context.diskCreatedAt },
-  ].filter(item => item.value > 0 || item.label === '可用空间')
-})
-
-const diskUsageTotal = computed(() => {
-  const context = diskUsageContext.value
-  return Math.max(context.totalBytes, context.usedBytes + context.availableBytes, context.knownUsedBytes + context.availableBytes)
-})
-
-const diskChartItems = computed(() => {
-  const context = diskUsageContext.value
-  const visibleUsedItems = context.knownUsedBytes > context.usedBytes && context.knownUsedBytes > 0
-    ? context.items.map(item => ({ ...item, chartValue: item.value / context.knownUsedBytes * context.usedBytes }))
-    : context.items.map(item => ({ ...item, chartValue: item.value }))
-  const knownChartBytes = visibleUsedItems.reduce((sum, item) => sum + item.chartValue, 0)
-  return [
-    ...visibleUsedItems,
-    { label: '其他系统占用', chartValue: Math.max(0, context.usedBytes - knownChartBytes), color: DISK_CHART_COLORS[8] },
-    { label: '可用空间', chartValue: context.availableBytes, color: DISK_CHART_COLORS[9] },
-  ].filter(item => item.chartValue > 0)
-})
-
-const diskChartStyle = computed(() => {
-  const total = diskChartItems.value.reduce((sum, item) => sum + item.chartValue, 0)
-  if (!total) return { background: DISK_CHART_COLORS[9] }
-  let offset = 0
-  const stops = diskChartItems.value.map(item => {
-    const start = offset
-    offset += item.chartValue / total * 100
-    return `${item.color} ${start}% ${offset}%`
+  const disk = component('disk').payload || status.summary?.disk || status
+  const docker = component('docker').payload || status.summary?.docker || {}
+  const workfolder = component('workfolder').payload || {}
+  const mysql = component('mysql').payload || {}
+  const binlog = component('mysql_binlog').payload || {}
+  const used = Math.max(0, Number(disk.usedGb || status.usedGb || 0) * gib)
+  const available = Math.max(0, Number(disk.availableGb || status.availableGb || 0) * gib)
+  const total = Math.max(Number(disk.totalGb || status.totalGb || 0) * gib, used + available)
+  const images = Math.max(0, Number(docker.imageBytes ?? status.dockerImageBytes ?? 0))
+  const dangling = Math.min(images, Math.max(0, Number(docker.danglingImageBytes ?? status.dockerDanglingImageBytes ?? 0)))
+  const entries = [
+    item('Docker 镜像', images - dangling, COLORS[0], component('docker').createdAt),
+    item('Docker dangling 镜像', dangling, COLORS[1], component('docker').createdAt),
+    item('Docker 构建缓存', docker.buildCacheBytes ?? status.dockerBuildCacheBytes, COLORS[2], component('docker').createdAt),
+    item('YouBi workfolder', workfolder.bytes ?? status.summary?.workfolderBytes ?? status.workfolderBytes, COLORS[3], component('workfolder').createdAt),
+    item('MySQL 数据', mysql.bytes ?? status.summary?.mysqlBytes ?? status.mysqlBytes, COLORS[4], component('mysql').createdAt),
+    item('MySQL binlog', binlog.bytes ?? status.summary?.mysqlBinlogBytes ?? status.mysqlBinlogBytes, COLORS[5], component('mysql_binlog').createdAt),
+  ]
+  return makeChart({
+    title: '系统盘', mount: disk.mountPoint || '/', total, used, available,
+    percent: disk.usedPercent ?? status.usedPercent,
+    entries, createdAt: component('disk').createdAt || status.createdAt,
+    otherLabel: '其他系统占用',
   })
-  return { background: `conic-gradient(${stops.join(', ')})` }
 })
+
+const minioDisk = computed(() => {
+  const part = component('minio_disk')
+  if (!part.payload || part.status !== 'success') {
+    return { title: 'MinIO 磁盘', unavailable: part.errorMessage || '等待 40G 磁盘统计', entries: [] }
+  }
+  const disk = part.payload
+  const buckets = Object.entries(disk.bucketBytes || {})
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, bytes], index) => item(name, bytes, COLORS[index % COLORS.length], part.createdAt))
+  return makeChart({
+    title: 'MinIO 磁盘', mount: disk.mountPoint || '/minio-data',
+    total: Number(disk.totalBytes || 0), used: Number(disk.usedBytes || 0),
+    available: Number(disk.availableBytes || 0), percent: disk.usedPercent,
+    entries: [...buckets, item('MinIO 系统数据', disk.systemBytes, COLORS[buckets.length % COLORS.length], part.createdAt)],
+    otherBytes: disk.otherBytes, otherLabel: '文件系统及其他占用', createdAt: part.createdAt,
+    overcountBytes: disk.overcountBytes,
+  })
+})
+
+const charts = computed(() => [systemDisk.value, minioDisk.value])
+
+function makeChart({ title, mount, total, used, available, percent, entries, otherBytes, otherLabel, createdAt, overcountBytes }) {
+  const known = entries.reduce((sum, entry) => sum + entry.value, 0)
+  const other = otherBytes === undefined ? Math.max(0, used - known) : Math.max(0, Number(otherBytes || 0))
+  const reserved = Math.max(0, total - used - available)
+  const usedRows = [...entries, item(otherLabel, other, OTHER_COLOR, createdAt)]
+    .filter(row => row.value > 0)
+  const rows = [...usedRows, item('文件系统保留空间', reserved, '#cbd5e1', createdAt), item('可用空间', available, FREE_COLOR, createdAt)]
+    .filter(row => row.value > 0 || row.label === '可用空间')
+  const knownUsed = known + other
+  const chartUsed = knownUsed > used && knownUsed > 0
+    ? rows.map(row => ({ ...row, chartValue: usedRows.includes(row) ? row.value / knownUsed * used : row.value }))
+    : rows.map(row => ({ ...row, chartValue: row.value }))
+  const chartTotal = chartUsed.reduce((sum, row) => sum + row.chartValue, 0)
+  let offset = 0
+  const stops = chartUsed.filter(row => row.chartValue > 0).map(row => {
+    const start = offset
+    offset += row.chartValue / chartTotal * 100
+    return `${row.color} ${start}% ${offset}%`
+  })
+  return {
+    title, mount, total: Math.max(total, used + available), used, percent,
+    entries: rows, style: { background: stops.length ? `conic-gradient(${stops.join(', ')})` : FREE_COLOR },
+    overcountBytes: Math.max(0, Number(overcountBytes || 0)),
+  }
+}
 
 function formatStorageBytes(value) {
   const bytes = Math.max(0, Number(value || 0))
-  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+  if (bytes >= gib) return `${(bytes / gib).toFixed(2)} GB`
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${Math.round(bytes)} B`
 }
 
-function diskUsagePercent(value) {
-  if (!diskUsageTotal.value) return '0.0%'
-  return `${(Number(value || 0) / diskUsageTotal.value * 100).toFixed(1)}%`
+function usagePercent(value, total) {
+  return total ? `${(value / total * 100).toFixed(1)}%` : '0.0%'
 }
 
 function relativeTime(value) {
   if (!value) return ''
   const text = String(value).trim()
-  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text)
-    ? text.replace(' ', 'T')
-    : text
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text) ? text.replace(' ', 'T') : text
   const time = new Date(normalized).getTime()
   if (Number.isNaN(time)) return ''
-  const diffMs = Math.max(0, nowTick.value - time)
-  const minutes = Math.floor(diffMs / 60000)
+  const minutes = Math.floor(Math.max(0, nowTick.value - time) / 60000)
   if (minutes < 1) return '刚刚'
   if (minutes < 60) return `${minutes} 分钟前`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-  return `${Math.floor(hours / 24)} 天前`
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} 小时前`
+  return `${Math.floor(minutes / 1440)} 天前`
 }
 
-onMounted(() => {
-  relativeTimer = window.setInterval(() => {
-    nowTick.value = Date.now()
-  }, 60000)
-})
-
-onUnmounted(() => {
-  if (relativeTimer) window.clearInterval(relativeTimer)
-})
+onMounted(() => { relativeTimer = window.setInterval(() => { nowTick.value = Date.now() }, 60000) })
+onUnmounted(() => { if (relativeTimer) window.clearInterval(relativeTimer) })
 </script>
 
 <template>
-  <div class="disk-status-panel-body">
-    <div class="disk-status-chart" :style="diskChartStyle" aria-label="服务器磁盘占用饼图">
-      <div>
-        <strong>{{ status?.components?.disk?.payload?.usedPercent || status?.usedPercent || 0 }}%</strong>
-        <span>{{ statusText || '暂无状态' }}</span>
+  <div class="disk-status-panels">
+    <section v-for="chart in charts" :key="chart.title" class="disk-status-section">
+      <header class="disk-status-section-head">
+        <h2>{{ chart.title }}</h2>
+        <span v-if="chart.mount">{{ chart.mount }} · {{ formatStorageBytes(chart.total) }}</span>
+      </header>
+      <p v-if="chart.unavailable" class="disk-status-unavailable">{{ chart.unavailable }}</p>
+      <div v-else class="disk-status-panel-body">
+        <div class="disk-status-chart" :style="chart.style" :aria-label="`${chart.title}占用饼图`">
+          <div>
+            <strong>{{ chart.percent || 0 }}%</strong>
+            <span>{{ chart.title === '系统盘' && statusText ? statusText : `${formatStorageBytes(chart.used)} / ${formatStorageBytes(chart.total)}` }}</span>
+          </div>
+        </div>
+        <div class="disk-status-legend">
+          <div v-for="row in chart.entries" :key="row.label" class="disk-status-legend-row">
+            <span class="disk-status-color" :style="{ background: row.color }"></span>
+            <span>{{ row.label }} <em v-if="relativeTime(row.createdAt)">{{ relativeTime(row.createdAt) }}</em></span>
+            <strong>{{ formatStorageBytes(row.value) }}</strong>
+            <small>{{ usagePercent(row.value, chart.total) }}</small>
+          </div>
+          <p v-if="chart.overcountBytes" class="disk-status-note">目录占盘比磁盘已用量多 {{ formatStorageBytes(chart.overcountBytes) }}，请检查挂载与统计时差。</p>
+        </div>
       </div>
-    </div>
-    <div class="disk-status-legend">
-      <div v-for="item in diskUsageItems" :key="item.label" class="disk-status-legend-row">
-        <span class="disk-status-color" :style="{ background: item.color }"></span>
-        <span>{{ item.label }} <em v-if="relativeTime(item.createdAt)">{{ relativeTime(item.createdAt) }}</em></span>
-        <strong>{{ formatStorageBytes(item.value) }}</strong>
-        <small>{{ diskUsagePercent(item.value) }}</small>
-      </div>
-    </div>
+    </section>
   </div>
 </template>
