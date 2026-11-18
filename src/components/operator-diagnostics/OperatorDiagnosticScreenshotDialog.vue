@@ -12,7 +12,6 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-const pageSize = 10000
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -66,15 +65,15 @@ async function loadFirstPage() {
     error.value = '缺少 op_id'
     return
   }
-  await loadPage(1)
+  await loadDiagnostics()
 }
 
-async function loadPage(nextPage) {
+async function loadDiagnostics() {
   const token = ++requestToken
   loading.value = true
   error.value = ''
   try {
-    const response = await props.api.getDiagnostics(opId.value, { page: nextPage, limit: pageSize })
+    const response = await props.api.getDiagnostics(opId.value, { all: true })
     if (token !== requestToken) return
     rows.value = response.items || []
     total.value = Number(response.total || 0)

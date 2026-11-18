@@ -1,4 +1,4 @@
-import { requestJson } from './http'
+import { postJson, requestJson } from './http'
 
 export function createOperatorDiagnosticsApi(apiBase, service = 'monitor') {
   const base = `${apiBase}/operator`
@@ -21,6 +21,12 @@ export function createOperatorDiagnosticsApi(apiBase, service = 'monitor') {
   return {
     listQueue(params) {
       return requestJson(`${base}/queue${queryString(params)}`, undefined, describe('查询Operator执行队列'))
+    },
+    deleteQueueTasks(tasks) {
+      return postJson(`${base}/queue/delete`, { tasks }, describe('删除未开始的 Operator 任务'))
+    },
+    updateQueuePriorities(tasks) {
+      return postJson(`${base}/queue/priority`, { tasks }, describe('调整 Operator 任务优先级'))
     },
     listTasks(params) {
       return requestJson(`${base}/tasks${queryString(params)}`, undefined, describe('查询Operator任务列表'))

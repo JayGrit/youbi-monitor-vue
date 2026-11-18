@@ -23,13 +23,26 @@ const filters = reactive({
 const queueTasks = ref([])
 const queueLoading = ref(false)
 const queueError = ref('')
+const editMode = ref('')
+const selectedForDeletion = ref([])
+const priorityEdits = ref({})
+const editSaving = ref(false)
+const editMessage = ref('')
+const editError = ref('')
+const priorityChanges = computed(() => queueTasks.value.flatMap(task => {
+  const opId = queueOpId(task)
+  const priority = priorityEdits.value[opId]
+  return priority !== undefined && priority !== String(task.priority ?? '')
+    ? [{ opId, priority: priority.trim() }]
+    : []
+}))
 const screenshotDialogTask = ref(null)
 let filterTimer = null
 let queueRequestToken = 0
 const { copyToastVisible, copyText } = useCopyToast()
 const { syncPolling, stopPolling } = usePageVisibilityPolling(() => {
   loadQueue({ silent: true })
-}, () => hasActiveQueue.value)
+}, () => hasActiveQueue.value && !editMode.value)
 
 const hasActiveQueue = computed(() => queueTasks.value.some(item => ['ready', 'running'].includes(item.status)))
 const platformOptions = computed(() => Object.entries(props.platformIconUrls).map(([type, iconUrl]) => ({
@@ -37,7 +50,7 @@ const platformOptions = computed(() => Object.entries(props.platformIconUrls).ma
   label: uploadPlatformText[type] || type,
   iconUrl,
 })))
-const timeRanges = recentTimeRanges
+const timeRanges = [...recentTimeRanges, { value: 'all', label: '全部' }]
 
 onMounted(() => {
   restoreQuery()
@@ -75,9 +88,9 @@ async function loadQueue({ silent = false } = {}) {
   queueError.value = ''
   syncQuery()
   try {
-    const response = await loadAllQueuePages(token)
+    const response = await props.api.listQueue({ ...queueParams(), all: true })
     if (token !== queueRequestToken) return
-    queueTasks.value = response
+    queueTasks.value = response.items || []
     syncPolling()
   } catch (err) {
     if (token === queueRequestToken) queueError.value = err instanceof Error ? err.message : String(err)
@@ -86,32 +99,18 @@ async function loadQueue({ silent = false } = {}) {
   }
 }
 
-async function loadAllQueuePages(token) {
-  const params = queueParams()
-  const firstPage = await props.api.listQueue({ ...params, page: 1 })
-  if (token !== queueRequestToken) return []
-  const rows = [...(firstPage.items || [])]
-  const pageCount = Number(firstPage.pageCount || 1)
-  for (let page = 2; page <= pageCount; page += 1) {
-    const response = await props.api.listQueue({ ...params, page })
-    if (token !== queueRequestToken) return []
-    rows.push(...(response.items || []))
-  }
-  return rows
-}
-
 function queueParams() {
   return {
     platform: filters.platform,
     topic: filters.topic,
     opId: filters.opId,
     taskId: filters.taskId,
-    ...timeRangeParams(filters.timeRange),
+    ...(filters.timeRange === 'all' ? {} : timeRangeParams(filters.timeRange)),
   }
 }
 
 function filterChanged() {
-  loadQueue()
+  if (!editSaving.value) loadQueue()
 }
 
 function filterChangedDebounced() {
@@ -129,6 +128,47 @@ function clearFilterTimer() {
 function setPlatformFilter(platform) {
   filters.platform = filters.platform === platform ? '' : platform
   filterChanged()
+}
+
+function setEditMode(mode) {
+  editMode.value = mode
+  selectedForDeletion.value = []
+  priorityEdits.value = {}
+  editError.value = ''
+  editMessage.value = ''
+  syncPolling()
+}
+
+async function saveQueueEdits() {
+  if (editSaving.value) return
+  const deleting = editMode.value === 'delete'
+  const tasks = deleting
+    ? selectedForDeletion.value.map(opId => ({ opId }))
+    : priorityChanges.value
+  if (!tasks.length) return
+  if (!deleting && tasks.some(task => !/^[+-]?[0-9]+$/.test(task.priority))) {
+    editError.value = '优先级请输入整数。'
+    return
+  }
+  if (deleting && !window.confirm(`删除选中的 ${tasks.length} 个未开始任务？`)) return
+
+  editSaving.value = true
+  editError.value = ''
+  try {
+    const result = deleting
+      ? await props.api.deleteQueueTasks(tasks)
+      : await props.api.updateQueuePriorities(tasks)
+    setEditMode('')
+    const skipped = result.skipped || []
+    const details = skipped.map(task => `${task.opId}（${task.reason === 'already_started' ? '已开始' : '已不存在'}）`)
+    editMessage.value = `已${deleting ? '删除' : '调整'} ${result.applied.length} 个任务`
+    if (details.length) editMessage.value += `。跳过 ${details.length} 个任务：${details.join('、')}`
+    await loadQueue()
+  } catch (err) {
+    editError.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    editSaving.value = false
+  }
 }
 
 function queueTaskId(row) {
@@ -212,7 +252,7 @@ function canOpenScreenshotDialog(task) {
       </div>
     </header>
 
-    <div class="operator-filter-bar">
+    <fieldset class="operator-filter-bar" :disabled="Boolean(editMode)">
       <div class="operator-platform-filter" aria-label="平台筛选">
         <span>平台</span>
         <div class="operator-platform-icons">
@@ -264,7 +304,7 @@ function canOpenScreenshotDialog(task) {
           <input v-model.trim="filters.taskId" type="search" @input="filterChangedDebounced" />
         </label>
       </div>
-    </div>
+    </fieldset>
 
     <section class="operator-queue-panel">
       <header class="operator-queue-head">
@@ -273,14 +313,30 @@ function canOpenScreenshotDialog(task) {
         </div>
         <div class="operator-queue-status">
           <span v-if="queueLoading">正在加载</span>
-          <button type="button" :disabled="queueLoading" @click="loadQueue">刷新</button>
+          <button type="button" :disabled="queueLoading || editSaving || Boolean(editMode)" @click="loadQueue">刷新</button>
+          <template v-if="!editMode">
+            <button type="button" :disabled="queueLoading || !queueTasks.some(task => task.deletable)" @click="setEditMode('delete')">删除</button>
+            <button type="button" :disabled="queueLoading || !queueTasks.length" @click="setEditMode('priority')">调整</button>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              :disabled="editSaving || (editMode === 'delete' ? !selectedForDeletion.length : !priorityChanges.length)"
+              @click="saveQueueEdits"
+            >
+              {{ editMode === 'delete' ? `删除所选（${selectedForDeletion.length}）` : '保存优先级' }}
+            </button>
+            <button type="button" :disabled="editSaving" @click="setEditMode('')">取消</button>
+          </template>
         </div>
       </header>
-      <div v-if="queueError" class="operator-page-error">{{ queueError }}</div>
+      <div v-if="queueError || editError" class="operator-page-error" role="alert">{{ editError || queueError }}</div>
+      <div v-if="editMessage" class="operator-queue-message" role="status">{{ editMessage }}</div>
       <div class="operator-queue-table-wrap">
         <table class="operator-queue-table">
           <thead>
             <tr>
+              <th v-if="editMode === 'delete'">选择</th>
               <th>平台</th>
               <th>任务</th>
               <th>任务类型</th>
@@ -293,7 +349,7 @@ function canOpenScreenshotDialog(task) {
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td colspan="8" class="operator-queue-empty">没有 Operator 任务</td>
+              <td :colspan="editMode === 'delete' ? 9 : 8" class="operator-queue-empty">没有 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
@@ -301,10 +357,20 @@ function canOpenScreenshotDialog(task) {
               :class="[
                 'operator-queue-row',
                 `operator-queue-${task.status || 'unknown'}`,
-                { 'operator-queue-clickable': canOpenScreenshotDialog(task) },
+                { 'operator-queue-clickable': !editMode && canOpenScreenshotDialog(task) },
               ]"
-              @click="canOpenScreenshotDialog(task) && openScreenshotDialog(task)"
+              @click="!editMode && canOpenScreenshotDialog(task) && openScreenshotDialog(task)"
             >
+              <td v-if="editMode === 'delete'">
+                <input
+                  v-if="task.deletable"
+                  v-model="selectedForDeletion"
+                  type="checkbox"
+                  :value="queueOpId(task)"
+                  :disabled="editSaving"
+                  :aria-label="`选择任务 ${queueOpId(task)}`"
+                />
+              </td>
               <td class="operator-queue-platform">
                 <button
                   type="button"
@@ -335,7 +401,18 @@ function canOpenScreenshotDialog(task) {
               <td>{{ relativeTime(task.createdAt) }}</td>
               <td>{{ waitingDurationText(task) }}</td>
               <td>{{ durationText(task) }}</td>
-              <td class="operator-queue-priority">{{ task.priority ?? '-' }}</td>
+              <td class="operator-queue-priority">
+                <input
+                  v-if="editMode === 'priority'"
+                  class="operator-priority-input"
+                  type="text"
+                  :aria-label="`任务 ${queueOpId(task)} 的优先级`"
+                  :value="priorityEdits[queueOpId(task)] ?? task.priority"
+                  :disabled="editSaving"
+                  @input="priorityEdits[queueOpId(task)] = $event.target.value"
+                />
+                <span v-else>{{ task.priority ?? '-' }}</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -353,6 +430,23 @@ function canOpenScreenshotDialog(task) {
 </template>
 
 <style scoped>
+.operator-filter-bar {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
+.operator-priority-input {
+  width: 7rem;
+  font: inherit;
+  color: inherit;
+}
+
+.operator-queue-message {
+  padding: 0.5rem 0;
+  overflow-wrap: anywhere;
+}
+
 .operator-diagnostics-page {
   display: flex;
   flex-direction: column;
