@@ -34,8 +34,8 @@ export function createOperatorDiagnosticsApi(apiBase, service = 'monitor') {
     getTask(opId) {
       return requestJson(`${base}/tasks/${encodeURIComponent(opId)}`, undefined, describe('查询Operator任务详情'))
     },
-    getDiagnostics(opId, params) {
-      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics${queryString(params)}`, undefined, describe('查询Operator诊断详情'))
+    getDiagnostics(opId) {
+      return requestJson(`${base}/tasks/${encodeURIComponent(opId)}/diagnostics`, undefined, describe('查询Operator诊断详情'))
     },
   }
 }

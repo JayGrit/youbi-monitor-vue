@@ -18,7 +18,7 @@ const filters = reactive({
   topic: '',
   opId: '',
   taskId: '',
-  timeRange: 'recent',
+  timeRange: 'all',
 })
 const queueTasks = ref([])
 const queueLoading = ref(false)
@@ -67,7 +67,7 @@ function restoreQuery() {
   for (const key of Object.keys(filters)) {
     filters[key] = query.get(key) || ''
   }
-  if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'recent'
+  if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'all'
 }
 
 function syncQuery() {
@@ -88,7 +88,7 @@ async function loadQueue({ silent = false } = {}) {
   queueError.value = ''
   syncQuery()
   try {
-    const response = await props.api.listQueue({ ...queueParams(), all: true })
+    const response = await props.api.listQueue(queueParams())
     if (token !== queueRequestToken) return
     queueTasks.value = response.items || []
     syncPolling()

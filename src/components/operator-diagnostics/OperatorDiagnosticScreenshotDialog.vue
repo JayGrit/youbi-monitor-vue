@@ -73,7 +73,7 @@ async function loadDiagnostics() {
   loading.value = true
   error.value = ''
   try {
-    const response = await props.api.getDiagnostics(opId.value, { all: true })
+    const response = await props.api.getDiagnostics(opId.value)
     if (token !== requestToken) return
     rows.value = response.items || []
     total.value = Number(response.total || 0)

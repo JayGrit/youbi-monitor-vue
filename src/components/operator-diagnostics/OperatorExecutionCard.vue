@@ -13,12 +13,9 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   expanded: { type: Boolean, default: false },
-  diagnosticPage: { type: Number, default: 1 },
-  diagnosticPageCount: { type: Number, default: 0 },
-  diagnosticTotal: { type: Number, default: 0 },
 })
 
-const emit = defineEmits(['toggle', 'refresh', 'copy', 'setDiagnosticPage'])
+const emit = defineEmits(['toggle', 'refresh', 'copy'])
 
 const durationText = computed(() => {
   const created = timestamp(props.execution.createdAt)
@@ -145,23 +142,6 @@ function relativeTime(value) {
         :rows="diagnostics"
         empty-text="没有诊断记录"
       />
-      <footer v-if="diagnosticPageCount > 1" class="operator-diagnostics-pagination">
-        <button
-          type="button"
-          :disabled="diagnosticPage <= 1 || loading"
-          @click="emit('setDiagnosticPage', execution.opId, diagnosticPage - 1)"
-        >
-          上一页
-        </button>
-        <span>{{ diagnosticPage }} / {{ diagnosticPageCount }} · {{ diagnosticTotal }}</span>
-        <button
-          type="button"
-          :disabled="diagnosticPage >= diagnosticPageCount || loading"
-          @click="emit('setDiagnosticPage', execution.opId, diagnosticPage + 1)"
-        >
-          下一页
-        </button>
-      </footer>
     </section>
   </article>
 </template>
@@ -255,31 +235,6 @@ function relativeTime(value) {
   border-top: 1px solid #e2e8f0;
   padding-top: 14px;
   min-width: 0;
-}
-
-.operator-diagnostics-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.operator-diagnostics-pagination button {
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #334155;
-  min-height: 30px;
-  padding: 0 10px;
-  cursor: pointer;
-}
-
-.operator-diagnostics-pagination button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 @media (max-width: 900px) {
