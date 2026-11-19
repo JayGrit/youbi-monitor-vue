@@ -18,8 +18,13 @@ const filters = reactive({
   topic: '',
   opId: '',
   taskId: '',
+  taskIdMatch: '',
   timeRange: 'recent',
 })
+const page = ref(1)
+const pageCount = ref(0)
+const total = ref(0)
+const limit = 50
 const queueTasks = ref([])
 const queueLoading = ref(false)
 const queueError = ref('')
@@ -44,7 +49,7 @@ const { syncPolling, stopPolling } = usePageVisibilityPolling(() => {
   loadQueue({ silent: true })
 }, () => hasActiveQueue.value && !editMode.value)
 
-const hasActiveQueue = computed(() => queueTasks.value.some(item => ['ready', 'running'].includes(item.status)))
+const hasActiveQueue = ref(false)
 const platformOptions = computed(() => Object.entries(props.platformIconUrls).map(([type, iconUrl]) => ({
   type,
   label: uploadPlatformText[type] || type,
@@ -67,6 +72,8 @@ function restoreQuery() {
   for (const key of Object.keys(filters)) {
     filters[key] = query.get(key) || ''
   }
+  const savedPage = Number(query.get('operatorPage'))
+  if (Number.isSafeInteger(savedPage) && savedPage > 0) page.value = savedPage
   if (!timeRanges.some(item => item.value === filters.timeRange)) filters.timeRange = 'recent'
 }
 
@@ -74,7 +81,7 @@ function syncQuery() {
   const query = new URLSearchParams(window.location.search)
   query.set('page', 'operator-diagnostics')
   query.delete('status')
-  query.delete('operatorPage')
+  query.set('operatorPage', String(page.value))
   for (const [key, value] of Object.entries(filters)) {
     if (value) query.set(key, value)
     else query.delete(key)
@@ -91,6 +98,11 @@ async function loadQueue({ silent = false } = {}) {
     const response = await props.api.listQueue(queueParams())
     if (token !== queueRequestToken) return
     queueTasks.value = response.items || []
+    total.value = response.total ?? queueTasks.value.length
+    page.value = response.page ?? 1
+    pageCount.value = response.pageCount ?? 0
+    hasActiveQueue.value = response.hasActive ?? queueTasks.value.some(item => ['ready', 'running'].includes(item.status))
+    syncQuery()
     syncPolling()
   } catch (err) {
     if (token === queueRequestToken) queueError.value = err instanceof Error ? err.message : String(err)
@@ -105,12 +117,23 @@ function queueParams() {
     topic: filters.topic,
     opId: filters.opId,
     taskId: filters.taskId,
+    exactTaskId: filters.taskIdMatch === 'exact' ? filters.taskId : '',
+    page: page.value,
+    limit,
     ...(filters.timeRange === 'all' ? {} : timeRangeParams(filters.timeRange)),
   }
 }
 
 function filterChanged() {
-  if (!editSaving.value) loadQueue()
+  clearFilterTimer()
+  if (editMode.value) return
+  page.value = 1
+  loadQueue()
+}
+
+function setPage(nextPage) {
+  page.value = nextPage
+  loadQueue()
 }
 
 function filterChangedDebounced() {
@@ -303,6 +326,10 @@ function canOpenScreenshotDialog(task) {
           task_id
           <input v-model.trim="filters.taskId" type="search" @input="filterChangedDebounced" />
         </label>
+        <label class="operator-exact-filter">
+          <input v-model="filters.taskIdMatch" type="checkbox" true-value="exact" false-value="" @change="filterChanged" />
+          精确匹配 task_id
+        </label>
       </div>
     </fieldset>
 
@@ -349,7 +376,7 @@ function canOpenScreenshotDialog(task) {
           </thead>
           <tbody>
             <tr v-if="!queueLoading && !queueTasks.length">
-              <td :colspan="editMode === 'delete' ? 9 : 8" class="operator-queue-empty">没有 Operator 任务</td>
+              <td :colspan="editMode === 'delete' ? 10 : 9" class="operator-queue-empty">没有 Operator 任务</td>
             </tr>
             <tr
               v-for="task in queueTasks"
@@ -417,6 +444,11 @@ function canOpenScreenshotDialog(task) {
           </tbody>
         </table>
       </div>
+      <nav v-if="pageCount > 1" class="operator-queue-status operator-queue-pagination" aria-label="Operator 队列分页">
+        <span>共 {{ total }} 条 · 第 {{ page }} / {{ pageCount }} 页</span>
+        <button type="button" :disabled="queueLoading || Boolean(editMode) || page <= 1" @click="setPage(page - 1)">上一页</button>
+        <button type="button" :disabled="queueLoading || Boolean(editMode) || page >= pageCount" @click="setPage(page + 1)">下一页</button>
+      </nav>
     </section>
 
     <OperatorDiagnosticScreenshotDialog
@@ -440,6 +472,21 @@ function canOpenScreenshotDialog(task) {
   width: 7rem;
   font: inherit;
   color: inherit;
+}
+
+.operator-search-row .operator-exact-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.operator-exact-filter input {
+  width: auto;
+}
+
+.operator-queue-pagination {
+  justify-content: flex-end;
+  padding: 0.75rem;
 }
 
 .operator-queue-message {

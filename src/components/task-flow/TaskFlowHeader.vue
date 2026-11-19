@@ -1,6 +1,15 @@
 <script setup>
 import { statusText } from '../../domain/constants'
 
+function operatorQueueUrl(taskId) {
+  return '?' + new URLSearchParams({
+    page: 'operator-diagnostics',
+    timeRange: 'all',
+    taskId,
+    taskIdMatch: 'exact',
+  })
+}
+
 defineProps({
   selectedTaskFlow: { type: Object, default: null },
   flowLoading: { type: Boolean, default: false },
@@ -25,6 +34,12 @@ defineProps({
       </p>
     </div>
     <div class="flow-actions">
+      <a
+        v-if="selectedTaskFlow?.task?.id"
+        :href="operatorQueueUrl(selectedTaskFlow.task.id)"
+        target="_blank"
+        rel="noreferrer"
+      >Operator 队列</a>
       <button type="button" :disabled="flowLoading" @click="refreshTaskFlow">
         {{ flowLoading ? 'Refreshing' : 'Refresh' }}
       </button>
