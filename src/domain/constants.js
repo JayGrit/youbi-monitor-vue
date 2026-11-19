@@ -135,6 +135,7 @@ export const uploadPlatformText = {
   doubao: '豆包',
   notebooklm: 'NotebookLM',
   chatgpt: 'ChatGPT',
+  baidupan: '百度网盘',
 }
 
 export function createPlatformIconUrls(baseUrl) {
@@ -151,6 +152,7 @@ export function createPlatformIconUrls(baseUrl) {
     doubao: `${assetBaseUrl}platform-icons/doubao-official-appstore-512.png`,
     notebooklm: `${assetBaseUrl}platform-icons/notebooklm-official-appstore-512.png`,
     chatgpt: `${assetBaseUrl}platform-icons/chatgpt-official-appstore-512.png`,
+    baidupan: `${assetBaseUrl}platform-icons/baidupan.webp`,
   }
 }
 
