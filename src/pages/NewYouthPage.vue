@@ -39,6 +39,8 @@ const formatScheduled = value => value ? new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit', minute: '2-digit', hour12: false,
 }).format(new Date(value)) : '—'
 
+const formatCount = new Intl.NumberFormat('zh-CN')
+const displayCount = value => value == null ? '—' : formatCount.format(value)
 const formatSlot = value => value ? String(value).replace('T', ' ').slice(5, 16) : '—'
 const previousPeriod = computed(() => data.value?.previousHour
   ? `${formatSlot(data.value.previousHour.startSlot)} → ${formatSlot(data.value.previousHour.endSlot)}` : '')
@@ -139,6 +141,10 @@ onUnmounted(() => {
         <span class="ny-hero-kicker">BILIBILI · NEWYOUTH</span>
         <h1>新青年</h1>
         <p>按整点快照追踪播客播放与粉丝增长</p>
+        <dl v-if="data" class="ny-account-counts">
+          <div><dt>当前粉丝量</dt><dd>{{ displayCount(data.followerCount) }}</dd></div>
+          <div><dt>充电人数</dt><dd>{{ displayCount(data.chargeCount) }}</dd></div>
+        </dl>
       </div>
       <button type="button" class="ny-refresh" :disabled="loading" @click="refresh">{{ loading ? '更新中…' : '刷新数据' }}</button>
     </section>
@@ -151,7 +157,7 @@ onUnmounted(() => {
         <GrowthPieChart heading="今日 00:00 至今" :period="todayPeriod" :data="data.today" />
       </div>
       <FollowerBarChart :points="data.followers || []" />
-      <p class="ny-source-note">播放量按同一 BV 的两次成功快照计算；此前没有记录的新视频按 0 次播放计算。饼图按绑定的 uploader 时间汇总全部视频，右侧只显示增量前 10 名。最近指昨天和前天；时间未知的视频归入以前。粉丝缺少相邻快照的小时以“—”表示。</p>
+      <p class="ny-source-note">播放量按同一 BV 的两次成功快照计算；此前没有记录的新视频按 0 次播放计算。饼图按视频发布时间分组，右侧只显示增量前 10 名。最近指昨天和前天；时间未知的视频归入以前。粉丝缺少相邻快照的小时以“—”表示。</p>
     </template>
 
     <section class="ny-card ny-pending-uploads">

@@ -3,6 +3,9 @@
 .ny-hero-kicker { display: block; margin-bottom: 10px; color: #a6e4d8; font-size: 12px; font-weight: 800; letter-spacing: .2em; }
 .ny-hero h1 { font-size: clamp(30px, 4vw, 44px); letter-spacing: .02em; }
 .ny-hero p { margin-top: 8px; color: #cbdce5; font-size: 15px; }
+.ny-account-counts { display: flex; flex-wrap: wrap; gap: 14px 32px; margin: 20px 0 0; }
+.ny-account-counts dt { color: #cbdce5; font-size: 13px; }
+.ny-account-counts dd { margin: 4px 0 0; color: #fff; font-size: clamp(22px, 3vw, 30px); font-weight: 750; font-variant-numeric: tabular-nums; }
 .ny-refresh { flex: none; padding: 10px 18px; border: 1px solid #ffffff8a; border-radius: 10px; background: #ffffff1b; color: #fff; font-weight: 700; cursor: pointer; }
 .ny-refresh:hover:not(:disabled) { background: #ffffff35; }
 .ny-refresh:disabled { opacity: .55; cursor: wait; }
