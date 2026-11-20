@@ -41,6 +41,20 @@ const formatScheduled = value => value ? new Intl.DateTimeFormat('zh-CN', {
 
 const formatCount = new Intl.NumberFormat('zh-CN')
 const displayCount = value => value == null ? '—' : formatCount.format(value)
+const formatNetGrowth = new Intl.NumberFormat('zh-CN', { signDisplay: 'exceptZero' })
+const followerGoal = computed(() => {
+  const date = data.value?.generatedAt?.slice(0, 10)
+  if (!date) return null
+
+  // The overview timestamps and hourly slots use Asia/Shanghai.
+  const weekday = new Date(date + 'T00:00:00Z').getUTCDay()
+  const target = weekday === 0 || weekday === 6 ? 750 : 300
+  const midnight = data.value.followers?.find(point => point.hour === '00:00')?.followers
+  const current = data.value.followerCount
+  const growth = midnight == null || current == null ? null : current - midnight
+  const percent = growth == null ? null : Math.floor(Math.max(0, growth) * 100 / target)
+  return { target, midnight, growth, percent }
+})
 const formatSlot = value => value ? String(value).replace('T', ' ').slice(5, 16) : '—'
 const previousPeriod = computed(() => data.value?.previousHour
   ? `${formatSlot(data.value.previousHour.startSlot)} → ${formatSlot(data.value.previousHour.endSlot)}` : '')
@@ -146,7 +160,27 @@ onUnmounted(() => {
           <div><dt>充电人数</dt><dd>{{ displayCount(data.chargeCount) }}</dd></div>
         </dl>
       </div>
-      <button type="button" class="ny-refresh" :disabled="loading" @click="refresh">{{ loading ? '更新中…' : '刷新数据' }}</button>
+      <div class="ny-hero-actions">
+        <div v-if="followerGoal" class="ny-follower-goal">
+          <div class="ny-follower-goal-heading">
+            <span id="ny-follower-goal-label">今日涨粉目标</span>
+            <span><strong v-if="followerGoal.growth !== null">{{ formatNetGrowth.format(followerGoal.growth) }}</strong><span v-else>—</span> / {{ displayCount(followerGoal.target) }} 人</span>
+          </div>
+          <progress
+            v-if="followerGoal.growth !== null"
+            :value="Math.min(followerGoal.target, Math.max(0, followerGoal.growth))"
+            :max="followerGoal.target"
+            aria-labelledby="ny-follower-goal-label"
+            :aria-valuetext="`净增 ${formatNetGrowth.format(followerGoal.growth)} 人，完成 ${followerGoal.percent}%`"
+          />
+          <div class="ny-follower-goal-caption">
+            <span v-if="followerGoal.midnight == null">暂无 00:00 粉丝快照</span>
+            <span v-else>00:00 基准 {{ displayCount(followerGoal.midnight) }}</span>
+            <span v-if="followerGoal.percent !== null">{{ followerGoal.percent }}%</span>
+          </div>
+        </div>
+        <button type="button" class="ny-refresh" :disabled="loading" @click="refresh">{{ loading ? '更新中…' : '刷新数据' }}</button>
+      </div>
     </section>
 
     <p v-if="error" class="ny-error" role="alert">加载失败：{{ error }}</p>

@@ -6,6 +6,16 @@
 .ny-account-counts { display: flex; flex-wrap: wrap; gap: 14px 32px; margin: 20px 0 0; }
 .ny-account-counts dt { color: #cbdce5; font-size: 13px; }
 .ny-account-counts dd { margin: 4px 0 0; color: #fff; font-size: clamp(22px, 3vw, 30px); font-weight: 750; font-variant-numeric: tabular-nums; }
+.ny-hero-actions { display: flex; flex: 1; align-items: end; justify-content: flex-end; gap: clamp(18px, 3vw, 34px); min-width: 0; }
+.ny-follower-goal { flex: 0 1 420px; min-width: 0; }
+.ny-follower-goal-heading, .ny-follower-goal-caption { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.ny-follower-goal-heading { font-size: 14px; font-weight: 650; }
+.ny-follower-goal-heading strong { font-size: 19px; }
+.ny-follower-goal progress { display: block; width: 100%; height: 8px; margin-top: 8px; appearance: none; border: 0; border-radius: 999px; overflow: hidden; background: #ffffff30; color: #a6e4d8; }
+.ny-follower-goal progress::-webkit-progress-bar { background: transparent; border-radius: 999px; }
+.ny-follower-goal progress::-webkit-progress-value { background: #a6e4d8; border-radius: 999px; }
+.ny-follower-goal progress::-moz-progress-bar { background: #a6e4d8; border-radius: 999px; }
+.ny-follower-goal-caption { margin-top: 6px; color: #cbdce5; font-size: 12px; }
 .ny-refresh { flex: none; padding: 10px 18px; border: 1px solid #ffffff8a; border-radius: 10px; background: #ffffff1b; color: #fff; font-weight: 700; cursor: pointer; }
 .ny-refresh:hover:not(:disabled) { background: #ffffff35; }
 .ny-refresh:disabled { opacity: .55; cursor: wait; }
@@ -49,7 +59,7 @@
 .ny-bar-hour { fill: #7d8d99; font-size: 11px; }
 @media (max-width: 1200px) { .ny-pies { grid-template-columns: 1fr; } .ny-pie-layout { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); } }
 @media (max-width: 1100px) { .top-bar::before { display: none; } .page-tabs { width: 100%; min-width: 0; overflow-x: auto; justify-content: flex-start; white-space: nowrap; scrollbar-width: thin; } .page-tabs button { flex: none; } }
-@media (max-width: 640px) { .ny-hero { align-items: start; flex-direction: column; padding: 24px; } .ny-card { padding: 19px; } .ny-pie-layout { grid-template-columns: 1fr; } .ny-pie-wrap { width: 66%; min-width: 190px; } .ny-video-list { max-height: 350px; } .ny-card-count { display: none; } }
+@media (max-width: 640px) { .ny-hero { align-items: start; flex-direction: column; padding: 24px; } .ny-hero-actions { align-items: start; flex-direction: column; width: 100%; } .ny-follower-goal { flex: none; width: 100%; } .ny-card { padding: 19px; } .ny-pie-layout { grid-template-columns: 1fr; } .ny-pie-wrap { width: 66%; min-width: 190px; } .ny-video-list { max-height: 350px; } .ny-card-count { display: none; } }
 
 .ny-pending-uploads .ny-card-heading { min-height: 0; }
 .ny-pending-list { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; }
