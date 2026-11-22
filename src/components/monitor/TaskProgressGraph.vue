@@ -15,7 +15,7 @@ const props = defineProps({
   routeEdit: { type: Object, default: null },
 })
 
-const emit = defineEmits(['move', 'route-point', 'select-target'])
+const emit = defineEmits(['move', 'route-point', 'select-route'])
 const container = ref(null)
 const drag = ref(null)
 const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
@@ -64,6 +64,29 @@ const dimensions = computed(() => {
   }
 })
 const displayedPaths = computed(() => mergedPaths(nodes.value, edges.value, positions.value, customLayout.value?.routing))
+
+const labels = computed(() => new Map(nodes.value.map(node => [node.id, node.label])))
+function pathLabel(path) {
+  return path.from ? `${labels.value.get(path.from)} → ${labels.value.get(path.to)}`
+    : `${labels.value.get(path.to)}的公共线`
+}
+
+function selectRoute(event, path) {
+  if (event.detail > 0) {
+    const hits = document.elementsFromPoint(event.clientX, event.clientY)
+      .filter(element => element.classList.contains('route-hit') && container.value.contains(element))
+    const options = [...new Map(hits.map(element => {
+      const route = displayedPaths.value.find(candidate => candidate.id === element.dataset.routeId)
+      return [route ? `${route.from || ''}->${route.to}` : '', route]
+    })).values()].filter(Boolean)
+    if (options.length > 1) {
+      const current = options.findIndex(option =>
+        (option.from || '') === props.routeEdit.line && option.to === props.routeEdit.target)
+      path = options[(current + 1) % options.length]
+    }
+  }
+  emit('select-route', path.to, path.from || '')
+}
 
 const routeDrag = ref(null)
 const handles = computed(() => {
@@ -200,11 +223,27 @@ function showTime(node) {
           v-for="path in displayedPaths"
           :key="path.id"
           class="edge-line"
-          :class="{ 'editing-route': routeEdit?.target && path.id === (routeEdit.line
-            ? `${routeEdit.line}->${routeEdit.target}` : `arrow:${routeEdit.target}`) }"
+          :class="{ 'editing-route': routeEdit?.target === path.to && routeEdit.line === (path.from || '') }"
           :d="path.d"
           :marker-end="path.arrow ? `url(#${markerId})` : null"
         />
+        <template v-if="routeEdit">
+          <path
+            v-for="path in displayedPaths"
+            :key="'hit:' + path.id"
+            class="route-hit"
+            :data-route-id="path.id"
+            :d="path.d"
+            :aria-label="pathLabel(path)"
+            role="button"
+            tabindex="0"
+            @click.stop="selectRoute($event, path)"
+            @keydown.enter.prevent="emit('select-route', path.to, path.from || '')"
+            @keydown.space.prevent="emit('select-route', path.to, path.from || '')"
+          >
+            <title>{{ pathLabel(path) }}</title>
+          </path>
+        </template>
         <circle
           v-for="handle in handles"
           :key="handle.index"
@@ -234,7 +273,7 @@ function showTime(node) {
           :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node), dragging: drag?.id === node.id }]"
           :style="nodeStyle(node.id)"
           :title="editorLayout ? node.label : `${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-          @click="routeEdit ? emit('select-target', node.id) : !editorLayout && openTaskFlow(task, node.stage, node.subStage)"
+          @click="!editorLayout && openTaskFlow(task, node.stage, node.subStage)"
           @pointerdown="pointerDown($event, node.id)"
           @keydown="onNodeKey($event, node.id)"
         >
@@ -306,6 +345,8 @@ function showTime(node) {
   cursor: grabbing;
 }
 .task-dag-links .editing-route { stroke: #195f48; stroke-width: 3; }
+.route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.route-hit:focus-visible { stroke: #195f4838; }
 .route-handle { fill: white; stroke: #195f48; stroke-width: 2; pointer-events: all; cursor: grab; }
 .route-handle.junction { fill: #195f48; }
 </style>

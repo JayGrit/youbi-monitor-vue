@@ -195,15 +195,15 @@ export function mergedPaths(nodes, edges, positions, routing = {}) {
       const arrival = rail === target.x ? y : source.y + cellHeight
       arrivals.push(arrival)
       routes.push({
-        id: `${from}->${to}`,
+        id: `${from}->${to}`, from, to,
         d: rail === target.x ? `M ${x} ${y} H ${rail}`
           : `M ${x} ${y} H ${rail} V ${arrival} H ${target.x}`,
       })
     }
     const top = Math.min(...arrivals)
     const bottom = Math.max(...arrivals)
-    if (top !== bottom) routes.push({ id: `rail:${to}`, d: `M ${target.x} ${top} V ${bottom}` })
-    routes.push({ id: `arrow:${to}`, arrow: true,
+    if (top !== bottom) routes.push({ id: `rail:${to}`, to, d: `M ${target.x} ${top} V ${bottom}` })
+    routes.push({ id: `arrow:${to}`, to, arrow: true,
       d: `M ${target.x} ${targetY} H ${target.x + insetX}` })
     return routes
   })
@@ -253,9 +253,9 @@ function customPaths(to, sources, positions, route) {
     const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
     sides.sort((a, b) => distance(a) - distance(b)
       || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
-    return { id: `${from}->${to}`, d: orthogonal([...sides[0], ...bends, join]) }
+    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...bends, join]) }
   })
   const end = port(positions[to], route.entry).reverse()
-  return [...branches, { id: `arrow:${to}`, arrow: true,
+  return [...branches, { id: `arrow:${to}`, to, arrow: true,
     d: orthogonal([join, ...(route.trunk || []).map(gridPoint), ...end]) }]
 }

@@ -17,21 +17,14 @@ const gridLimit = 64
 const lineMode = ref(false)
 const target = ref('')
 const line = ref('')
-const targets = computed(() => {
-  const inputs = new Set(graph.value?.routeEdges.map(edge => edge.to))
-  return graph.value?.routeNodes.filter(node => inputs.has(node.id)) || []
-})
-const sources = computed(() => {
-  const inputs = new Set(graph.value?.routeEdges.filter(edge => edge.to === target.value).map(edge => edge.from))
-  return graph.value?.routeNodes.filter(node => inputs.has(node.id)) || []
-})
+const labels = computed(() => new Map(graph.value?.routeNodes.map(node => [node.id, node.label])))
 const currentRoute = computed(() => draft.value?.routing?.[target.value])
 const sides = { left: '左侧', right: '右侧', top: '上方', bottom: '下方' }
 
-function selectTarget(id) {
-  if (!targets.value.some(node => node.id === id)) return
-  target.value = id
-  line.value = ''
+function selectRoute(to, from) {
+  if (saving.value) return
+  target.value = to
+  line.value = from
 }
 
 function editRoute() {
@@ -71,7 +64,8 @@ function resetTarget() {
 
 function toggleLineMode() {
   lineMode.value = !lineMode.value
-  if (lineMode.value && !target.value && targets.value.length) selectTarget(targets.value[0].id)
+  target.value = ''
+  line.value = ''
 }
 
 function automaticLayout() {
@@ -182,7 +176,7 @@ async function save() {
           @click="draft.gridSize = Math.min(gridLimit, draft.gridSize + 2)">扩展网格</button>
         <button type="button" :disabled="saving" @click="restore">恢复自动布局</button>
         <button type="button" :disabled="saving" @click="save">{{ saving ? '保存中' : '保存布局' }}</button>
-        <button type="button" :aria-pressed="lineMode" :disabled="saving || !targets.length" @click="toggleLineMode">
+        <button type="button" :aria-pressed="lineMode" :disabled="saving || !graph.routeEdges.length" @click="toggleLineMode">
           {{ lineMode ? '返回节点布局' : '编辑连线' }}
         </button>
         <span>{{ draft.gridSize }} × {{ draft.gridSize }}</span>
@@ -192,17 +186,9 @@ async function save() {
     <p v-else-if="loading" role="status">正在加载布局</p>
     <p v-else-if="status" role="status">{{ status }}</p>
     <div v-if="draft && lineMode" class="layout-toolbar">
-      <label>目标节点
-        <select :value="target" :disabled="saving" @change="selectTarget($event.target.value)">
-          <option v-for="node in targets" :key="node.id" :value="node.id">{{ node.label }}</option>
-        </select>
-      </label>
-      <label>线路
-        <select v-model="line" :disabled="saving">
-          <option value="">公共线</option>
-          <option v-for="node in sources" :key="node.id" :value="node.id">{{ node.label }} 的支线</option>
-        </select>
-      </label>
+      <span v-if="!target">点击已有依赖线或公共线开始编辑。重叠处可重复点击切换。</span>
+      <template v-else>
+      <strong>{{ line ? `${labels.get(line)} → ${labels.get(target)}` : `${labels.get(target)}的公共线` }}</strong>
       <label>箭头入口
         <select :value="currentRoute?.entry || 'left'" :disabled="saving"
           @change="editRoute().entry = $event.target.value">
@@ -211,7 +197,8 @@ async function save() {
       </label>
       <button type="button" :disabled="saving" @click="resetLine">清除本线拐点</button>
       <button type="button" :disabled="saving" @click="resetTarget">来线恢复自动</button>
-      <span>点击格线添加拐点，拖动调整，右键或 Delete 删除。实心点为合流点。</span>
+      <span>点击空白格线添加拐点，拖动调整，右键或 Delete 删除。</span>
+      </template>
     </div>
     <TaskProgressGraph
       v-if="graph && draft"
@@ -224,7 +211,7 @@ async function save() {
       :node-title="empty"
       :open-task-flow="empty"
       @move="move"
-      @select-target="selectTarget"
+      @select-route="selectRoute"
       @route-point="changePoint"
     />
   </section>
