@@ -48,7 +48,7 @@ function selectRoute(to, from) {
 
 function editRoute() {
   status.value = ''
-  return draft.value.routing[target.value] ||= { entry: 'left', junction: null, trunk: [], branches: {} }
+  return draft.value.routing[target.value] ||= { entry: 'left', junction: null, trunk: [], branches: {}, branchEntries: {} }
 }
 
 function cancelDrawing() {
@@ -67,7 +67,7 @@ function changePoint(point) {
     }
     points.push(point)
     drawMessage.value = ''
-    if (side) finishDrawing(side, point, points)
+    if (side) finishDrawing(side, points)
     return
   }
   if (!canExtendRoute(points, point)) {
@@ -81,18 +81,16 @@ function changePoint(point) {
   }
   points.push(point)
   drawMessage.value = ''
-  if (finished) finishDrawing(side, point, points)
+  if (finished) finishDrawing(side, points)
 }
 
-function finishDrawing(side, point, points) {
+function finishDrawing(side, points) {
   const route = editRoute()
   if (line.value) {
     route.branches[line.value] = points.length === 1 ? [...points] : points.slice(0, -1)
-    if (side) {
-      route.junction = point
-      route.entry = side
-      route.trunk = []
-    }
+    route.branchEntries ||= {}
+    if (side) route.branchEntries[line.value] = side
+    else delete route.branchEntries[line.value]
   } else {
     route.entry = side
     route.trunk = points.slice(1)
@@ -109,8 +107,10 @@ function resetLine() {
   const route = currentRoute.value
   cancelDrawing()
   if (!route) return
-  if (line.value) delete route.branches[line.value]
-  else {
+  if (line.value) {
+    delete route.branches[line.value]
+    if (route.branchEntries) delete route.branchEntries[line.value]
+  } else {
     route.trunk = []
     if (!route.junction) route.entry = 'left'
   }
@@ -186,9 +186,11 @@ watch(taskType, async (type, _, onCleanup) => {
     }
     for (const [id, route] of Object.entries(saved?.routing || {})) {
       if (!incoming.has(id)) continue
-      routing[id] = { ...route, branches: Object.fromEntries(
-        Object.entries(route.branches).filter(([from]) => incoming.get(id).has(from)),
-      ) }
+      const liveBranches = values => Object.fromEntries(
+        Object.entries(values || {}).filter(([from]) => incoming.get(id).has(from)),
+      )
+      routing[id] = { ...route, branches: liveBranches(route.branches),
+        branchEntries: liveBranches(route.branchEntries) }
     }
     draft.value.routing = routing
     if (saved && Object.keys(routing).length) draft.value.gridSize = Math.max(draft.value.gridSize, saved.gridSize)

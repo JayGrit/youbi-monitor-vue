@@ -178,15 +178,17 @@ export function mergedPaths(nodes, edges, positions, routing = {}) {
   }
   return [...incoming].flatMap(([to, sources]) => {
     const route = routing[to]
+    const shared = [...sources].filter(from => !route?.branchEntries?.[from])
+    const routes = independentPaths(to, sources, positions, route, shared.length > 0)
+    if (!shared.length) return routes
     if (route && (route.entry !== 'left' || route.junction || route.trunk?.length
-      || [...sources].some(from => route.branches?.[from]?.length))) {
-      return customPaths(to, sources, positions, route)
+      || shared.some(from => route.branches?.[from]?.length))) {
+      return [...routes, ...customPaths(to, shared, positions, route)]
     }
     const target = origin(positions[to])
     const targetY = target.y + cellHeight / 2
-    const routes = []
     const arrivals = [targetY]
-    for (const from of sources) {
+    for (const from of shared) {
       const source = origin(positions[from])
       const right = source.x < target.x
       const rail = source.x + (right ? cellWidth : 0)
@@ -264,24 +266,45 @@ function sharesGridLine(a, b) {
     || (a.y === b.y && a.y % cellHeight === 0)
 }
 
+function routeBranch(from, to, positions, route, join) {
+  const bends = (route.branches?.[from] || []).map(gridPoint)
+  const { x, y } = origin(positions[from])
+  const anchor = bends[0] || join
+  const sides = ['left', 'right', 'top', 'bottom'].map(side => port(positions[from], side))
+  const selected = bends.length && sides.find(([, midpoint]) => midpoint.x === anchor.x && midpoint.y === anchor.y)
+  if (selected) return { id: `${from}->${to}`, from, to,
+    d: orthogonal([selected[0], ...bends, ...gridBridge(bends.at(-1), join), join]) }
+  const direct = sides.find(([, midpoint]) => sharesGridLine(midpoint, anchor))
+  if (direct) return { id: `${from}->${to}`, from, to,
+    d: orthogonal([...direct.slice(0, 2), ...bends, join]) }
+  const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
+  sides.sort((a, b) => distance(a) - distance(b)
+    || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
+  return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...gridBridge(sides[0][2], anchor), ...bends, ...gridBridge(bends.at(-1), join), join]) }
+}
+
+function independentPaths(to, sources, positions, route, hasShared) {
+  const branches = []
+  const portSources = new Map()
+  for (const from of sources) {
+    const side = route?.branchEntries?.[from]
+    if (!side) continue
+    const [, midpoint] = port(positions[to], side)
+    branches.push(routeBranch(from, to, positions, route, midpoint))
+    if (!portSources.has(side)) portSources.set(side, from)
+  }
+  for (const [side, from] of portSources) {
+    if (hasShared && side === route.entry) continue
+    const [card, midpoint] = port(positions[to], side)
+    branches.push({ id: `port:${side}:${to}`, from, to, arrow: true,
+      d: orthogonal([midpoint, card]) })
+  }
+  return branches
+}
+
 function customPaths(to, sources, positions, route) {
   const join = gridPoint(routeJunction(positions[to], route))
-  const branches = [...sources].map(from => {
-    const bends = (route.branches?.[from] || []).map(gridPoint)
-    const { x, y } = origin(positions[from])
-    const anchor = bends[0] || join
-    const sides = ['left', 'right', 'top', 'bottom'].map(side => port(positions[from], side))
-    const selected = bends.length && sides.find(([, midpoint]) => midpoint.x === anchor.x && midpoint.y === anchor.y)
-    if (selected) return { id: `${from}->${to}`, from, to,
-      d: orthogonal([selected[0], ...bends, ...gridBridge(bends.at(-1), join), join]) }
-    const direct = sides.find(([, midpoint]) => sharesGridLine(midpoint, anchor))
-    if (direct) return { id: `${from}->${to}`, from, to,
-      d: orthogonal([...direct.slice(0, 2), ...bends, join]) }
-    const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
-    sides.sort((a, b) => distance(a) - distance(b)
-      || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
-    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...gridBridge(sides[0][2], anchor), ...bends, ...gridBridge(bends.at(-1), join), join]) }
-  })
+  const branches = sources.map(from => routeBranch(from, to, positions, route, join))
   const end = port(positions[to], route.entry).reverse()
   const trunk = (route.trunk || []).map(gridPoint)
   const last = trunk.at(-1)
