@@ -200,7 +200,7 @@ onUnmounted(() => {
         <span class="ny-card-count">{{ pendingUploads.length }} 条</span>
       </div>
       <p v-if="uploadsError" class="ny-error" role="alert">{{ uploadsError }}</p>
-      <p v-if="!pendingUploads.length" class="ny-pending-empty">暂无待发表视频</p>
+      <p v-if="!pendingUploads.length" class="ny-pending-empty">暂无待放行视频</p>
       <ul v-else class="ny-pending-list">
         <li v-for="item in pendingUploads" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
@@ -208,7 +208,7 @@ onUnmounted(() => {
           <div class="ny-pending-title" :title="item.title">{{ item.title }}</div>
           <div class="ny-pending-actions">
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">
-              {{ publishingTaskId === item.taskId ? '提交中…' : '发表' }}
+              {{ publishingTaskId === item.taskId ? '提交中…' : '放行发表' }}
             </button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">定时发表</button>
           </div>
