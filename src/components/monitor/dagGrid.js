@@ -259,6 +259,11 @@ function gridBridge(previous, next) {
   return [{ x: previous.x, y }, { x: next.x, y }]
 }
 
+function sharesGridLine(a, b) {
+  return (a.x === b.x && a.x % cellWidth === 0)
+    || (a.y === b.y && a.y % cellHeight === 0)
+}
+
 function customPaths(to, sources, positions, route) {
   const join = gridPoint(routeJunction(positions[to], route))
   const branches = [...sources].map(from => {
@@ -269,6 +274,9 @@ function customPaths(to, sources, positions, route) {
     const selected = bends.length && sides.find(([, midpoint]) => midpoint.x === anchor.x && midpoint.y === anchor.y)
     if (selected) return { id: `${from}->${to}`, from, to,
       d: orthogonal([selected[0], ...bends, join]) }
+    const direct = sides.find(([, midpoint]) => sharesGridLine(midpoint, anchor))
+    if (direct) return { id: `${from}->${to}`, from, to,
+      d: orthogonal([...direct.slice(0, 2), ...bends, join]) }
     const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
     sides.sort((a, b) => distance(a) - distance(b)
       || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
@@ -278,7 +286,9 @@ function customPaths(to, sources, positions, route) {
   const trunk = (route.trunk || []).map(gridPoint)
   const last = trunk.at(-1)
   const [, midpoint, card] = end
-  const finish = last?.x === midpoint.x && last?.y === midpoint.y ? [card] : [...gridBridge(last || join, end[0]), ...end]
+  const anchor = last || join
+  const finish = sharesGridLine(anchor, midpoint) ? [midpoint, card]
+    : [...gridBridge(anchor, end[0]), ...end]
   return [...branches, { id: `arrow:${to}`, to, arrow: true,
     d: orthogonal([join, ...trunk, ...finish]) }]
 }
