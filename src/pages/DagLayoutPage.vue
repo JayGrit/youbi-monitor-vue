@@ -63,7 +63,7 @@ function changePoint(point) {
     return
   }
   if (!canExtendRoute(points, point)) {
-    drawMessage.value = '只能沿同一条横线或竖线前进，不能经过已走过的位置。'
+    drawMessage.value = '只能连接同一行或同一列的点，不能经过已走过的位置。'
     return
   }
   const finished = line.value ? samePoint(point, junction.value) : !!side
@@ -239,7 +239,7 @@ async function save() {
         <button type="button" :disabled="drawing.length <= (line ? 0 : 1)" @click="undoPoint">撤销上一步</button>
         <button type="button" @click="cancelDrawing">取消重画</button>
         <span>{{ drawMessage || (line && !drawing.length ? '从来源格的边中点开始。'
-          : '沿横竖格线依次点选，点绿色终点完成。') }}</span>
+          : '依次点选同一行或同一列的点，点绿色终点完成。') }}</span>
       </template>
       <template v-else>
         <button type="button" :disabled="saving" @click="selectRoute(target, line)">重画本线</button>

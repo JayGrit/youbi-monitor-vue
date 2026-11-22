@@ -101,8 +101,7 @@ function clickGridPoint(event) {
   const row = Math.round(y / cellHeight * 2) / 2
   const column = Math.round(x / cellWidth * 2) / 2
   const size = props.editorLayout.gridSize
-  if (row < 0 || row > size || column < 0 || column > size
-      || (!Number.isInteger(row) && !Number.isInteger(column))) return
+  if (row < 0 || row > size || column < 0 || column > size) return
   if (Math.hypot(x - column * cellWidth, y - row * cellHeight) <= 12) {
     emit('route-point', { row, column })
   }
@@ -191,7 +190,7 @@ function showTime(node) {
       @pointercancel="endDrag($event)"
       @lostpointercapture="endDrag($event)"
     >
-      <svg class="task-dag-links">
+      <svg class="task-dag-links" :class="{ 'drawing-links': activeDrawing !== null }">
         <defs>
           <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
             <path d="M0,0 L7,3.5 L0,7 Z" />
@@ -206,6 +205,7 @@ function showTime(node) {
             <circle :cx="cellWidth / 2" :cy="cellHeight" r="3" />
             <circle cx="0" :cy="cellHeight / 2" r="3" />
             <circle :cx="cellWidth" :cy="cellHeight / 2" r="3" />
+            <circle :cx="cellWidth / 2" :cy="cellHeight / 2" r="3" />
           </pattern>
         </defs>
         <path
@@ -330,6 +330,7 @@ function showTime(node) {
 .route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
 .route-hit:focus-visible { stroke: #195f4838; }
 pattern circle { fill: #667c91; }
+.task-dag-links.drawing-links { z-index: 2; }
 .draw-grid { pointer-events: all; cursor: crosshair; }
 .draw-preview { fill: none; stroke: #195f48; stroke-width: 3; }
 .draw-visited { fill: #195f48; }

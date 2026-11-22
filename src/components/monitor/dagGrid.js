@@ -307,8 +307,7 @@ function segmentPoints(a, b) {
 export function canExtendRoute(points, next) {
   const last = points.at(-1)
   if (!last || samePoint(last, next)) return false
-  if (!(last.row === next.row && Number.isInteger(last.row))
-    && !(last.column === next.column && Number.isInteger(last.column))) return false
+  if (last.row !== next.row && last.column !== next.column) return false
   const used = new Set([`${points[0].row}:${points[0].column}`])
   for (let index = 1; index < points.length; index += 1) {
     for (const point of segmentPoints(points[index - 1], points[index])) used.add(point)
