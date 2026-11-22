@@ -2,6 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createPlatformIconUrls, uploadPlatformText } from '../../domain/constants'
 import { formatDuration } from '../../utils/format'
+import { loadDagLayout } from '../../api/dagLayouts'
+import { cellWidth, cellHeight, insetX, insetY, origin, connector } from './dagGrid'
 
 const props = defineProps({
   progress: { type: Object, default: null },
@@ -22,6 +24,72 @@ let resizeObserver = null
 const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
 const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
 const nodeLabels = computed(() => new Map(nodes.value.map(node => [node.id, node.label || node.id])))
+const savedLayout = ref(null)
+watch(() => props.task.taskType || props.task.task_type, async (taskType, _, onCleanup) => {
+  savedLayout.value = null
+  if (taskType !== 'podcast_new') return
+  let active = true
+  onCleanup(() => { active = false })
+  const result = await loadDagLayout(taskType)
+  if (active && result?.taskType === taskType) savedLayout.value = result
+}, { immediate: true })
+
+const customLayout = computed(() => {
+  const saved = savedLayout.value
+  if (!saved?.positions || !Number.isInteger(saved.gridSize) || !nodes.value.length) return null
+  const coordinates = nodes.value.map(node => saved.positions[node.id])
+  const occupied = new Set()
+  for (const cell of coordinates) {
+    if (!cell || ![cell.row, cell.column].every(value =>
+      Number.isInteger(value) && value > 0 && value <= saved.gridSize)) return null
+    const key = `${cell.row}:${cell.column}`
+    if (occupied.has(key)) return null
+    occupied.add(key)
+  }
+  return {
+    positions: saved.positions,
+    width: Math.max(...coordinates.map(cell => cell.column)) * cellWidth + 1,
+    height: Math.max(...coordinates.map(cell => cell.row)) * cellHeight + 1,
+  }
+})
+
+const displayedPaths = computed(() => {
+  const custom = customLayout.value
+  if (!custom) return paths.value
+  const incoming = new Map()
+  for (const edge of edges.value) {
+    if (!custom.positions[edge.from] || !custom.positions[edge.to]) continue
+    if (!incoming.has(edge.to)) incoming.set(edge.to, [])
+    incoming.get(edge.to).push(edge)
+  }
+  return Array.from(incoming.values()).flatMap(group => group.map(({ from, to }, index) => {
+    const source = custom.positions[from]
+    const target = custom.positions[to]
+    const offset = (index - (group.length - 1) / 2) * Math.min(9, 42 / group.length)
+    return {
+      id: `${from}->${to}`,
+      from,
+      to,
+      long: Math.abs(source.column - target.column) > 1 || Math.abs(source.row - target.row) > 1,
+      d: connector(source, target, offset),
+      arrow: true,
+    }
+  }))
+})
+
+function nodeStyle(id) {
+  if (customLayout.value) {
+    const { x, y } = origin(customLayout.value.positions[id])
+    return { left: `${x + insetX}px`, top: `${y + insetY}px` }
+  }
+  const node = layout.value.nodeLayouts.get(id)
+  return {
+    '--dag-column': node?.column || 1,
+    '--dag-row-start': node?.rowStart || 1,
+    '--dag-row-span': node?.rowSpan || 1,
+  }
+}
+
 const layout = computed(() => {
   const nodeById = new Map(nodes.value.map(node => [node.id, node]))
   const parents = new Map(nodes.value.map(node => [node.id, []]))
@@ -205,7 +273,7 @@ function showTime(node) {
 
 function updatePaths() {
   const root = container.value
-  if (!root) return
+  if (!root || customLayout.value) return
   const rootRect = root.getBoundingClientRect()
   const rects = new Map([...nodeElements].map(([id, element]) => {
     const rect = element.getBoundingClientRect()
@@ -281,7 +349,7 @@ async function schedulePathUpdate() {
   updatePaths()
 }
 
-watch([nodes, edges], schedulePathUpdate, { deep: true })
+watch([nodes, edges, customLayout], schedulePathUpdate, { deep: true })
 
 onMounted(() => {
   resizeObserver = new ResizeObserver(updatePaths)
@@ -293,79 +361,108 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 </script>
 
 <template>
-  <div
-    ref="container"
-    class="task-dag"
-    :style="{
-      '--dag-columns': layout.columns,
-      '--dag-row-units': layout.rowUnits,
-      '--dag-min-height': `${layout.maxRows * 80}px`,
-    }"
-    aria-label="任务 DAG 阶段图"
-  >
-    <svg class="task-dag-links">
-      <defs>
-        <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <path d="M0,0 L7,3.5 L0,7 Z" />
-        </marker>
-      </defs>
-      <g
-        v-for="path in paths"
-        :key="path.id"
-        :class="{
-          'is-dimmed': activeEdgeId && path.id !== activeEdgeId,
-          'is-highlighted': path.id === activeEdgeId,
-          'is-long': path.long,
-        }"
-      >
-        <path class="edge-line" :d="path.d" :marker-end="path.arrow ? `url(#${markerId})` : null" />
-        <path
-          class="edge-hit"
-          :d="path.d"
-          @mouseenter="activeEdgeId = path.id"
-          @mouseleave="activeEdgeId = null"
+  <div :class="{ 'custom-dag-scroll': customLayout }">
+    <div
+      ref="container"
+      class="task-dag"
+      :class="{ 'custom-dag': customLayout }"
+      :style="customLayout ? { width: customLayout.width + 'px', height: customLayout.height + 'px' } : {
+        '--dag-columns': layout.columns,
+        '--dag-row-units': layout.rowUnits,
+        '--dag-min-height': `${layout.maxRows * 80}px`,
+      }"
+      aria-label="任务 DAG 阶段图"
+    >
+      <svg class="task-dag-links">
+        <defs>
+          <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <path d="M0,0 L7,3.5 L0,7 Z" />
+          </marker>
+        </defs>
+        <g
+          v-for="path in displayedPaths"
+          :key="path.id"
+          :class="{
+            'is-dimmed': activeEdgeId && path.id !== activeEdgeId,
+            'is-highlighted': path.id === activeEdgeId,
+            'is-long': path.long,
+          }"
         >
-          <title>{{ nodeLabels.get(path.from) }} → {{ nodeLabels.get(path.to) }}</title>
-        </path>
-      </g>
-    </svg>
-
-    <div class="task-dag-grid">
-      <button
-        v-for="node in nodes"
-        :key="node.id"
-        :ref="element => setNodeElement(node.id, element)"
-        type="button"
-        :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
-        :style="{
-          '--dag-column': layout.nodeLayouts.get(node.id)?.column || 1,
-          '--dag-row-start': layout.nodeLayouts.get(node.id)?.rowStart || 1,
-          '--dag-row-span': layout.nodeLayouts.get(node.id)?.rowSpan || 1,
-        }"
-        :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-        @click="openTaskFlow(task, node.stage, node.subStage)"
-      >
-        <span class="stage-label">{{ node.label }}</span>
-        <span v-if="nodeProgress({ ...node, key: node.stage })" class="stage-progress">
-          {{ nodeProgress({ ...node, key: node.stage }) }}
-        </span>
-        <span v-if="hasUploaderPlatforms(node)" class="uploader-platform-icons" aria-label="上传平台状态">
-          <span
-            v-for="platformStatus in node.platformStatuses"
-            :key="platformStatus.platform"
-            :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
-            :title="platformTitle(platformStatus)"
+          <path class="edge-line" :d="path.d" :marker-end="path.arrow ? `url(#${markerId})` : null" />
+          <path
+            class="edge-hit"
+            :d="path.d"
+            @mouseenter="activeEdgeId = path.id"
+            @mouseleave="activeEdgeId = null"
           >
-            <img
-              v-if="platformIconUrls[platformStatus.platform]"
-              :src="platformIconUrls[platformStatus.platform]"
-              :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
-              loading="lazy"
-            />
+            <title>{{ nodeLabels.get(path.from) }} → {{ nodeLabels.get(path.to) }}</title>
+          </path>
+        </g>
+      </svg>
+
+      <div class="task-dag-grid">
+        <button
+          v-for="node in nodes"
+          :key="node.id"
+          :ref="element => setNodeElement(node.id, element)"
+          type="button"
+          :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
+          :style="nodeStyle(node.id)"
+          :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
+          @click="openTaskFlow(task, node.stage, node.subStage)"
+        >
+          <span class="stage-label">{{ node.label }}</span>
+          <span v-if="nodeProgress({ ...node, key: node.stage })" class="stage-progress">
+            {{ nodeProgress({ ...node, key: node.stage }) }}
           </span>
-        </span>
-        <span v-if="showTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
-      </button>
+          <span v-if="hasUploaderPlatforms(node)" class="uploader-platform-icons" aria-label="上传平台状态">
+            <span
+              v-for="platformStatus in node.platformStatuses"
+              :key="platformStatus.platform"
+              :class="['uploader-platform-icon', `upload-status-${platformStatus.status}`]"
+              :title="platformTitle(platformStatus)"
+            >
+              <img
+                v-if="platformIconUrls[platformStatus.platform]"
+                :src="platformIconUrls[platformStatus.platform]"
+                :alt="uploadPlatformText[platformStatus.platform] || platformStatus.platform"
+                loading="lazy"
+              />
+            </span>
+          </span>
+          <span v-if="showTime(node)" class="stage-time">{{ formatDuration(node.elapsedSeconds) }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
+
+
+<style scoped>
+.custom-dag-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.task-dag.custom-dag {
+  min-width: 0;
+  padding: 0;
+}
+
+.custom-dag .task-dag-grid {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.custom-dag .task-dag-grid .stage-node {
+  position: absolute;
+  width: 116px;
+  height: 60px;
+  min-height: 0;
+}
+
+.custom-dag .task-dag-links {
+  display: block;
+}
+</style>

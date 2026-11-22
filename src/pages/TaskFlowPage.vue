@@ -72,7 +72,7 @@ const emit = defineEmits(['update:speechEditDraft'])
     <template v-else-if="selectedTaskFlow">
       <TaskProgressGraph
         v-if="selectedTaskProgress"
-        :task="{ taskId: selectedTaskFlow.task.id }"
+        :task="selectedTaskFlow.task"
         :progress="selectedTaskProgress"
         :node-progress="nodeProgress"
         :node-title="nodeTitle"
