@@ -1,9 +1,9 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { createPlatformIconUrls, uploadPlatformText } from '../../domain/constants'
 import { formatDuration } from '../../utils/format'
 import { loadDagLayout } from '../../api/dagLayouts'
-import { cellWidth, cellHeight, insetX, insetY, origin, connector } from './dagGrid'
+import { cellWidth, cellHeight, insetX, insetY, origin, autoPositions, mergedPaths } from './dagGrid'
 
 const props = defineProps({
   progress: { type: Object, default: null },
@@ -11,23 +11,21 @@ const props = defineProps({
   nodeTitle: { type: Function, required: true },
   openTaskFlow: { type: Function, required: true },
   task: { type: Object, required: true },
+  editorLayout: { type: Object, default: null },
 })
 
+const emit = defineEmits(['move'])
 const container = ref(null)
-const nodeElements = new Map()
-const paths = ref([])
-const activeEdgeId = ref(null)
+const drag = ref(null)
 const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
 const platformIconUrls = createPlatformIconUrls(import.meta.env.BASE_URL)
-let resizeObserver = null
 
 const nodes = computed(() => Array.isArray(props.progress?.routeNodes) ? props.progress.routeNodes : [])
 const edges = computed(() => Array.isArray(props.progress?.routeEdges) ? props.progress.routeEdges : [])
-const nodeLabels = computed(() => new Map(nodes.value.map(node => [node.id, node.label || node.id])))
 const savedLayout = ref(null)
 watch(() => props.task.taskType || props.task.task_type, async (taskType, _, onCleanup) => {
   savedLayout.value = null
-  if (taskType !== 'podcast_new') return
+  if (!taskType || props.editorLayout) return
   let active = true
   onCleanup(() => { active = false })
   const result = await loadDagLayout(taskType)
@@ -35,220 +33,76 @@ watch(() => props.task.taskType || props.task.task_type, async (taskType, _, onC
 }, { immediate: true })
 
 const customLayout = computed(() => {
-  const saved = savedLayout.value
+  const saved = props.editorLayout || savedLayout.value
   if (!saved?.positions || !Number.isInteger(saved.gridSize) || !nodes.value.length) return null
-  const coordinates = nodes.value.map(node => saved.positions[node.id])
   const occupied = new Set()
-  for (const cell of coordinates) {
+  for (const { id } of nodes.value) {
+    const cell = saved.positions[id]
     if (!cell || ![cell.row, cell.column].every(value =>
       Number.isInteger(value) && value > 0 && value <= saved.gridSize)) return null
     const key = `${cell.row}:${cell.column}`
     if (occupied.has(key)) return null
     occupied.add(key)
   }
-  return {
-    positions: saved.positions,
-    width: Math.max(...coordinates.map(cell => cell.column)) * cellWidth + 1,
-    height: Math.max(...coordinates.map(cell => cell.row)) * cellHeight + 1,
-  }
+  return saved
 })
 
-const displayedPaths = computed(() => {
-  const custom = customLayout.value
-  if (!custom) return paths.value
-  const incoming = new Map()
-  for (const edge of edges.value) {
-    if (!custom.positions[edge.from] || !custom.positions[edge.to]) continue
-    if (!incoming.has(edge.to)) incoming.set(edge.to, [])
-    incoming.get(edge.to).push(edge)
+const positions = computed(() => customLayout.value?.positions || autoPositions(nodes.value, edges.value))
+const dimensions = computed(() => {
+  const cells = nodes.value.map(node => positions.value[node.id])
+  return {
+    width: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.column))) * cellWidth + 1,
+    height: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.row))) * cellHeight + 1,
   }
-  return Array.from(incoming.values()).flatMap(group => group.map(({ from, to }, index) => {
-    const source = custom.positions[from]
-    const target = custom.positions[to]
-    const offset = (index - (group.length - 1) / 2) * Math.min(9, 42 / group.length)
-    return {
-      id: `${from}->${to}`,
-      from,
-      to,
-      long: Math.abs(source.column - target.column) > 1 || Math.abs(source.row - target.row) > 1,
-      d: connector(source, target, offset),
-      arrow: true,
-    }
-  }))
 })
+const displayedPaths = computed(() => mergedPaths(nodes.value, edges.value, positions.value))
 
 function nodeStyle(id) {
-  if (customLayout.value) {
-    const { x, y } = origin(customLayout.value.positions[id])
-    return { left: `${x + insetX}px`, top: `${y + insetY}px` }
-  }
-  const node = layout.value.nodeLayouts.get(id)
+  const { x, y } = origin(positions.value[id])
+  const offset = drag.value?.id === id ? drag.value : null
   return {
-    '--dag-column': node?.column || 1,
-    '--dag-row-start': node?.rowStart || 1,
-    '--dag-row-span': node?.rowSpan || 1,
+    left: `${x + insetX}px`,
+    top: `${y + insetY}px`,
+    transform: offset ? `translate(${offset.dx}px, ${offset.dy}px)` : undefined,
   }
 }
 
-const layout = computed(() => {
-  const nodeById = new Map(nodes.value.map(node => [node.id, node]))
-  const parents = new Map(nodes.value.map(node => [node.id, []]))
-  const children = new Map(nodes.value.map(node => [node.id, []]))
-  for (const edge of edges.value) {
-    if (nodeById.has(edge.from) && nodeById.has(edge.to)) {
-      parents.get(edge.to).push(edge.from)
-      children.get(edge.from).push(edge.to)
-    }
-  }
+function pointerDown(event, id) {
+  if (!props.editorLayout || event.button !== 0 || drag.value) return
+  event.currentTarget.setPointerCapture(event.pointerId)
+  const rect = container.value.getBoundingClientRect()
+  drag.value = { id, pointer: event.pointerId, x: event.clientX - rect.left,
+    y: event.clientY - rect.top, dx: 0, dy: 0 }
+}
 
-  const nodeOrder = new Map(nodes.value.map((node, index) => [node.id, index]))
-  const roots = nodes.value.filter(node => !parents.get(node.id)?.length)
-  const depthCache = new Map()
-
-  function depth(id, visiting = new Set()) {
-    if (depthCache.has(id)) return depthCache.get(id)
-    if (visiting.has(id)) return 1
-    const nextVisiting = new Set(visiting).add(id)
-    const value = 1 + Math.max(0, ...(parents.get(id) || []).map(parent => depth(parent, nextVisiting)))
-    depthCache.set(id, value)
-    return value
-  }
-
-  // Count every fork until its branches join. A later fork needs its own rows
-  // even when an earlier fork already divided the graph into lanes.
-  const widthCache = new Map()
-  function branchWidth(id, visiting = new Set()) {
-    if (widthCache.has(id)) return widthCache.get(id)
-    if (visiting.has(id)) return 1
-    const nextVisiting = new Set(visiting).add(id)
-    const next = children.get(id) || []
-    const width = next.length
-      ? next.reduce((total, child) => total + ((parents.get(child) || []).length > 1
-        ? 1 : branchWidth(child, nextVisiting)), 0)
-      : 1
-    widthCache.set(id, width)
-    return width
-  }
-
-  const downstreamLengthCache = new Map()
-  function downstreamLength(id, visiting = new Set()) {
-    if (downstreamLengthCache.has(id)) return downstreamLengthCache.get(id)
-    if (visiting.has(id)) return 1
-    const nextVisiting = new Set(visiting).add(id)
-    const value = 1 + Math.max(0, ...(children.get(id) || []).map(child => downstreamLength(child, nextVisiting)))
-    downstreamLengthCache.set(id, value)
-    return value
-  }
-
-  function branchPriority(leftId, rightId) {
-    const left = nodeById.get(leftId)
-    const right = nodeById.get(rightId)
-    return branchWidth(rightId) - branchWidth(leftId)
-      || downstreamLength(rightId) - downstreamLength(leftId)
-      || rootLanePriority(left) - rootLanePriority(right)
-      || nodeOrder.get(leftId) - nodeOrder.get(rightId)
-  }
-
-  const orderedRoots = [...roots].sort((left, right) => branchPriority(left.id, right.id))
-  const rootWidth = orderedRoots.reduce((total, node) => total + branchWidth(node.id), 0)
-  const rowUnits = Math.max(1, rootWidth, ...nodes.value.map(node => branchWidth(node.id)))
-  const intervals = new Map()
-  const edgeIntervals = new Map()
-  let nextRootRow = 1
-  orderedRoots.forEach((node, index) => {
-    const span = branchWidth(node.id) + (index === 0 ? rowUnits - rootWidth : 0)
-    intervals.set(node.id, { start: nextRootRow, end: nextRootRow + span - 1 })
-    nextRootRow += span
+function updateDrag(event) {
+  if (drag.value?.pointer !== event.pointerId) return
+  const rect = container.value.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  Object.assign(drag.value, {
+    dx: x - drag.value.x, dy: y - drag.value.y,
+    column: Math.floor(x / cellWidth) + 1, row: Math.floor(y / cellHeight) + 1,
   })
-
-  const orderedNodes = [...nodes.value].sort((left, right) =>
-    depth(left.id) - depth(right.id) || nodeOrder.get(left.id) - nodeOrder.get(right.id))
-  for (const node of orderedNodes) {
-    const nodeParents = parents.get(node.id) || []
-    if (nodeParents.length) {
-      const ranges = nodeParents.map(parent => edgeIntervals.get(`${parent}->${node.id}`))
-        .filter(Boolean)
-      if (ranges.length) {
-        intervals.set(node.id, {
-          start: Math.min(...ranges.map(range => range.start)),
-          end: Math.max(...ranges.map(range => range.end)),
-        })
-      }
-    }
-    const range = intervals.get(node.id)
-    if (!range) continue
-    const next = [...(children.get(node.id) || [])].sort(branchPriority)
-    const weights = next.map(child => (parents.get(child) || []).length > 1
-      ? 1 : branchWidth(child))
-    const totalWeight = weights.reduce((total, weight) => total + weight, 0)
-    const available = range.end - range.start + 1
-    let usedWeight = 0
-    next.forEach((child, index) => {
-      const start = range.start + Math.floor(usedWeight * available / totalWeight)
-      usedWeight += weights[index]
-      const end = range.start + Math.floor(usedWeight * available / totalWeight) - 1
-      edgeIntervals.set(`${node.id}->${child}`, { start, end: Math.max(start, end) })
-    })
-  }
-
-  const desiredLayouts = new Map(nodes.value.map(node => {
-    const range = intervals.get(node.id) || { start: 1, end: rowUnits }
-    return [node.id, {
-      column: depth(node.id),
-      row: (range.start + range.end) / 2,
-    }]
-  }))
-
-  // A branch can share row intervals with another branch after a join. Give
-  // every node in the same column its own grid row before drawing connectors.
-  const nodeLayouts = new Map()
-  const columns = new Map()
-  for (const node of nodes.value) {
-    const desired = desiredLayouts.get(node.id)
-    if (!columns.has(desired.column)) columns.set(desired.column, [])
-    columns.get(desired.column).push(node)
-  }
-  for (const columnNodes of columns.values()) {
-    columnNodes.sort((left, right) =>
-      desiredLayouts.get(left.id).row - desiredLayouts.get(right.id).row
-      || nodeOrder.get(left.id) - nodeOrder.get(right.id))
-    let previousRow = 0
-    for (const node of columnNodes) {
-      const desired = desiredLayouts.get(node.id)
-      const rowStart = Math.max(Math.round(desired.row), previousRow + 1)
-      nodeLayouts.set(node.id, { column: desired.column, rowStart, rowSpan: 1 })
-      previousRow = rowStart
-    }
-  }
-
-  // The interval allocator leaves room for branches that later converge.
-  // Remove rows that contain no node in any column before sizing the grid.
-  const usedRows = [...new Set([...nodeLayouts.values()].map(node => node.rowStart))]
-    .sort((left, right) => left - right)
-  const compactRow = new Map(usedRows.map((row, index) => [row, index + 1]))
-  for (const node of nodeLayouts.values()) node.rowStart = compactRow.get(node.rowStart)
-  const occupiedRows = usedRows.length
-
-  return {
-    columns: Math.max(1, ...[...nodeLayouts.values()].map(node => node.column)),
-    maxRows: occupiedRows,
-    nodeLayouts,
-    rowUnits: occupiedRows,
-  }
-})
-
-function rootLanePriority(node) {
-  if (node.stage === 'publisher' && node.subStage === 'image_generation') return 0
-  if (node.stage === 'publisher' && node.subStage === 'segment_plan') return 1
-  if (node.stage === 'combiner' && node.subStage === 'asmr') return 20
-  if (node.stage === 'combiner' && node.subStage === 'audio_merge') return 21
-  if (node.stage === 'combiner' && node.subStage === 'video_render') return 22
-  return Number(node.order) || Number.MAX_SAFE_INTEGER
 }
 
-function setNodeElement(id, element) {
-  if (element) nodeElements.set(id, element)
-  else nodeElements.delete(id)
+function endDrag(event, drop = false) {
+  if (drag.value?.pointer !== event.pointerId) return
+  updateDrag(event)
+  const { id, row, column } = drag.value
+  drag.value = null
+  const clip = container.value.parentElement.getBoundingClientRect()
+  if (drop && event.clientX >= clip.left && event.clientX < clip.right
+      && event.clientY >= clip.top && event.clientY < clip.bottom) emit('move', id, { row, column })
+}
+
+function onNodeKey(event, id) {
+  if (!props.editorLayout) return
+  const delta = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[event.key]
+  if (!delta) return
+  event.preventDefault()
+  const { row, column } = positions.value[id]
+  emit('move', id, { row: row + delta[0], column: column + delta[1] })
 }
 
 function statusClass(node) {
@@ -271,107 +125,20 @@ function showTime(node) {
   return Number(node.elapsedSeconds) > 0 && !(Number.isFinite(Number(node.totalCount)) && Number(node.totalCount) > 0)
 }
 
-function updatePaths() {
-  const root = container.value
-  if (!root || customLayout.value) return
-  const rootRect = root.getBoundingClientRect()
-  const rects = new Map([...nodeElements].map(([id, element]) => {
-    const rect = element.getBoundingClientRect()
-    return [id, {
-      left: rect.left - rootRect.left,
-      right: rect.right - rootRect.left,
-      top: rect.top - rootRect.top,
-      bottom: rect.bottom - rootRect.top,
-    }]
-  }))
-  const blocked = (x1, x2, y, excluded) => [...rects].some(([id, rect]) =>
-    !excluded.has(id) && rect.left < x2 && rect.right > x1
-    && rect.top < y + 8 && rect.bottom > y - 8)
-  const branchPath = (source, junctionX, y2, targetId) => {
-    const excluded = new Set([source.edge.from, targetId])
-    if (!blocked(source.x, junctionX, source.y, excluded)) {
-      return `M ${source.x} ${source.y} H ${junctionX} V ${y2}`
-    }
-    const bendX = source.x + Math.min(12, (junctionX - source.x) / 2)
-    const rails = [...rects.values()]
-      .flatMap(rect => [rect.top - 16, rect.bottom + 16])
-      .sort((left, right) => Math.abs(left - source.y) - Math.abs(right - source.y))
-    const railY = rails.find(y => !blocked(bendX, junctionX, y, excluded))
-      ?? Math.min(...[...rects.values()].map(rect => rect.top)) - 24
-    return `M ${source.x} ${source.y} H ${bendX} V ${railY} H ${junctionX} V ${y2}`
-  }
-  const incoming = new Map()
-  for (const edge of edges.value) {
-    if (!incoming.has(edge.to)) incoming.set(edge.to, [])
-    incoming.get(edge.to).push(edge)
-  }
-
-  paths.value = [...incoming.entries()].flatMap(([targetId, targetEdges]) => {
-    const to = nodeElements.get(targetId)
-    if (!to) return []
-    const toRect = to.getBoundingClientRect()
-    const x2 = toRect.left - rootRect.left
-    const y2 = toRect.top + toRect.height / 2 - rootRect.top
-    const sources = targetEdges.flatMap(edge => {
-      const from = nodeElements.get(edge.from)
-      if (!from) return []
-      const rect = from.getBoundingClientRect()
-      return [{
-        edge,
-        x: rect.right - rootRect.left,
-        y: rect.top + rect.height / 2 - rootRect.top,
-        rect: rects.get(edge.from),
-      }]
-    })
-    if (!sources.length) return []
-
-    // Each dependency gets its own arrow and input port. A shared trunk makes
-    // crossing lines look like they belong to the same branch.
-    return sources.map((source, index) => {
-      const portY = y2 + (index - (sources.length - 1) / 2) * 12
-      // Keep vertical turns in the gap immediately before the target column.
-      // A midpoint turn can cut through unrelated nodes in a long edge.
-      const junctionX = x2 - Math.min(16, Math.max(4, (x2 - source.x) / 2))
-      return {
-        id: `${source.edge.from}->${targetId}`,
-        from: source.edge.from,
-        to: targetId,
-        long: x2 - source.x > 180,
-        d: `${branchPath(source, junctionX, portY, targetId)} H ${x2}`,
-        arrow: true,
-      }
-    })
-  })
-}
-
-async function schedulePathUpdate() {
-  await nextTick()
-  updatePaths()
-}
-
-watch([nodes, edges, customLayout], schedulePathUpdate, { deep: true })
-
-onMounted(() => {
-  resizeObserver = new ResizeObserver(updatePaths)
-  if (container.value) resizeObserver.observe(container.value)
-  schedulePathUpdate()
-})
-
-onBeforeUnmount(() => resizeObserver?.disconnect())
 </script>
 
 <template>
-  <div :class="{ 'custom-dag-scroll': customLayout }">
+  <div class="custom-dag-scroll">
     <div
       ref="container"
-      class="task-dag"
-      :class="{ 'custom-dag': customLayout }"
-      :style="customLayout ? { width: customLayout.width + 'px', height: customLayout.height + 'px' } : {
-        '--dag-columns': layout.columns,
-        '--dag-row-units': layout.rowUnits,
-        '--dag-min-height': `${layout.maxRows * 80}px`,
-      }"
+      class="task-dag custom-dag"
+      :class="{ 'dag-editor': editorLayout }"
+      :style="{ width: dimensions.width + 'px', height: dimensions.height + 'px' }"
       aria-label="任务 DAG 阶段图"
+      @pointermove="updateDrag"
+      @pointerup="endDrag($event, true)"
+      @pointercancel="endDrag($event)"
+      @lostpointercapture="endDrag($event)"
     >
       <svg class="task-dag-links">
         <defs>
@@ -379,37 +146,26 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
             <path d="M0,0 L7,3.5 L0,7 Z" />
           </marker>
         </defs>
-        <g
+        <path
           v-for="path in displayedPaths"
           :key="path.id"
-          :class="{
-            'is-dimmed': activeEdgeId && path.id !== activeEdgeId,
-            'is-highlighted': path.id === activeEdgeId,
-            'is-long': path.long,
-          }"
-        >
-          <path class="edge-line" :d="path.d" :marker-end="path.arrow ? `url(#${markerId})` : null" />
-          <path
-            class="edge-hit"
-            :d="path.d"
-            @mouseenter="activeEdgeId = path.id"
-            @mouseleave="activeEdgeId = null"
-          >
-            <title>{{ nodeLabels.get(path.from) }} → {{ nodeLabels.get(path.to) }}</title>
-          </path>
-        </g>
+          class="edge-line"
+          :d="path.d"
+          :marker-end="path.arrow ? `url(#${markerId})` : null"
+        />
       </svg>
 
       <div class="task-dag-grid">
         <button
           v-for="node in nodes"
           :key="node.id"
-          :ref="element => setNodeElement(node.id, element)"
           type="button"
-          :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node) }]"
+          :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node), dragging: drag?.id === node.id }]"
           :style="nodeStyle(node.id)"
-          :title="`${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-          @click="openTaskFlow(task, node.stage, node.subStage)"
+          :title="editorLayout ? node.label : `${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
+          @click="!editorLayout && openTaskFlow(task, node.stage, node.subStage)"
+          @pointerdown="pointerDown($event, node.id)"
+          @keydown="onNodeKey($event, node.id)"
         >
           <span class="stage-label">{{ node.label }}</span>
           <span v-if="nodeProgress({ ...node, key: node.stage })" class="stage-progress">
@@ -464,5 +220,18 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 
 .custom-dag .task-dag-links {
   display: block;
+}
+.dag-editor {
+  background-image: linear-gradient(to right, #dce4ec 1px, transparent 1px),
+    linear-gradient(to bottom, #dce4ec 1px, transparent 1px);
+  background-size: 152px 88px;
+}
+.dag-editor .stage-node {
+  touch-action: none;
+  cursor: grab;
+}
+.dag-editor .stage-node.dragging {
+  z-index: 1;
+  cursor: grabbing;
 }
 </style>

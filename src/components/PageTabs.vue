@@ -47,6 +47,13 @@ const emit = defineEmits(['openPage'])
       </button>
       <button
         type="button"
+        :class="{ active: activePage === 'dag-layouts' && !flowPageOpen }"
+        @click="emit('openPage', 'dag-layouts')"
+      >
+        流程图布局
+      </button>
+      <button
+        type="button"
         :class="{ active: activePage === 'accounts' && !flowPageOpen }"
         @click="emit('openPage', 'accounts')"
       >

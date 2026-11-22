@@ -794,37 +794,10 @@
   pointer-events: none;
 }
 
-.task-dag-links g {
-  transition: opacity 120ms ease;
-}
-
-.task-dag-links g.is-dimmed {
-  opacity: 0.12;
-}
-
 .task-dag-links .edge-line {
   fill: none;
   stroke: #94a3b8;
   stroke-width: 2;
-  transition: stroke 120ms ease;
-}
-
-.task-dag-links g.is-long .edge-line {
-  stroke: #b7c3d2;
-  stroke-dasharray: 5 5;
-}
-
-.task-dag-links g.is-highlighted .edge-line {
-  stroke: #2563eb;
-  stroke-width: 3;
-  stroke-dasharray: none;
-}
-
-.task-dag-links .edge-hit {
-  fill: none;
-  stroke: transparent;
-  stroke-width: 12;
-  pointer-events: stroke;
 }
 
 .task-dag-links marker path {
