@@ -273,14 +273,14 @@ function customPaths(to, sources, positions, route) {
     const sides = ['left', 'right', 'top', 'bottom'].map(side => port(positions[from], side))
     const selected = bends.length && sides.find(([, midpoint]) => midpoint.x === anchor.x && midpoint.y === anchor.y)
     if (selected) return { id: `${from}->${to}`, from, to,
-      d: orthogonal([selected[0], ...bends, join]) }
+      d: orthogonal([selected[0], ...bends, ...gridBridge(bends.at(-1), join), join]) }
     const direct = sides.find(([, midpoint]) => sharesGridLine(midpoint, anchor))
     if (direct) return { id: `${from}->${to}`, from, to,
       d: orthogonal([...direct.slice(0, 2), ...bends, join]) }
     const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
     sides.sort((a, b) => distance(a) - distance(b)
       || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
-    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...gridBridge(sides[0][2], anchor), ...bends, join]) }
+    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...gridBridge(sides[0][2], anchor), ...bends, ...gridBridge(bends.at(-1), join), join]) }
   })
   const end = port(positions[to], route.entry).reverse()
   const trunk = (route.trunk || []).map(gridPoint)

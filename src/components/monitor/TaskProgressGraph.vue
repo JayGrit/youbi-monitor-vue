@@ -92,7 +92,9 @@ const activeDrawing = computed(() => props.routeEdit?.drawing ?? null)
 const drawPatternId = `${markerId}-grid`
 const visiblePaths = computed(() => activeDrawing.value === null ? displayedPaths.value
   : displayedPaths.value.filter(path =>
-    path.to !== props.routeEdit.target || (path.from || '') !== props.routeEdit.line))
+    path.to !== props.routeEdit.target
+      || (props.routeEdit.multipleInputs && (path.from || '') !== props.routeEdit.line)
+      || (!props.routeEdit.multipleInputs && !props.routeEdit.line && !!path.from)))
 
 function clickGridPoint(event) {
   const rect = container.value.getBoundingClientRect()

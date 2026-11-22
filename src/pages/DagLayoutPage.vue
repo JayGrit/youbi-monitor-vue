@@ -21,14 +21,21 @@ const labels = computed(() => new Map(graph.value?.routeNodes.map(node => [node.
 const currentRoute = computed(() => draft.value?.routing?.[target.value])
 const drawing = ref(null)
 const drawMessage = ref('')
-const ports = computed(() => target.value && draft.value
-  ? cardPorts(draft.value.positions[line.value || target.value]) : {})
+const sourcePorts = computed(() => line.value && draft.value
+  ? cardPorts(draft.value.positions[line.value]) : {})
+const targetPorts = computed(() => target.value && draft.value
+  ? cardPorts(draft.value.positions[target.value]) : {})
+const multipleInputs = computed(() => new Set(
+  graph.value?.routeEdges.filter(edge => edge.to === target.value).map(edge => edge.from),
+).size > 1)
 const junction = computed(() => target.value && draft.value
   ? routeJunction(draft.value.positions[target.value], currentRoute.value || {}) : null)
 const endpoints = computed(() => {
   if (!drawing.value) return []
-  if (!line.value) return Object.values(ports.value)
-  return drawing.value.length ? [junction.value] : Object.values(ports.value)
+  if (line.value && !drawing.value.length) return Object.values(sourcePorts.value)
+  const ports = Object.values(targetPorts.value)
+  if (!line.value || !multipleInputs.value || ports.some(point => samePoint(point, junction.value))) return ports
+  return [...ports, junction.value]
 })
 
 function selectRoute(to, from) {
@@ -52,31 +59,41 @@ function cancelDrawing() {
 function changePoint(point) {
   if (!drawing.value || saving.value) return
   const points = drawing.value
-  const side = Object.keys(ports.value).find(key => samePoint(ports.value[key], point))
+  const side = Object.keys(targetPorts.value).find(key => samePoint(targetPorts.value[key], point))
   if (!points.length) {
-    if (!side) {
+    if (!Object.values(sourcePorts.value).some(port => samePoint(port, point))) {
       drawMessage.value = '先点来源卡片所在格子的一个边中点。'
       return
     }
     points.push(point)
     drawMessage.value = ''
+    if (side) finishDrawing(side, point, points)
     return
   }
   if (!canExtendRoute(points, point)) {
     drawMessage.value = '只能连接同一行或同一列的点，不能经过已走过的位置。'
     return
   }
-  const finished = line.value ? samePoint(point, junction.value) : !!side
+  const finished = !!side || (line.value && multipleInputs.value && samePoint(point, junction.value))
   if (!finished && points.length >= 64) {
     drawMessage.value = '已达到 64 个路径点，请撤销一个点或连接终点。'
     return
   }
   points.push(point)
   drawMessage.value = ''
-  if (!finished) return
+  if (finished) finishDrawing(side, point, points)
+}
+
+function finishDrawing(side, point, points) {
   const route = editRoute()
-  if (line.value) route.branches[line.value] = points.slice(0, -1)
-  else {
+  if (line.value) {
+    route.branches[line.value] = points.length === 1 ? [...points] : points.slice(0, -1)
+    if (side) {
+      route.junction = point
+      route.entry = side
+      route.trunk = []
+    }
+  } else {
     route.entry = side
     route.trunk = points.slice(1)
   }
@@ -95,7 +112,7 @@ function resetLine() {
   if (line.value) delete route.branches[line.value]
   else {
     route.trunk = []
-    route.entry = 'left'
+    if (!route.junction) route.entry = 'left'
   }
   status.value = ''
 }
@@ -239,7 +256,7 @@ async function save() {
         <button type="button" :disabled="drawing.length <= (line ? 0 : 1)" @click="undoPoint">撤销上一步</button>
         <button type="button" @click="cancelDrawing">取消重画</button>
         <span>{{ drawMessage || (line && !drawing.length ? '从来源格的边中点开始。'
-          : '依次点选同一行或同一列的点，点绿色终点完成。') }}</span>
+          : '依次点选横竖方向的点，点目标格的绿色边中点完成。') }}</span>
       </template>
       <template v-else>
         <button type="button" :disabled="saving" @click="selectRoute(target, line)">重画本线</button>
@@ -254,7 +271,7 @@ async function save() {
       :task="{ taskType }"
       :progress="graph"
       :editor-layout="draft"
-      :route-edit="lineMode ? { target, line, drawing, endpoints } : null"
+      :route-edit="lineMode ? { target, line, drawing, endpoints, multipleInputs } : null"
       :node-progress="empty"
       :node-title="empty"
       :open-task-flow="empty"
