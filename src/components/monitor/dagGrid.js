@@ -243,6 +243,22 @@ function orthogonal(points) {
   return path
 }
 
+function gridBridge(previous, next) {
+  if (!previous || !next || previous.x === next.x || previous.y === next.y) return []
+  const previousOnRow = previous.y % cellHeight === 0
+  const nextOnColumn = next.x % cellWidth === 0
+  if (previousOnRow && nextOnColumn) return []
+  if (previous.x % cellWidth === 0 && next.y % cellHeight === 0) {
+    return [{ x: previous.x, y: next.y }]
+  }
+  if (previousOnRow) {
+    const x = Math.round((previous.x + next.x) / 2 / cellWidth) * cellWidth
+    return [{ x, y: previous.y }, { x, y: next.y }]
+  }
+  const y = Math.round((previous.y + next.y) / 2 / cellHeight) * cellHeight
+  return [{ x: previous.x, y }, { x: next.x, y }]
+}
+
 function customPaths(to, sources, positions, route) {
   const join = gridPoint(routeJunction(positions[to], route))
   const branches = [...sources].map(from => {
@@ -250,12 +266,56 @@ function customPaths(to, sources, positions, route) {
     const { x, y } = origin(positions[from])
     const anchor = bends[0] || join
     const sides = ['left', 'right', 'top', 'bottom'].map(side => port(positions[from], side))
+    const selected = bends.length && sides.find(([, midpoint]) => midpoint.x === anchor.x && midpoint.y === anchor.y)
+    if (selected) return { id: `${from}->${to}`, from, to,
+      d: orthogonal([selected[0], ...bends, join]) }
     const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
     sides.sort((a, b) => distance(a) - distance(b)
       || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
-    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...bends, join]) }
+    return { id: `${from}->${to}`, from, to, d: orthogonal([...sides[0], ...gridBridge(sides[0][2], anchor), ...bends, join]) }
   })
   const end = port(positions[to], route.entry).reverse()
+  const trunk = (route.trunk || []).map(gridPoint)
+  const last = trunk.at(-1)
+  const [, midpoint, card] = end
+  const finish = last?.x === midpoint.x && last?.y === midpoint.y ? [card] : [...gridBridge(last || join, end[0]), ...end]
   return [...branches, { id: `arrow:${to}`, to, arrow: true,
-    d: orthogonal([join, ...(route.trunk || []).map(gridPoint), ...end]) }]
+    d: orthogonal([join, ...trunk, ...finish]) }]
+}
+
+export function cardPorts(position) {
+  return Object.fromEntries(['left', 'right', 'top', 'bottom'].map(side => {
+    const { x, y } = port(position, side)[1]
+    return [side, { row: y / cellHeight, column: x / cellWidth }]
+  }))
+}
+
+export function samePoint(a, b) {
+  return !!a && !!b && a.row === b.row && a.column === b.column
+}
+
+function segmentPoints(a, b) {
+  const dr = Math.sign(b.row - a.row) / 2
+  const dc = Math.sign(b.column - a.column) / 2
+  const points = []
+  for (let row = a.row + dr, column = a.column + dc; ; row += dr, column += dc) {
+    points.push(`${row}:${column}`)
+    if (row === b.row && column === b.column) return points
+  }
+}
+
+export function canExtendRoute(points, next) {
+  const last = points.at(-1)
+  if (!last || samePoint(last, next)) return false
+  if (!(last.row === next.row && Number.isInteger(last.row))
+    && !(last.column === next.column && Number.isInteger(last.column))) return false
+  const used = new Set([`${points[0].row}:${points[0].column}`])
+  for (let index = 1; index < points.length; index += 1) {
+    for (const point of segmentPoints(points[index - 1], points[index])) used.add(point)
+  }
+  return segmentPoints(last, next).every(point => !used.has(point))
+}
+
+export function routePreview(points) {
+  return points.length ? orthogonal(points.map(gridPoint)) : ''
 }

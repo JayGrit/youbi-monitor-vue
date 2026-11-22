@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { createPlatformIconUrls, uploadPlatformText } from '../../domain/constants'
 import { formatDuration } from '../../utils/format'
 import { loadDagLayout } from '../../api/dagLayouts'
-import { cellWidth, cellHeight, insetX, insetY, origin, autoPositions, mergedPaths, gridPoint, routeJunction } from './dagGrid'
+import { cellWidth, cellHeight, insetX, insetY, origin, autoPositions, mergedPaths, gridPoint, routePreview } from './dagGrid'
 
 const props = defineProps({
   progress: { type: Object, default: null },
@@ -88,45 +88,24 @@ function selectRoute(event, path) {
   emit('select-route', path.to, path.from || '')
 }
 
-const routeDrag = ref(null)
-const handles = computed(() => {
-  const edit = props.routeEdit
-  if (!edit?.target || !positions.value[edit.target]) return []
-  const route = props.editorLayout.routing?.[edit.target] || {}
-  const bends = edit.line ? route.branches?.[edit.line] : route.trunk
-  return [
-    { index: -1, ...gridPoint(routeJunction(positions.value[edit.target], route)) },
-    ...(bends || []).map((point, index) => ({ index, ...gridPoint(point) })),
-  ]
-})
+const activeDrawing = computed(() => props.routeEdit?.drawing ?? null)
+const drawPatternId = `${markerId}-grid`
+const visiblePaths = computed(() => activeDrawing.value === null ? displayedPaths.value
+  : displayedPaths.value.filter(path =>
+    path.to !== props.routeEdit.target || (path.from || '') !== props.routeEdit.line))
 
-function canvasPoint(event) {
+function clickGridPoint(event) {
   const rect = container.value.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  const row = Math.round(y / cellHeight * 2) / 2
+  const column = Math.round(x / cellWidth * 2) / 2
   const size = props.editorLayout.gridSize
-  const snap = (value, unit) => Math.max(0, Math.min(size, Math.round(value / unit)))
-  return { row: snap(event.clientY - rect.top, cellHeight), column: snap(event.clientX - rect.left, cellWidth) }
-}
-
-function addRoutePoint(event) {
-  if (props.routeEdit?.target) emit('route-point', null, canvasPoint(event))
-}
-
-function startHandle(event, index) {
-  if (event.button !== 0) return
-  event.currentTarget.setPointerCapture(event.pointerId)
-  routeDrag.value = { index, pointer: event.pointerId }
-}
-
-function moveHandle(event) {
-  if (routeDrag.value?.pointer === event.pointerId) {
-    routeDrag.value.point = canvasPoint(event)
+  if (row < 0 || row > size || column < 0 || column > size
+      || (!Number.isInteger(row) && !Number.isInteger(column))) return
+  if (Math.hypot(x - column * cellWidth, y - row * cellHeight) <= 12) {
+    emit('route-point', { row, column })
   }
-}
-
-function dropHandle(event) {
-  if (routeDrag.value?.pointer !== event.pointerId) return
-  if (routeDrag.value.point) emit('route-point', routeDrag.value.index, canvasPoint(event))
-  routeDrag.value = null
 }
 
 function nodeStyle(id) {
@@ -207,7 +186,6 @@ function showTime(node) {
       :class="{ 'dag-editor': editorLayout }"
       :style="{ width: dimensions.width + 'px', height: dimensions.height + 'px' }"
       aria-label="任务 DAG 阶段图"
-      @click.self="addRoutePoint"
       @pointermove="updateDrag"
       @pointerup="endDrag($event, true)"
       @pointercancel="endDrag($event)"
@@ -218,18 +196,29 @@ function showTime(node) {
           <marker :id="markerId" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
             <path d="M0,0 L7,3.5 L0,7 Z" />
           </marker>
+          <pattern v-if="activeDrawing !== null" :id="drawPatternId" patternUnits="userSpaceOnUse"
+            :width="cellWidth" :height="cellHeight">
+            <circle cx="0" cy="0" r="3" />
+            <circle :cx="cellWidth" cy="0" r="3" />
+            <circle cx="0" :cy="cellHeight" r="3" />
+            <circle :cx="cellWidth" :cy="cellHeight" r="3" />
+            <circle :cx="cellWidth / 2" cy="0" r="3" />
+            <circle :cx="cellWidth / 2" :cy="cellHeight" r="3" />
+            <circle cx="0" :cy="cellHeight / 2" r="3" />
+            <circle :cx="cellWidth" :cy="cellHeight / 2" r="3" />
+          </pattern>
         </defs>
         <path
-          v-for="path in displayedPaths"
+          v-for="path in visiblePaths"
           :key="path.id"
           class="edge-line"
           :class="{ 'editing-route': routeEdit?.target === path.to && routeEdit.line === (path.from || '') }"
           :d="path.d"
           :marker-end="path.arrow ? `url(#${markerId})` : null"
         />
-        <template v-if="routeEdit">
+        <template v-if="routeEdit && activeDrawing === null">
           <path
-            v-for="path in displayedPaths"
+            v-for="path in visiblePaths"
             :key="'hit:' + path.id"
             class="route-hit"
             :data-route-id="path.id"
@@ -244,25 +233,18 @@ function showTime(node) {
             <title>{{ pathLabel(path) }}</title>
           </path>
         </template>
-        <circle
-          v-for="handle in handles"
-          :key="handle.index"
-          class="route-handle"
-          :class="{ junction: handle.index === -1 }"
-          :cx="routeDrag?.index === handle.index && routeDrag.point ? gridPoint(routeDrag.point).x : handle.x"
-          :cy="routeDrag?.index === handle.index && routeDrag.point ? gridPoint(routeDrag.point).y : handle.y"
-          r="7"
-          tabindex="0"
-          :aria-label="handle.index === -1 ? '合流点' : `拐点 ${handle.index + 1}`"
-          @keydown.delete.prevent="emit('route-point', handle.index, null)"
-          @pointerdown.stop="startHandle($event, handle.index)"
-          @pointermove.stop="moveHandle"
-          @pointerup.stop="dropHandle"
-          @pointercancel.stop="routeDrag = null"
-          @lostpointercapture.stop="routeDrag = null"
-          @click.stop
-          @contextmenu.prevent.stop="emit('route-point', handle.index, null)"
-        />
+        <template v-if="activeDrawing !== null">
+          <rect class="draw-grid" :width="dimensions.width" :height="dimensions.height"
+            :fill="`url(#${drawPatternId})`" @click.stop="clickGridPoint" />
+          <path class="draw-preview" :d="routePreview(activeDrawing)" />
+          <circle v-for="point in activeDrawing" :key="`${point.row}:${point.column}`"
+            class="draw-visited" :cx="gridPoint(point).x" :cy="gridPoint(point).y" r="4" />
+          <circle v-for="point in routeEdit.endpoints" :key="`${point.row}:${point.column}`"
+            class="draw-endpoint" :cx="gridPoint(point).x" :cy="gridPoint(point).y" r="7"
+            role="button" tabindex="0" aria-label="连线端点"
+            @click.stop="emit('route-point', point)"
+            @keydown.enter.prevent="emit('route-point', point)" />
+        </template>
       </svg>
 
       <div class="task-dag-grid">
@@ -347,6 +329,9 @@ function showTime(node) {
 .task-dag-links .editing-route { stroke: #195f48; stroke-width: 3; }
 .route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
 .route-hit:focus-visible { stroke: #195f4838; }
-.route-handle { fill: white; stroke: #195f48; stroke-width: 2; pointer-events: all; cursor: grab; }
-.route-handle.junction { fill: #195f48; }
+pattern circle { fill: #667c91; }
+.draw-grid { pointer-events: all; cursor: crosshair; }
+.draw-preview { fill: none; stroke: #195f48; stroke-width: 3; }
+.draw-visited { fill: #195f48; }
+.draw-endpoint { fill: #195f48; stroke: white; stroke-width: 2; pointer-events: all; cursor: pointer; }
 </style>

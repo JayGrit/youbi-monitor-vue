@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
-import { autoPositions } from '../components/monitor/dagGrid'
+import { autoPositions, cardPorts, canExtendRoute, routeJunction, samePoint } from '../components/monitor/dagGrid'
 import { loadDagLayoutTemplate, loadDagLayoutTypes, saveDagLayout } from '../api/dagLayouts'
 
 const types = ref([])
@@ -19,12 +19,24 @@ const target = ref('')
 const line = ref('')
 const labels = computed(() => new Map(graph.value?.routeNodes.map(node => [node.id, node.label])))
 const currentRoute = computed(() => draft.value?.routing?.[target.value])
-const sides = { left: '左侧', right: '右侧', top: '上方', bottom: '下方' }
+const drawing = ref(null)
+const drawMessage = ref('')
+const ports = computed(() => target.value && draft.value
+  ? cardPorts(draft.value.positions[line.value || target.value]) : {})
+const junction = computed(() => target.value && draft.value
+  ? routeJunction(draft.value.positions[target.value], currentRoute.value || {}) : null)
+const endpoints = computed(() => {
+  if (!drawing.value) return []
+  if (!line.value) return Object.values(ports.value)
+  return drawing.value.length ? [junction.value] : Object.values(ports.value)
+})
 
 function selectRoute(to, from) {
   if (saving.value) return
   target.value = to
   line.value = from
+  drawing.value = from ? [] : [junction.value]
+  drawMessage.value = ''
 }
 
 function editRoute() {
@@ -32,37 +44,70 @@ function editRoute() {
   return draft.value.routing[target.value] ||= { entry: 'left', junction: null, trunk: [], branches: {} }
 }
 
-function changePoint(index, point) {
-  if (!target.value || saving.value) return
-  const route = editRoute()
-  if (index === -1) {
-    route.junction = point
+function cancelDrawing() {
+  drawing.value = null
+  drawMessage.value = ''
+}
+
+function changePoint(point) {
+  if (!drawing.value || saving.value) return
+  const points = drawing.value
+  const side = Object.keys(ports.value).find(key => samePoint(ports.value[key], point))
+  if (!points.length) {
+    if (!side) {
+      drawMessage.value = '先点来源卡片所在格子的一个边中点。'
+      return
+    }
+    points.push(point)
+    drawMessage.value = ''
     return
   }
-  const points = line.value ? (route.branches[line.value] ||= []) : route.trunk
-  if (index === null) {
-    if (points.length < 64) points.push(point)
-  } else if (point) {
-    points[index] = point
-  } else {
-    points.splice(index, 1)
+  if (!canExtendRoute(points, point)) {
+    drawMessage.value = '只能沿同一条横线或竖线前进，不能经过已走过的位置。'
+    return
   }
+  const finished = line.value ? samePoint(point, junction.value) : !!side
+  if (!finished && points.length >= 64) {
+    drawMessage.value = '已达到 64 个路径点，请撤销一个点或连接终点。'
+    return
+  }
+  points.push(point)
+  drawMessage.value = ''
+  if (!finished) return
+  const route = editRoute()
+  if (line.value) route.branches[line.value] = points.slice(0, -1)
+  else {
+    route.entry = side
+    route.trunk = points.slice(1)
+  }
+  cancelDrawing()
+}
+
+function undoPoint() {
+  if (drawing.value && drawing.value.length > (line.value ? 0 : 1)) drawing.value.pop()
+  drawMessage.value = ''
 }
 
 function resetLine() {
   const route = currentRoute.value
+  cancelDrawing()
   if (!route) return
   if (line.value) delete route.branches[line.value]
-  else route.trunk = []
+  else {
+    route.trunk = []
+    route.entry = 'left'
+  }
   status.value = ''
 }
 
 function resetTarget() {
+  cancelDrawing()
   delete draft.value.routing[target.value]
   status.value = ''
 }
 
 function toggleLineMode() {
+  cancelDrawing()
   lineMode.value = !lineMode.value
   target.value = ''
   line.value = ''
@@ -104,6 +149,7 @@ watch(taskType, async (type, _, onCleanup) => {
   target.value = ''
   line.value = ''
   lineMode.value = false
+  cancelDrawing()
   loading.value = true
   try {
     const result = await loadDagLayoutTemplate(type)
@@ -174,8 +220,8 @@ async function save() {
       <template v-if="draft">
         <button type="button" :disabled="saving || draft.gridSize >= gridLimit"
           @click="draft.gridSize = Math.min(gridLimit, draft.gridSize + 2)">扩展网格</button>
-        <button type="button" :disabled="saving" @click="restore">恢复自动布局</button>
-        <button type="button" :disabled="saving" @click="save">{{ saving ? '保存中' : '保存布局' }}</button>
+        <button type="button" :disabled="saving || drawing !== null" @click="restore">恢复自动布局</button>
+        <button type="button" :disabled="saving || drawing !== null" @click="save">{{ saving ? '保存中' : '保存布局' }}</button>
         <button type="button" :aria-pressed="lineMode" :disabled="saving || !graph.routeEdges.length" @click="toggleLineMode">
           {{ lineMode ? '返回节点布局' : '编辑连线' }}
         </button>
@@ -189,15 +235,17 @@ async function save() {
       <span v-if="!target">点击已有依赖线或公共线开始编辑。重叠处可重复点击切换。</span>
       <template v-else>
       <strong>{{ line ? `${labels.get(line)} → ${labels.get(target)}` : `${labels.get(target)}的公共线` }}</strong>
-      <label>箭头入口
-        <select :value="currentRoute?.entry || 'left'" :disabled="saving"
-          @change="editRoute().entry = $event.target.value">
-          <option v-for="(label, value) in sides" :key="value" :value="value">{{ label }}</option>
-        </select>
-      </label>
-      <button type="button" :disabled="saving" @click="resetLine">清除本线拐点</button>
-      <button type="button" :disabled="saving" @click="resetTarget">来线恢复自动</button>
-      <span>点击空白格线添加拐点，拖动调整，右键或 Delete 删除。</span>
+      <template v-if="drawing !== null">
+        <button type="button" :disabled="drawing.length <= (line ? 0 : 1)" @click="undoPoint">撤销上一步</button>
+        <button type="button" @click="cancelDrawing">取消重画</button>
+        <span>{{ drawMessage || (line && !drawing.length ? '从来源格的边中点开始。'
+          : '沿横竖格线依次点选，点绿色终点完成。') }}</span>
+      </template>
+      <template v-else>
+        <button type="button" :disabled="saving" @click="selectRoute(target, line)">重画本线</button>
+        <button type="button" :disabled="saving" @click="resetLine">本线恢复自动</button>
+        <button type="button" :disabled="saving" @click="resetTarget">来线恢复自动</button>
+      </template>
       </template>
     </div>
     <TaskProgressGraph
@@ -206,7 +254,7 @@ async function save() {
       :task="{ taskType }"
       :progress="graph"
       :editor-layout="draft"
-      :route-edit="lineMode ? { target, line } : null"
+      :route-edit="lineMode ? { target, line, drawing, endpoints } : null"
       :node-progress="empty"
       :node-title="empty"
       :open-task-flow="empty"
