@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { createPlatformIconUrls, uploadPlatformText } from '../../domain/constants'
 import { formatDuration } from '../../utils/format'
 import { loadDagLayout } from '../../api/dagLayouts'
-import { cellWidth, cellHeight, insetX, insetY, origin, autoPositions, mergedPaths } from './dagGrid'
+import { cellWidth, cellHeight, insetX, insetY, origin, autoPositions, mergedPaths, gridPoint, routeJunction } from './dagGrid'
 
 const props = defineProps({
   progress: { type: Object, default: null },
@@ -12,9 +12,10 @@ const props = defineProps({
   openTaskFlow: { type: Function, required: true },
   task: { type: Object, required: true },
   editorLayout: { type: Object, default: null },
+  routeEdit: { type: Object, default: null },
 })
 
-const emit = defineEmits(['move'])
+const emit = defineEmits(['move', 'route-point', 'select-target'])
 const container = ref(null)
 const drag = ref(null)
 const markerId = `dag-arrow-${Math.random().toString(36).slice(2)}`
@@ -50,12 +51,60 @@ const customLayout = computed(() => {
 const positions = computed(() => customLayout.value?.positions || autoPositions(nodes.value, edges.value))
 const dimensions = computed(() => {
   const cells = nodes.value.map(node => positions.value[node.id])
+  for (const node of nodes.value) {
+    const route = customLayout.value?.routing?.[node.id]
+    if (!route) continue
+    if (route.junction) cells.push(route.junction)
+    cells.push(...(route.trunk || []))
+    for (const points of Object.values(route.branches || {})) cells.push(...points)
+  }
   return {
     width: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.column))) * cellWidth + 1,
     height: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.row))) * cellHeight + 1,
   }
 })
-const displayedPaths = computed(() => mergedPaths(nodes.value, edges.value, positions.value))
+const displayedPaths = computed(() => mergedPaths(nodes.value, edges.value, positions.value, customLayout.value?.routing))
+
+const routeDrag = ref(null)
+const handles = computed(() => {
+  const edit = props.routeEdit
+  if (!edit?.target || !positions.value[edit.target]) return []
+  const route = props.editorLayout.routing?.[edit.target] || {}
+  const bends = edit.line ? route.branches?.[edit.line] : route.trunk
+  return [
+    { index: -1, ...gridPoint(routeJunction(positions.value[edit.target], route)) },
+    ...(bends || []).map((point, index) => ({ index, ...gridPoint(point) })),
+  ]
+})
+
+function canvasPoint(event) {
+  const rect = container.value.getBoundingClientRect()
+  const size = props.editorLayout.gridSize
+  const snap = (value, unit) => Math.max(0, Math.min(size, Math.round(value / unit)))
+  return { row: snap(event.clientY - rect.top, cellHeight), column: snap(event.clientX - rect.left, cellWidth) }
+}
+
+function addRoutePoint(event) {
+  if (props.routeEdit?.target) emit('route-point', null, canvasPoint(event))
+}
+
+function startHandle(event, index) {
+  if (event.button !== 0) return
+  event.currentTarget.setPointerCapture(event.pointerId)
+  routeDrag.value = { index, pointer: event.pointerId }
+}
+
+function moveHandle(event) {
+  if (routeDrag.value?.pointer === event.pointerId) {
+    routeDrag.value.point = canvasPoint(event)
+  }
+}
+
+function dropHandle(event) {
+  if (routeDrag.value?.pointer !== event.pointerId) return
+  if (routeDrag.value.point) emit('route-point', routeDrag.value.index, canvasPoint(event))
+  routeDrag.value = null
+}
 
 function nodeStyle(id) {
   const { x, y } = origin(positions.value[id])
@@ -68,7 +117,7 @@ function nodeStyle(id) {
 }
 
 function pointerDown(event, id) {
-  if (!props.editorLayout || event.button !== 0 || drag.value) return
+  if (!props.editorLayout || props.routeEdit || event.button !== 0 || drag.value) return
   event.currentTarget.setPointerCapture(event.pointerId)
   const rect = container.value.getBoundingClientRect()
   drag.value = { id, pointer: event.pointerId, x: event.clientX - rect.left,
@@ -97,7 +146,7 @@ function endDrag(event, drop = false) {
 }
 
 function onNodeKey(event, id) {
-  if (!props.editorLayout) return
+  if (!props.editorLayout || props.routeEdit) return
   const delta = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[event.key]
   if (!delta) return
   event.preventDefault()
@@ -135,6 +184,7 @@ function showTime(node) {
       :class="{ 'dag-editor': editorLayout }"
       :style="{ width: dimensions.width + 'px', height: dimensions.height + 'px' }"
       aria-label="任务 DAG 阶段图"
+      @click.self="addRoutePoint"
       @pointermove="updateDrag"
       @pointerup="endDrag($event, true)"
       @pointercancel="endDrag($event)"
@@ -150,8 +200,29 @@ function showTime(node) {
           v-for="path in displayedPaths"
           :key="path.id"
           class="edge-line"
+          :class="{ 'editing-route': routeEdit?.target && path.id === (routeEdit.line
+            ? `${routeEdit.line}->${routeEdit.target}` : `arrow:${routeEdit.target}`) }"
           :d="path.d"
           :marker-end="path.arrow ? `url(#${markerId})` : null"
+        />
+        <circle
+          v-for="handle in handles"
+          :key="handle.index"
+          class="route-handle"
+          :class="{ junction: handle.index === -1 }"
+          :cx="routeDrag?.index === handle.index && routeDrag.point ? gridPoint(routeDrag.point).x : handle.x"
+          :cy="routeDrag?.index === handle.index && routeDrag.point ? gridPoint(routeDrag.point).y : handle.y"
+          r="7"
+          tabindex="0"
+          :aria-label="handle.index === -1 ? '合流点' : `拐点 ${handle.index + 1}`"
+          @keydown.delete.prevent="emit('route-point', handle.index, null)"
+          @pointerdown.stop="startHandle($event, handle.index)"
+          @pointermove.stop="moveHandle"
+          @pointerup.stop="dropHandle"
+          @pointercancel.stop="routeDrag = null"
+          @lostpointercapture.stop="routeDrag = null"
+          @click.stop
+          @contextmenu.prevent.stop="emit('route-point', handle.index, null)"
         />
       </svg>
 
@@ -163,7 +234,7 @@ function showTime(node) {
           :class="['stage-node', 'stage-node-button', statusClass(node), { 'with-uploader-platforms': hasUploaderPlatforms(node), dragging: drag?.id === node.id }]"
           :style="nodeStyle(node.id)"
           :title="editorLayout ? node.label : `${nodeTitle({ ...node, key: node.stage })}\n点击查看任务流详情`"
-          @click="!editorLayout && openTaskFlow(task, node.stage, node.subStage)"
+          @click="routeEdit ? emit('select-target', node.id) : !editorLayout && openTaskFlow(task, node.stage, node.subStage)"
           @pointerdown="pointerDown($event, node.id)"
           @keydown="onNodeKey($event, node.id)"
         >
@@ -234,4 +305,7 @@ function showTime(node) {
   z-index: 1;
   cursor: grabbing;
 }
+.task-dag-links .editing-route { stroke: #195f48; stroke-width: 3; }
+.route-handle { fill: white; stroke: #195f48; stroke-width: 2; pointer-events: all; cursor: grab; }
+.route-handle.junction { fill: #195f48; }
 </style>

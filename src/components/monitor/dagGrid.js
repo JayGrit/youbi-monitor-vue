@@ -168,7 +168,7 @@ export function autoPositions(nodes, edges) {
     .map(([id, { rowStart, column }]) => [id, { row: rowStart, column }]))
 }
 
-export function mergedPaths(nodes, edges, positions) {
+export function mergedPaths(nodes, edges, positions, routing = {}) {
   const visible = new Set(nodes.map(node => node.id))
   const incoming = new Map()
   for (const { from, to } of edges) {
@@ -177,6 +177,11 @@ export function mergedPaths(nodes, edges, positions) {
     incoming.get(to).add(from)
   }
   return [...incoming].flatMap(([to, sources]) => {
+    const route = routing[to]
+    if (route && (route.entry !== 'left' || route.junction || route.trunk?.length
+      || [...sources].some(from => route.branches?.[from]?.length))) {
+      return customPaths(to, sources, positions, route)
+    }
     const target = origin(positions[to])
     const targetY = target.y + cellHeight / 2
     const routes = []
@@ -202,4 +207,55 @@ export function mergedPaths(nodes, edges, positions) {
       d: `M ${target.x} ${targetY} H ${target.x + insetX}` })
     return routes
   })
+}
+
+export function gridPoint({ row, column }) {
+  return { x: column * cellWidth, y: row * cellHeight }
+}
+
+export function routeJunction(position, route) {
+  return route.junction || { row: position.row - 1, column: position.column - 1 }
+}
+
+function port(position, side) {
+  const { x, y } = origin(position)
+  const centerX = x + cellWidth / 2
+  const centerY = y + cellHeight / 2
+  if (side === 'top') return [{ x: centerX, y: y + insetY }, { x: centerX, y }, { x, y }]
+  if (side === 'bottom') return [
+    { x: centerX, y: y + cellHeight - insetY }, { x: centerX, y: y + cellHeight }, { x, y: y + cellHeight },
+  ]
+  if (side === 'right') return [
+    { x: x + cellWidth - insetX, y: centerY }, { x: x + cellWidth, y: centerY }, { x: x + cellWidth, y },
+  ]
+  return [{ x: x + insetX, y: centerY }, { x, y: centerY }, { x, y }]
+}
+
+function orthogonal(points) {
+  const [first, ...rest] = points
+  let path = `M ${first.x} ${first.y}`
+  let previous = first
+  for (const point of rest) {
+    if (point.x !== previous.x) path += ` H ${point.x}`
+    if (point.y !== previous.y) path += ` V ${point.y}`
+    previous = point
+  }
+  return path
+}
+
+function customPaths(to, sources, positions, route) {
+  const join = gridPoint(routeJunction(positions[to], route))
+  const branches = [...sources].map(from => {
+    const bends = (route.branches?.[from] || []).map(gridPoint)
+    const { x, y } = origin(positions[from])
+    const anchor = bends[0] || join
+    const sides = ['left', 'right', 'top', 'bottom'].map(side => port(positions[from], side))
+    const distance = ([, , corner]) => Math.abs(corner.x - anchor.x) + Math.abs(corner.y - anchor.y)
+    sides.sort((a, b) => distance(a) - distance(b)
+      || Math.abs(a[0].x - x) + Math.abs(a[0].y - y) - Math.abs(b[0].x - x) - Math.abs(b[0].y - y))
+    return { id: `${from}->${to}`, d: orthogonal([...sides[0], ...bends, join]) }
+  })
+  const end = port(positions[to], route.entry).reverse()
+  return [...branches, { id: `arrow:${to}`, arrow: true,
+    d: orthogonal([join, ...(route.trunk || []).map(gridPoint), ...end]) }]
 }
