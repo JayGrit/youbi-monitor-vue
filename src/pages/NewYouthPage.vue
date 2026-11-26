@@ -34,7 +34,7 @@ function editCharging(item) {
 }
 
 async function saveCharging() {
-  if (!chargingTaskId.value || publishingTaskId.value) return
+  if (!chargingTaskId.value || publishingTaskId.value || (!chargingEnabled.value && chargingAmount.value > 0)) return
   publishingTaskId.value = chargingTaskId.value
   uploadsError.value = ''
   try {
@@ -241,7 +241,8 @@ onUnmounted(() => {
             <option :value="0">取消充电</option>
           </select>
         </label>
-        <button type="submit" :disabled="Boolean(publishingTaskId)">{{ publishingTaskId ? '保存中…' : '保存' }}</button>
+        <span v-if="!chargingEnabled" role="status">18／30 元档正在等待 B 站草稿页验证，暂不能保存。</span>
+        <button type="submit" :disabled="Boolean(publishingTaskId) || (!chargingEnabled && chargingAmount > 0)">{{ publishingTaskId ? '保存中…' : '保存' }}</button>
         <button type="button" :disabled="Boolean(publishingTaskId)" @click="chargingTaskId = ''">关闭</button>
       </form>
       <div class="ny-card-heading">
@@ -259,7 +260,7 @@ onUnmounted(() => {
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">
               {{ publishingTaskId === item.taskId ? '提交中…' : '放行发表' }}
             </button>
-            <button v-if="chargingEnabled" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
+            <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">定时发表</button>
           </div>
           <div v-if="editingTaskId === item.taskId" class="ny-schedule-editor">
