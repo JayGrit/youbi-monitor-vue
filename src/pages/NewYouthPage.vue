@@ -11,6 +11,13 @@ const error = ref('')
 const pendingUploads = ref([])
 const scheduledUploads = ref([])
 const reviews = ref([])
+const pendingReviews = computed(() => reviews.value.filter(item => !item.dispatchAtUtc))
+const scheduledVideos = computed(() => [
+  ...scheduledUploads.value.filter(item => !reviews.value.some(review => review.taskId === item.taskId)),
+  ...reviews.value.filter(item => item.dispatchAtUtc).map(item => ({
+    ...item, isReview: true, scheduleState: item.due ? 'waiting' : 'scheduled',
+  })),
+].sort((left, right) => Date.parse(left.dispatchAtUtc) - Date.parse(right.dispatchAtUtc)))
 const uploadsError = ref('')
 const publishingTaskId = ref('')
 const editingTaskId = ref('')
@@ -262,10 +269,10 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
-      <div class="ny-card-heading"><h2>待重投视频</h2><span class="ny-card-count">{{ reviews.length }} 条</span></div>
-      <p v-if="!reviews.length" class="ny-pending-empty">暂无待重投视频</p>
+      <div class="ny-card-heading"><h2>待重投视频</h2><span class="ny-card-count">{{ pendingReviews.length }} 条</span></div>
+      <p v-if="!pendingReviews.length" class="ny-pending-empty">暂无待重投视频</p>
       <ul v-else class="ny-pending-list">
-        <li v-for="item in reviews" :key="item.taskId" class="ny-pending-row">
+        <li v-for="item in pendingReviews" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
           <div class="ny-pending-title" :title="item.title">
@@ -286,14 +293,15 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
-      <div v-if="scheduledUploads.length" class="ny-card-heading"><div><h2>已定时视频</h2></div><span class="ny-card-count">{{ scheduledUploads.length }} 条</span></div>
-      <ul v-if="scheduledUploads.length" class="ny-pending-list">
-        <li v-for="item in scheduledUploads" :key="item.taskId" class="ny-pending-row">
+      <div v-if="scheduledVideos.length" class="ny-card-heading"><div><h2>已定时视频</h2></div><span class="ny-card-count">{{ scheduledVideos.length }} 条</span></div>
+      <ul v-if="scheduledVideos.length" class="ny-pending-list">
+        <li v-for="item in scheduledVideos" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
           <div class="ny-pending-title" :title="item.title">{{ item.title }} <small v-if="item.isChargingVideo">充电 · {{ item.chargingAmountYuan }} 元</small><small> {{ formatScheduled(item.dispatchAtUtc) }} · {{ item.scheduleState === 'missed' ? (item.errorMessage || '定时发表失败') : item.scheduleState === 'queued' ? '已进入投稿队列' : item.scheduleState === 'waiting' ? '到点等待接纳' : '等待定时发表' }}</small></div>
           <div v-if="item.scheduleState !== 'missed'" class="ny-pending-actions">
-            <button v-if="chargingEnabled && item.scheduleState !== 'queued' && item.stageStatus !== 'running'" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
+            <button v-if="!item.isReview && chargingEnabled && item.scheduleState !== 'queued' && item.stageStatus !== 'running'" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
+            <button v-if="item.isReview" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">立即投递</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">改期</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
           </div>
