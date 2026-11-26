@@ -65,7 +65,7 @@ const share = value => total.value ? `${((Number(value) / total.value) * 100).to
       <div class="ny-video-list">
         <div v-for="slice in slices" :key="slice.bvid" class="ny-video-row">
           <span class="ny-legend-dot" :style="{ background: groupColor(slice.ageGroup) }"></span>
-          <a class="ny-video-title" :href="slice.url" target="_blank" rel="noopener noreferrer" :title="slice.title">{{ slice.title }}</a>
+          <a class="ny-video-title" :href="slice.url" target="_blank" rel="noopener noreferrer" :title="slice.title">{{ slice.title }}</a> <small v-if="slice.isChargingVideo">充电 · {{ slice.chargingAmountYuan }} 元</small>
           <strong>+{{ formatNumber(slice.growth) }}</strong>
           <span class="ny-legend-share">{{ share(slice.growth) }}</span>
         </div>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { loadNewYouthOverview, loadPendingNewYouthUploads, loadScheduledNewYouthUploads, releaseNewYouthUpload, scheduleNewYouthUpload, cancelNewYouthUploadSchedule } from '../api/newYouth'
+import { loadNewYouthOverview, loadPendingNewYouthUploads, loadScheduledNewYouthUploads, releaseNewYouthUpload, scheduleNewYouthUpload, cancelNewYouthUploadSchedule, saveNewYouthChargingVideo } from '../api/newYouth'
 import { normalizeResourceUrl } from '../utils/media'
 import GrowthPieChart from '../components/new-youth/GrowthPieChart.vue'
 import FollowerBarChart from '../components/new-youth/FollowerBarChart.vue'
@@ -14,6 +14,34 @@ const uploadsError = ref('')
 const publishingTaskId = ref('')
 const editingTaskId = ref('')
 const selectedSlot = ref('')
+const chargingEnabled = ref(false)
+const chargingTitle = ref('')
+const chargingTaskId = ref('')
+const chargingAmount = ref(18)
+
+function editCharging(item) {
+  chargingTaskId.value = item.taskId
+  chargingTitle.value = item.title
+  chargingAmount.value = item.chargingAmountYuan || 18
+}
+
+async function saveCharging() {
+  if (!chargingTaskId.value || publishingTaskId.value) return
+  publishingTaskId.value = chargingTaskId.value
+  uploadsError.value = ''
+  try {
+    const saved = await saveNewYouthChargingVideo(chargingTaskId.value, chargingAmount.value)
+    for (const uploads of [pendingUploads, scheduledUploads]) {
+      uploads.value = uploads.value.map(item => item.taskId === saved.taskId ? { ...item, ...saved } : item)
+    }
+    chargingTaskId.value = ''
+  } catch (err) {
+    uploadsError.value = err.message
+  } finally {
+    publishingTaskId.value = ''
+  }
+}
+
 const clockNow = ref(Date.now())
 let timer = null
 let clockTimer = null
@@ -71,6 +99,7 @@ async function refresh() {
     else error.value = overview.reason?.message || String(overview.reason)
     if (uploads.status === 'fulfilled') {
       pendingUploads.value = uploads.value?.items || []
+      chargingEnabled.value = uploads.value?.chargingVideoEnabled === true
       uploadsError.value = ''
     } else uploadsError.value = uploads.reason?.message || String(uploads.reason)
     if (scheduled.status === 'fulfilled') scheduledUploads.value = scheduled.value?.items || []
@@ -195,6 +224,17 @@ onUnmounted(() => {
     </template>
 
     <section class="ny-card ny-pending-uploads">
+      <form v-if="chargingTaskId" class="ny-schedule-editor" @submit.prevent="saveCharging">
+        <label>{{ chargingTitle }}的充电设置
+          <select v-model.number="chargingAmount" :disabled="Boolean(publishingTaskId)">
+            <option :value="18">18 元</option>
+            <option :value="30">30 元</option>
+            <option :value="0">取消充电</option>
+          </select>
+        </label>
+        <button type="submit" :disabled="Boolean(publishingTaskId)">{{ publishingTaskId ? '保存中…' : '保存' }}</button>
+        <button type="button" :disabled="Boolean(publishingTaskId)" @click="chargingTaskId = ''">关闭</button>
+      </form>
       <div class="ny-card-heading">
         <div><span class="ny-eyebrow">PUBLISH QUEUE</span><h2>待发表视频</h2></div>
         <span class="ny-card-count">{{ pendingUploads.length }} 条</span>
@@ -205,11 +245,12 @@ onUnmounted(() => {
         <li v-for="item in pendingUploads" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
-          <div class="ny-pending-title" :title="item.title">{{ item.title }}</div>
+          <div class="ny-pending-title" :title="item.title">{{ item.title }} <small v-if="item.isChargingVideo">充电 · {{ item.chargingAmountYuan }} 元</small></div>
           <div class="ny-pending-actions">
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">
               {{ publishingTaskId === item.taskId ? '提交中…' : '放行发表' }}
             </button>
+            <button v-if="chargingEnabled" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">定时发表</button>
           </div>
           <div v-if="editingTaskId === item.taskId" class="ny-schedule-editor">
@@ -224,8 +265,9 @@ onUnmounted(() => {
         <li v-for="item in scheduledUploads" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
-          <div class="ny-pending-title" :title="item.title">{{ item.title }}<small> {{ formatScheduled(item.dispatchAtUtc) }} · {{ item.scheduleState === 'missed' ? (item.errorMessage || '定时发表失败') : item.scheduleState === 'queued' ? '已进入投稿队列' : item.scheduleState === 'waiting' ? '到点等待接纳' : '等待定时发表' }}</small></div>
+          <div class="ny-pending-title" :title="item.title">{{ item.title }} <small v-if="item.isChargingVideo">充电 · {{ item.chargingAmountYuan }} 元</small><small> {{ formatScheduled(item.dispatchAtUtc) }} · {{ item.scheduleState === 'missed' ? (item.errorMessage || '定时发表失败') : item.scheduleState === 'queued' ? '已进入投稿队列' : item.scheduleState === 'waiting' ? '到点等待接纳' : '等待定时发表' }}</small></div>
           <div v-if="item.scheduleState !== 'missed'" class="ny-pending-actions">
+            <button v-if="chargingEnabled && item.scheduleState !== 'queued' && item.stageStatus !== 'running'" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editCharging(item)">{{ item.isChargingVideo ? '修改充电设置' : '设为充电视频' }}</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">改期</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
           </div>

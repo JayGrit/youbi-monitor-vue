@@ -39,3 +39,11 @@ export function cancelNewYouthUploadSchedule(taskId) {
     method: 'DELETE',
   }, { service: 'distributor', summary: '取消定时发表' })
 }
+
+export function saveNewYouthChargingVideo(taskId, amount) {
+  return requestJson(`${import.meta.env.BASE_URL}distributor-api/tasks/${encodeURIComponent(taskId)}/charging-video`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isChargingVideo: amount > 0, chargingAmountYuan: amount }),
+  }, { service: 'distributor', summary: '保存充电视频配置' })
+}
