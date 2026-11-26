@@ -100,7 +100,7 @@ async function refresh() {
     else error.value = overview.reason?.message || String(overview.reason)
     if (uploads.status === 'fulfilled') {
       pendingUploads.value = uploads.value?.items || []
-      reviews.value = uploads.value?.reviews || []
+      reviews.value = (uploads.value?.reviews || []).filter(item => item.step === 'release' && !item.blockedReason)
       chargingEnabled.value = uploads.value?.chargingVideoEnabled === true
       uploadsError.value = ''
     } else uploadsError.value = uploads.reason?.message || String(uploads.reason)
@@ -262,20 +262,22 @@ onUnmounted(() => {
           </div>
         </li>
       </ul>
-      <div class="ny-card-heading"><h2>未过审</h2><span class="ny-card-count">{{ reviews.length }} 条</span></div>
-      <p v-if="!reviews.length" class="ny-pending-empty">暂无未过审稿件</p>
+      <div class="ny-card-heading"><h2>待重投视频</h2><span class="ny-card-count">{{ reviews.length }} 条</span></div>
+      <p v-if="!reviews.length" class="ny-pending-empty">暂无待重投视频</p>
       <ul v-else class="ny-pending-list">
         <li v-for="item in reviews" :key="item.taskId" class="ny-pending-row">
-          <div class="ny-pending-title">
+          <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
+          <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
+          <div class="ny-pending-title" :title="item.title">
             {{ item.title }}
-            <small>{{ item.blockedReason || (item.step === 'edit' ? '换稿中' : item.step === 'audit' ? '审核中' : item.step === 'cut' ? '违规片段处理中' : item.step === 'release' ? (item.dispatchAtUtc ? (item.due ? '到点等待接纳' : formatScheduled(item.dispatchAtUtc)) : '待人工放行') : '未过审') }}</small>
+            <small>{{ item.dispatchAtUtc ? (item.due ? '到点等待接纳' : formatScheduled(item.dispatchAtUtc)) : '未过审 · 待人工放行' }}</small>
             <small v-if="item.reason">{{ item.reason }}</small>
             <small v-if="item.violationTime">{{ item.violationTime }}</small>
           </div>
           <div v-if="item.step === 'release' && !item.blockedReason" class="ny-pending-actions">
-            <button type="button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">立即投递</button>
-            <button type="button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">{{ item.dispatchAtUtc ? '改期' : '定时投递' }}</button>
-            <button v-if="item.dispatchAtUtc" type="button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
+            <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">立即投递</button>
+            <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">{{ item.dispatchAtUtc ? '改期' : '定时投递' }}</button>
+            <button v-if="item.dispatchAtUtc" type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
           </div>
           <div v-if="editingTaskId === item.taskId && item.step === 'release'" class="ny-schedule-editor">
             <select v-model="selectedSlot" aria-label="定时投递时间"><option v-for="slot in availableSlots" :key="slot.value" :value="slot.value">{{ slot.label }}</option></select>
