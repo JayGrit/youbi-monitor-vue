@@ -14,6 +14,13 @@ const error = ref('')
 const status = ref('')
 const empty = () => ''
 const gridLimit = 64
+const gridEdges = [
+  { label: '顶部', axis: 'row', first: true },
+  { label: '底部', axis: 'row', first: false },
+  { label: '左侧', axis: 'column', first: true },
+  { label: '右侧', axis: 'column', first: false },
+]
+const gridMessage = ref('')
 const lineMode = ref(false)
 const target = ref('')
 const line = ref('')
@@ -134,14 +141,19 @@ function automaticLayout() {
   const { routeNodes, routeEdges } = graph.value
   const positions = autoPositions(routeNodes, routeEdges)
   const used = Math.max(1, ...Object.values(positions).flatMap(cell => [cell.row, cell.column]))
-  return { positions, gridSize: Math.min(gridLimit, used + 2) }
+  const size = Math.min(gridLimit, used + 2)
+  return { positions, rows: size, columns: size }
 }
 
 function restore() {
   const current = draft.value
   const automatic = automaticLayout()
-  draft.value = { ...automatic, routing: current.routing,
-    gridSize: Object.keys(current.routing).length ? Math.max(current.gridSize, automatic.gridSize) : automatic.gridSize }
+  draft.value = { ...automatic, routing: current.routing }
+  if (Object.keys(current.routing).length) {
+    draft.value.rows = Math.max(current.rows, automatic.rows)
+    draft.value.columns = Math.max(current.columns, automatic.columns)
+  }
+  gridMessage.value = ''
   status.value = ''
 }
 
@@ -161,6 +173,7 @@ watch(taskType, async (type, _, onCleanup) => {
   onCleanup(() => { active = false })
   error.value = ''
   status.value = ''
+  gridMessage.value = ''
   graph.value = null
   draft.value = null
   target.value = ''
@@ -175,7 +188,8 @@ watch(taskType, async (type, _, onCleanup) => {
     const saved = result.layout
     const complete = result.routeNodes.every(node => Object.hasOwn(saved?.positions || {}, node.id))
     draft.value = complete ? {
-      gridSize: saved.gridSize,
+      rows: saved.rows ?? saved.gridSize,
+      columns: saved.columns ?? saved.gridSize,
       positions: Object.fromEntries(result.routeNodes.map(node => [node.id, saved.positions[node.id]])),
     } : automaticLayout()
     const routing = {}
@@ -193,7 +207,10 @@ watch(taskType, async (type, _, onCleanup) => {
         branchEntries: liveBranches(route.branchEntries) }
     }
     draft.value.routing = routing
-    if (saved && Object.keys(routing).length) draft.value.gridSize = Math.max(draft.value.gridSize, saved.gridSize)
+    if (saved && Object.keys(routing).length) {
+      draft.value.rows = Math.max(draft.value.rows, saved.rows ?? saved.gridSize)
+      draft.value.columns = Math.max(draft.value.columns, saved.columns ?? saved.gridSize)
+    }
     if (saved && !complete) status.value = '阶段配置已变化，当前显示自动布局。'
   } catch (failure) {
     if (active) error.value = failure.message
@@ -202,23 +219,57 @@ watch(taskType, async (type, _, onCleanup) => {
   }
 })
 
+function changeGrid({ label, axis, first }, delta) {
+  const layout = draft.value
+  const dimension = axis === 'row' ? 'rows' : 'columns'
+  const size = layout[dimension]
+  const newSize = size + delta
+  if (saving.value || drawing.value !== null || newSize < 1 || newSize > gridLimit) return
+
+  const cells = Object.values(layout.positions)
+  const points = Object.values(layout.routing).flatMap(route => [
+    ...(route.junction ? [route.junction] : []),
+    ...route.trunk,
+    ...Object.values(route.branches).flat(),
+  ])
+  const offset = first ? delta : 0
+  gridMessage.value = ''
+  if (delta < 0 && cells.some(cell => cell[axis] === (first ? 1 : size))) {
+    gridMessage.value = `${label}边缘有节点，无法删除。`
+    return
+  }
+  if (delta < 0 && points.some(point => point[axis] + offset < 0 || point[axis] + offset > newSize)) {
+    gridMessage.value = `${label}边缘有自定义连线，请调整连线后再删除。`
+    return
+  }
+
+  if (offset) {
+    for (const point of new Set([...cells, ...points])) point[axis] += offset
+  }
+  layout[dimension] = newSize
+  status.value = ''
+}
+
 function move(id, cell) {
-  const { gridSize, positions } = draft.value
-  if (saving.value || ![cell.row, cell.column].every(value => value >= 1 && value <= gridSize)) return
+  const { rows, columns, positions } = draft.value
+  if (saving.value || cell.row < 1 || cell.row > rows || cell.column < 1 || cell.column > columns) return
   const occupant = Object.keys(positions).find(key =>
     positions[key].row === cell.row && positions[key].column === cell.column)
   if (occupant === id) return
   if (occupant) positions[occupant] = positions[id]
   positions[id] = cell
+  gridMessage.value = ''
   status.value = ''
 }
 
 async function save() {
+  gridMessage.value = ''
   saving.value = true
   error.value = ''
   status.value = ''
   try {
-    draft.value = await saveDagLayout(taskType.value, draft.value)
+    const { rows, columns, positions, routing } = draft.value
+    draft.value = await saveDagLayout(taskType.value, { rows, columns, positions, routing })
     status.value = '布局已保存'
   } catch (failure) {
     error.value = failure.message
@@ -237,16 +288,25 @@ async function save() {
         </select>
       </label>
       <template v-if="draft">
-        <button type="button" :disabled="saving || draft.gridSize >= gridLimit"
-          @click="draft.gridSize = Math.min(gridLimit, draft.gridSize + 2)">扩展网格</button>
         <button type="button" :disabled="saving || drawing !== null" @click="restore">恢复自动布局</button>
         <button type="button" :disabled="saving || drawing !== null" @click="save">{{ saving ? '保存中' : '保存布局' }}</button>
         <button type="button" :aria-pressed="lineMode" :disabled="saving || !graph.routeEdges.length" @click="toggleLineMode">
           {{ lineMode ? '返回节点布局' : '编辑连线' }}
         </button>
-        <span>{{ draft.gridSize }} × {{ draft.gridSize }}</span>
+        <span>{{ draft.rows }} 行 × {{ draft.columns }} 列</span>
       </template>
     </div>
+    <div v-if="draft" class="layout-toolbar grid-toolbar" role="group" aria-label="调整网格边缘">
+      <div v-for="edge in gridEdges" :key="edge.label" class="grid-edge">
+        <button type="button"
+          :disabled="saving || drawing !== null || (edge.axis === 'row' ? draft.rows : draft.columns) >= gridLimit"
+          @click="changeGrid(edge, 1)">{{ edge.label }}增加</button>
+        <button type="button"
+          :disabled="saving || drawing !== null || (edge.axis === 'row' ? draft.rows : draft.columns) <= 1"
+          @click="changeGrid(edge, -1)">{{ edge.label }}删除</button>
+      </div>
+    </div>
+    <p v-if="gridMessage" role="alert">{{ gridMessage }}</p>
     <p v-if="error" role="alert">{{ error }}</p>
     <p v-else-if="loading" role="status">正在加载布局</p>
     <p v-else-if="status" role="status">{{ status }}</p>
@@ -287,6 +347,8 @@ async function save() {
 <style scoped>
 .layout-page { min-width: 0; border: 1px solid #dce4ec; border-radius: 8px; background: white; }
 .layout-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 12px; }
+.grid-toolbar { padding-top: 0; }
+.grid-edge { display: flex; gap: 4px; }
 .layout-page p { padding-inline: 12px; }
 .layout-page :deep(.custom-dag-scroll) { max-height: 72vh; overflow: auto; border-top: 1px solid #dce4ec; }
 </style>

@@ -35,12 +35,15 @@ watch(() => props.task.taskType || props.task.task_type, async (taskType, _, onC
 
 const customLayout = computed(() => {
   const saved = props.editorLayout || savedLayout.value
-  if (!saved?.positions || !Number.isInteger(saved.gridSize) || !nodes.value.length) return null
+  if (!saved?.positions || !nodes.value.length) return null
+  const rows = saved.rows ?? saved.gridSize
+  const columns = saved.columns ?? saved.gridSize
+  if (!Number.isInteger(rows) || !Number.isInteger(columns)) return null
   const occupied = new Set()
   for (const { id } of nodes.value) {
     const cell = saved.positions[id]
-    if (!cell || ![cell.row, cell.column].every(value =>
-      Number.isInteger(value) && value > 0 && value <= saved.gridSize)) return null
+    if (!cell || !Number.isInteger(cell.row) || cell.row < 1 || cell.row > rows
+      || !Number.isInteger(cell.column) || cell.column < 1 || cell.column > columns) return null
     const key = `${cell.row}:${cell.column}`
     if (occupied.has(key)) return null
     occupied.add(key)
@@ -59,8 +62,8 @@ const dimensions = computed(() => {
     for (const points of Object.values(route.branches || {})) cells.push(...points)
   }
   return {
-    width: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.column))) * cellWidth + 1,
-    height: (props.editorLayout?.gridSize || Math.max(1, ...cells.map(cell => cell.row))) * cellHeight + 1,
+    width: (props.editorLayout?.columns ?? Math.max(1, ...cells.map(cell => cell.column))) * cellWidth + 1,
+    height: (props.editorLayout?.rows ?? Math.max(1, ...cells.map(cell => cell.row))) * cellHeight + 1,
   }
 })
 const displayedPaths = computed(() => mergedPaths(nodes.value, edges.value, positions.value, customLayout.value?.routing))
@@ -102,8 +105,8 @@ function clickGridPoint(event) {
   const y = event.clientY - rect.top
   const row = Math.round(y / cellHeight * 2) / 2
   const column = Math.round(x / cellWidth * 2) / 2
-  const size = props.editorLayout.gridSize
-  if (row < 0 || row > size || column < 0 || column > size) return
+  const { rows, columns } = props.editorLayout
+  if (row < 0 || row > rows || column < 0 || column > columns) return
   if (Math.hypot(x - column * cellWidth, y - row * cellHeight) <= 12) {
     emit('route-point', { row, column })
   }
