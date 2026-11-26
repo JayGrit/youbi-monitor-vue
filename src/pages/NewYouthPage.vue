@@ -10,6 +10,7 @@ const loading = ref(false)
 const error = ref('')
 const pendingUploads = ref([])
 const scheduledUploads = ref([])
+const reviews = ref([])
 const uploadsError = ref('')
 const publishingTaskId = ref('')
 const editingTaskId = ref('')
@@ -99,6 +100,7 @@ async function refresh() {
     else error.value = overview.reason?.message || String(overview.reason)
     if (uploads.status === 'fulfilled') {
       pendingUploads.value = uploads.value?.items || []
+      reviews.value = uploads.value?.reviews || []
       chargingEnabled.value = uploads.value?.chargingVideoEnabled === true
       uploadsError.value = ''
     } else uploadsError.value = uploads.reason?.message || String(uploads.reason)
@@ -152,7 +154,7 @@ async function publishUpload(taskId) {
   uploadsError.value = ''
   try {
     await releaseNewYouthUpload(taskId)
-    pendingUploads.value = pendingUploads.value.filter(item => item.taskId !== taskId)
+    await refresh()
   } catch (err) {
     uploadsError.value = err?.message || String(err)
   } finally {
@@ -255,6 +257,28 @@ onUnmounted(() => {
           </div>
           <div v-if="editingTaskId === item.taskId" class="ny-schedule-editor">
             <select v-model="selectedSlot" aria-label="定时发表时间"><option v-for="slot in availableSlots" :key="slot.value" :value="slot.value">{{ slot.label }}</option></select>
+            <button type="button" :disabled="!selectedSlot || Boolean(publishingTaskId)" @click="saveSchedule(item.taskId)">确认</button>
+            <button type="button" @click="editingTaskId = ''">返回</button>
+          </div>
+        </li>
+      </ul>
+      <div class="ny-card-heading"><h2>未过审</h2><span class="ny-card-count">{{ reviews.length }} 条</span></div>
+      <p v-if="!reviews.length" class="ny-pending-empty">暂无未过审稿件</p>
+      <ul v-else class="ny-pending-list">
+        <li v-for="item in reviews" :key="item.taskId" class="ny-pending-row">
+          <div class="ny-pending-title">
+            {{ item.title }}
+            <small>{{ item.blockedReason || (item.step === 'edit' ? '换稿中' : item.step === 'audit' ? '审核中' : item.step === 'cut' ? '违规片段处理中' : item.step === 'release' ? (item.dispatchAtUtc ? (item.due ? '到点等待接纳' : formatScheduled(item.dispatchAtUtc)) : '待人工放行') : '未过审') }}</small>
+            <small v-if="item.reason">{{ item.reason }}</small>
+            <small v-if="item.violationTime">{{ item.violationTime }}</small>
+          </div>
+          <div v-if="item.step === 'release' && !item.blockedReason" class="ny-pending-actions">
+            <button type="button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">立即投递</button>
+            <button type="button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">{{ item.dispatchAtUtc ? '改期' : '定时投递' }}</button>
+            <button v-if="item.dispatchAtUtc" type="button" :disabled="Boolean(publishingTaskId)" @click="cancelSchedule(item.taskId)">取消</button>
+          </div>
+          <div v-if="editingTaskId === item.taskId && item.step === 'release'" class="ny-schedule-editor">
+            <select v-model="selectedSlot" aria-label="定时投递时间"><option v-for="slot in availableSlots" :key="slot.value" :value="slot.value">{{ slot.label }}</option></select>
             <button type="button" :disabled="!selectedSlot || Boolean(publishingTaskId)" @click="saveSchedule(item.taskId)">确认</button>
             <button type="button" @click="editingTaskId = ''">返回</button>
           </div>
