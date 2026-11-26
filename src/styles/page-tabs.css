@@ -23,3 +23,45 @@
   text-underline-offset: 6px;
   text-decoration-thickness: 2px;
 }
+
+.page-tabs-primary {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+  min-width: 0;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.page-tabs-primary button,
+.page-tabs-more {
+  flex: none;
+}
+
+.page-tabs-more {
+  position: relative;
+  white-space: nowrap;
+}
+
+.page-tabs-more-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  min-width: 132px;
+  padding: 4px;
+  border-radius: 6px;
+  background: #000;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+}
+
+.page-tabs-more-panel button {
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.page-tabs-more-panel button:hover,
+.page-tabs-more-panel button:focus-visible {
+  background: #303030;
+}

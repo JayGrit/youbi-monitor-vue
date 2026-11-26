@@ -58,7 +58,7 @@
 .ny-bar-value { fill: #34475a; font-size: 11px; font-weight: 700; }
 .ny-bar-hour { fill: #7d8d99; font-size: 11px; }
 @media (max-width: 1200px) { .ny-pies { grid-template-columns: 1fr; } .ny-pie-layout { grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); } }
-@media (max-width: 1100px) { .top-bar::before { display: none; } .page-tabs { width: 100%; min-width: 0; overflow-x: auto; justify-content: flex-start; white-space: nowrap; scrollbar-width: thin; } .page-tabs button { flex: none; } }
+@media (max-width: 1100px) { .top-bar::before { display: none; } .page-tabs { width: 100%; min-width: 0; } }
 @media (max-width: 640px) { .ny-hero { align-items: start; flex-direction: column; padding: 24px; } .ny-hero-actions { align-items: start; flex-direction: column; width: 100%; } .ny-follower-goal { flex: none; width: 100%; } .ny-card { padding: 19px; } .ny-pie-layout { grid-template-columns: 1fr; } .ny-pie-wrap { width: 66%; min-width: 190px; } .ny-video-list { max-height: 350px; } .ny-card-count { display: none; } }
 
 .ny-pending-uploads .ny-card-heading { min-height: 0; }
