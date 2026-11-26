@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const rows = ref([])
-const total = ref(0)
+const selectedAttemptIndex = ref(-1)
 const loading = ref(false)
 const error = ref('')
 const previewIndex = ref(-1)
@@ -23,7 +23,24 @@ const screenshotErrors = ref({})
 let requestToken = 0
 
 const opId = computed(() => props.task?.opId || props.task?.op_id || props.task?.runId || props.task?.run_id || '')
-const sortedRows = computed(() => rows.value.filter(hasScreenshotUrl).sort(compareDiagnostics))
+const attempts = computed(() => {
+  const groups = new Map()
+  for (const row of rows.value) {
+    const id = row.archiveAttemptId || ''
+    const hasScreenshot = hasScreenshotUrl(row)
+    if (!id && !hasScreenshot) continue
+    if (!groups.has(id)) {
+      groups.set(id, { id, number: row.archiveAttemptNumber ?? 0, screenshots: [] })
+    }
+    if (hasScreenshot) groups.get(id).screenshots.push(row)
+  }
+  return [...groups.values()].sort((left, right) => left.number - right.number)
+})
+const attemptIndex = computed(() => selectedAttemptIndex.value < 0
+  ? attempts.value.length - 1
+  : selectedAttemptIndex.value)
+const activeAttempt = computed(() => attempts.value[attemptIndex.value])
+const sortedRows = computed(() => [...(activeAttempt.value?.screenshots ?? [])].sort(compareDiagnostics))
 const previewRow = computed(() => sortedRows.value[previewIndex.value] || null)
 
 watch(
@@ -59,7 +76,7 @@ onUnmounted(() => {
 
 async function loadFirstPage() {
   rows.value = []
-  total.value = 0
+  selectedAttemptIndex.value = -1
   previewIndex.value = -1
   if (!opId.value) {
     error.value = '缺少 op_id'
@@ -76,7 +93,6 @@ async function loadDiagnostics() {
     const response = await props.api.getDiagnostics(opId.value)
     if (token !== requestToken) return
     rows.value = response.items || []
-    total.value = Number(response.total || 0)
   } catch (err) {
     if (token === requestToken) error.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -168,6 +184,13 @@ async function downloadScreenshot(row) {
   }
 }
 
+function moveAttempt(offset) {
+  const index = attemptIndex.value + offset
+  if (index < 0 || index >= attempts.value.length) return
+  closePreview()
+  selectedAttemptIndex.value = index
+}
+
 function openPreview(row) {
   const index = sortedRows.value.findIndex(item => screenshotKey(item) === screenshotKey(row))
   previewIndex.value = Math.max(0, index)
@@ -189,9 +212,11 @@ function handleKeydown(event) {
     if (previewIndex.value >= 0) closePreview()
     else emit('close')
   } else if (event.key === 'ArrowLeft') {
-    movePreview(-1)
+    if (previewRow.value) movePreview(-1)
+    else moveAttempt(-1)
   } else if (event.key === 'ArrowRight') {
-    movePreview(1)
+    if (previewRow.value) movePreview(1)
+    else moveAttempt(1)
   }
 }
 
@@ -218,15 +243,24 @@ function relativeTime(value) {
         <header class="operator-screenshot-head">
           <div>
             <strong>{{ title }}</strong>
-            <span>{{ opId || '-' }}<template v-if="total"> · {{ sortedRows.length }} / {{ total }}</template></span>
+            <span>{{ opId || '-' }}<template v-if="activeAttempt"> · {{ sortedRows.length }} 张截图</template></span>
           </div>
-          <button type="button" @click="emit('close')">关闭</button>
+          <div class="operator-screenshot-actions">
+            <template v-if="activeAttempt">
+              <button type="button" aria-label="上一轮" :disabled="attemptIndex <= 0" @click="moveAttempt(-1)">&lsaquo;</button>
+              <span class="operator-screenshot-attempt" aria-live="polite">
+                {{ activeAttempt.number ? `第 ${activeAttempt.number} 次` : '轮次未知' }}
+              </span>
+              <button type="button" aria-label="下一轮" :disabled="attemptIndex >= attempts.length - 1" @click="moveAttempt(1)">&rsaquo;</button>
+            </template>
+            <button type="button" @click="emit('close')">关闭</button>
+          </div>
         </header>
 
         <div v-if="loading" class="operator-screenshot-state">正在加载诊断截图</div>
         <div v-else-if="error" class="operator-screenshot-error">诊断截图接口错误：{{ error }}</div>
         <div v-else-if="!sortedRows.length" class="operator-screenshot-state">没有诊断截图</div>
-        <div v-else class="operator-screenshot-grid-wrap">
+        <div v-else :key="activeAttempt?.id" class="operator-screenshot-grid-wrap">
           <div class="operator-screenshot-grid">
             <article
               v-for="row in sortedRows"
@@ -313,6 +347,22 @@ function relativeTime(value) {
   display: grid;
   min-width: 0;
   gap: 3px;
+}
+
+.operator-screenshot-head .operator-screenshot-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.operator-screenshot-attempt {
+  white-space: nowrap;
+}
+
+.operator-screenshot-head button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .operator-screenshot-head strong,
