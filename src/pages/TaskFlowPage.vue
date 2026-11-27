@@ -1,4 +1,5 @@
 <script setup>
+import PodcastTitleRelease from '../components/task-flow/PodcastTitleRelease.vue'
 import SubStageDetailPanel from '../components/task-flow/substages/SubStageDetailPanel.vue'
 import TaskFlowHeader from '../components/task-flow/TaskFlowHeader.vue'
 import TaskProgressGraph from '../components/monitor/TaskProgressGraph.vue'
@@ -70,6 +71,14 @@ const emit = defineEmits(['update:speechEditDraft'])
     <div v-if="flowError" class="flow-error">Task flow API error: {{ flowError }}</div>
     <div v-else-if="flowLoading && !selectedTaskFlow" class="flow-loading">Loading task flow</div>
     <template v-else-if="selectedTaskFlow">
+      <PodcastTitleRelease
+        v-if="(selectedTaskFlow.task?.task_type || selectedTaskFlow.task?.taskType) === 'podcast_test'"
+        :key="selectedTaskFlow.task.id"
+        :task-id="selectedTaskFlow.task.id"
+        :task-status="selectedTaskFlow.task.status"
+        :gate-status="selectedTaskProgress?.routeNodes?.find(node => node.stage === 'publisher' && node.subStage === 'manual_title_release')?.status"
+        @released="refreshTaskFlow()"
+      />
       <TaskProgressGraph
         v-if="selectedTaskProgress"
         :task="selectedTaskFlow.task"
