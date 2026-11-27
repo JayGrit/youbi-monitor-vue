@@ -76,3 +76,11 @@
 .ny-publish-button:disabled { opacity: .55; cursor: wait; }
 .ny-pending-empty { margin-top: 18px; color: #8193a1; }
 @media (max-width: 640px) { .ny-pending-row { grid-template-columns: 112px minmax(0, 1fr); gap: 10px; } .ny-pending-cover { width: 112px; } .ny-pending-actions, .ny-schedule-editor { grid-column: 2; } }
+
+.ny-charging-dialog { width: min(420px, calc(100% - 32px)); margin: auto; color: #223249; }
+.ny-charging-dialog::backdrop { background: #172c4573; }
+.ny-charging-dialog form { display: grid; gap: 16px; }
+.ny-charging-dialog h2 { font-size: 21px; }
+.ny-charging-dialog select { width: 100%; }
+.ny-charging-actions { justify-content: flex-end; }
+.ny-charging-actions button.ny-publish-button { border-color: transparent; background: #247b78; }
