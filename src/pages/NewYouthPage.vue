@@ -92,7 +92,7 @@ const followerGoal = computed(() => {
   const current = data.value.followerCount
   const growth = midnight == null || current == null ? null : current - midnight
   const percent = growth == null ? null : Math.floor(Math.max(0, growth) * 100 / target)
-  return { target, midnight, growth, percent }
+  return { target, growth, percent }
 })
 const formatSlot = value => value ? String(value).replace('T', ' ').slice(5, 16) : '—'
 const previousPeriod = computed(() => data.value?.previousHour
@@ -194,7 +194,6 @@ onUnmounted(() => {
       <div>
         <span class="ny-hero-kicker">BILIBILI · NEWYOUTH</span>
         <h1>新青年</h1>
-        <p>按整点快照追踪播客播放与粉丝增长</p>
         <dl v-if="data" class="ny-account-counts">
           <div><dt>当前粉丝量</dt><dd>{{ displayCount(data.followerCount) }}</dd></div>
           <div><dt>充电人数</dt><dd>{{ displayCount(data.chargeCount) }}</dd></div>
@@ -213,10 +212,8 @@ onUnmounted(() => {
             aria-labelledby="ny-follower-goal-label"
             :aria-valuetext="`净增 ${formatNetGrowth.format(followerGoal.growth)} 人，完成 ${followerGoal.percent}%`"
           />
-          <div class="ny-follower-goal-caption">
-            <span v-if="followerGoal.midnight == null">暂无 00:00 粉丝快照</span>
-            <span v-else>00:00 基准 {{ displayCount(followerGoal.midnight) }}</span>
-            <span v-if="followerGoal.percent !== null">{{ followerGoal.percent }}%</span>
+          <div v-if="followerGoal.percent !== null" class="ny-follower-goal-caption">
+            {{ followerGoal.percent }}%
           </div>
         </div>
         <button type="button" class="ny-refresh" :disabled="loading" @click="refresh">{{ loading ? '更新中…' : '刷新数据' }}</button>
@@ -231,7 +228,6 @@ onUnmounted(() => {
         <GrowthPieChart heading="今日 00:00 至今" :period="todayPeriod" :data="data.today" />
       </div>
       <FollowerBarChart :points="data.followers || []" />
-      <p class="ny-source-note">播放量按同一 BV 的两次成功快照计算；此前没有记录的新视频按 0 次播放计算。饼图按视频发布时间分组，右侧只显示增量前 10 名。最近指昨天和前天；时间未知的视频归入以前。粉丝缺少相邻快照的小时以“—”表示。</p>
     </template>
 
     <section class="ny-card ny-pending-uploads">
@@ -266,12 +262,7 @@ onUnmounted(() => {
         <li v-for="item in pendingReviews" :key="item.taskId" class="ny-pending-row">
           <img v-if="item.coverUrl" class="ny-pending-cover" :src="normalizeResourceUrl(item.coverUrl)" alt="" loading="lazy" />
           <div v-else class="ny-pending-cover ny-pending-cover-empty">无封面</div>
-          <div class="ny-pending-title" :title="item.title">
-            {{ item.title }}
-            <small>{{ item.dispatchAtUtc ? (item.due ? '到点等待接纳' : formatScheduled(item.dispatchAtUtc)) : '未过审 · 待人工放行' }}</small>
-            <small v-if="item.reason">{{ item.reason }}</small>
-            <small v-if="item.violationTime">{{ item.violationTime }}</small>
-          </div>
+          <div class="ny-pending-title" :title="item.title">{{ item.title }}</div>
           <div v-if="item.step === 'release' && !item.blockedReason" class="ny-pending-actions">
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="publishUpload(item.taskId)">立即投递</button>
             <button type="button" class="ny-publish-button" :disabled="Boolean(publishingTaskId)" @click="editSchedule(item)">{{ item.dispatchAtUtc ? '改期' : '定时投递' }}</button>

@@ -44,7 +44,7 @@
 .ny-video-title:hover { color: #196f9b; text-decoration: underline; }
 .ny-legend-share { color: #7890a0; text-align: right; font-variant-numeric: tabular-nums; }
 .ny-empty { display: grid; place-items: center; min-height: 235px; margin-top: 16px; border: 1px dashed #d8e3e9; border-radius: 15px; color: #8193a1; font-size: 14px; }
-.ny-footnote, .ny-source-note { color: #728292; font-size: 12px; line-height: 1.6; }
+.ny-footnote { color: #728292; font-size: 12px; line-height: 1.6; }
 .ny-footnote { margin-top: 14px; }
 .ny-error { padding: 12px 16px; border-radius: 10px; background: #fff1ee; color: #b93c35; }
 .ny-loading { padding: 28px; text-align: center; color: #64788b; }

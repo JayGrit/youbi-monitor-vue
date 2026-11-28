@@ -17,7 +17,6 @@ const label = value => value == null ? '—' : `${value > 0 ? '+' : ''}${value}`
       <div>
         <span class="ny-eyebrow">账号增长</span>
         <h2>粉丝每小时增量</h2>
-        <p>每根柱子比较该整点与前一整点的成功快照</p>
       </div>
     </div>
     <div v-if="!points.length" class="ny-empty">暂无粉丝采集数据</div>

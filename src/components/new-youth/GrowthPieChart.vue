@@ -14,6 +14,14 @@ const ageGroups = [
 ]
 const groupColor = key => ageGroups.find(group => group.key === key)?.color || ageGroups[2].color
 const slices = computed(() => (props.data?.slices || []).filter(item => Number(item.growth) > 0).slice(0, 10))
+function displayTitle(title) {
+  const original = title || ''
+  return original
+    .replace(/^\s*《[^》]+》\s*[:：]\s*/, '')
+    .replace(/\s*[|｜]\s*外刊播客\s*[|｜]\s*中英\s*[+＋]\s*文稿\s*$/, '')
+    .trim() || original
+}
+
 const total = computed(() => Number(props.data?.totalGrowth || 0))
 const groups = computed(() => ageGroups.map(group => ({
   ...group,
@@ -42,7 +50,6 @@ const share = value => total.value ? `${((Number(value) / total.value) * 100).to
         <h2>{{ heading }}</h2>
         <p>{{ period }}</p>
       </div>
-      <span class="ny-card-count">{{ data?.comparableVideos || 0 }} 条视频</span>
     </div>
 
     <div v-if="!data?.available" class="ny-empty">等待这段时间的完整采集快照</div>
@@ -65,7 +72,7 @@ const share = value => total.value ? `${((Number(value) / total.value) * 100).to
       <div class="ny-video-list">
         <div v-for="slice in slices" :key="slice.bvid" class="ny-video-row">
           <span class="ny-legend-dot" :style="{ background: groupColor(slice.ageGroup) }"></span>
-          <a class="ny-video-title" :href="slice.url" target="_blank" rel="noopener noreferrer" :title="slice.title">{{ slice.title }}</a> <small v-if="slice.isChargingVideo">充电 · {{ slice.chargingAmountYuan }} 元</small>
+          <a class="ny-video-title" :href="slice.url" target="_blank" rel="noopener noreferrer" :title="displayTitle(slice.title)">{{ displayTitle(slice.title) }}</a>
           <strong>+{{ formatNumber(slice.growth) }}</strong>
           <span class="ny-legend-share">{{ share(slice.growth) }}</span>
         </div>
